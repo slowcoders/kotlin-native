@@ -145,21 +145,6 @@ internal val psiToIrPhase = konanUnitPhase(
                     Psi2IrConfiguration(false))
             val generatorContext = translator.createGeneratorContext(moduleDescriptor, bindingContext, symbolTable)
 
-            translator.addPostprocessingStep { module ->
-                val extensions = IrGenerationExtension.getInstances(config.project)
-                val pluginContext = IrPluginContext(
-                    generatorContext.moduleDescriptor,
-                    generatorContext.bindingContext,
-                    generatorContext.languageVersionSettings,
-                    generatorContext.symbolTable,
-                    generatorContext.typeTranslator,
-                    generatorContext.irBuiltIns
-                )
-                extensions.forEach { extension ->
-                    extension.generate(module, pluginContext)
-                }
-            }
-
             val forwardDeclarationsModuleDescriptor = moduleDescriptor.allDependencyModules.firstOrNull { it.isForwardDeclarationModule }
 
             val modulesWithoutDCE = moduleDescriptor.allDependencyModules
@@ -210,6 +195,22 @@ internal val psiToIrPhase = konanUnitPhase(
             )
             val irProviders = listOf(irProviderForInteropStubs, functionIrClassFactory, deserializer, stubGenerator)
             stubGenerator.setIrProviders(irProviders)
+
+            translator.addPostprocessingStep { module ->
+                val extensions = IrGenerationExtension.getInstances(config.project)
+                val pluginContext = IrPluginContext(
+                    generatorContext.moduleDescriptor,
+                    generatorContext.bindingContext,
+                    generatorContext.languageVersionSettings,
+                    generatorContext.symbolTable,
+                    generatorContext.typeTranslator,
+                    generatorContext.irBuiltIns,
+                    irProviders = irProviders
+                )
+                extensions.forEach { extension ->
+                    extension.generate(module, pluginContext)
+                }
+            }
 
             expectDescriptorToSymbol = mutableMapOf<DeclarationDescriptor, IrSymbol>()
             val module = translator.generateModuleFragment(
