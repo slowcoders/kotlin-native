@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.backend.konan.optimizations
 
 import org.jetbrains.kotlin.backend.common.ir.ir2stringWhole
+import org.jetbrains.kotlin.backend.common.serialization.target
 import org.jetbrains.kotlin.backend.konan.*
 import org.jetbrains.kotlin.backend.konan.descriptors.isAbstract
 import org.jetbrains.kotlin.backend.konan.descriptors.target
@@ -527,7 +528,9 @@ internal object DataFlowIR {
             type.superTypes += irClass.superTypes.map { mapClassReferenceType(it.getClass()!!) }
             if (!isAbstract) {
                 val layoutBuilder = context.getLayoutBuilder(irClass)
-                type.vtable += layoutBuilder.vtableEntries.map { mapFunction(it.getImplementation(context)!!) }
+                type.vtable += layoutBuilder.vtableEntries.map {
+                    mapFunction(it.getImplementation(context)!!)
+                }
                 layoutBuilder.methodTableEntries.forEach {
                     type.itable[it.overriddenFunction.functionName.localHash.value] = mapFunction(it.getImplementation(context)!!)
                 }
