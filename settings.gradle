@@ -32,6 +32,8 @@ include ':backend.native:debugger-tests'
 include ':utilities'
 include 'dependencyPacker'
 
+include ':tools:komesco'
+
 include ':performance'
 include ':performance:ring'
 include ':performance:cinterop'
