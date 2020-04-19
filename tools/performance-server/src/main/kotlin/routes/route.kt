@@ -557,7 +557,6 @@ fun router() {
     })
 
     // Replace from Artifactory to DB.
-    // TODO Bintray -> Artifactory.
     router.get("/convert/:target", { request, response ->
         val target = request.params.target.toString()
         var buildNumber: String? = null
@@ -575,7 +574,8 @@ fun router() {
                 buildsDescription.forEach {
                     if (!it.isEmpty()) {
                         val currentBuildNumber = it.substringBefore(',')
-                        if (!"\\d+(\\.\\d+)+-\\w+-\\d+".toRegex().matches(currentBuildNumber)) {
+                        println(currentBuildNumber)
+                        if (!"\\d+(\\.\\d+)+(-M\\d)?-\\w+-\\d+".toRegex().matches(currentBuildNumber)) {
                             error("Build number $currentBuildNumber differs from expected format. File with data for " +
                                     "target $target could be corrupted.")
                         }
@@ -584,12 +584,14 @@ fun router() {
                         }
                         if (shouldConvert) {
                             // Save data from Bintray into database.
+                            println("Should be converted")
                             val artifactoryUrl = "https://repo.labs.intellij.net/kotlin-native-benchmarks"
                             val fileName = "nativeReport.json"
                             val accessFileUrl = "$artifactoryUrl/$target/$currentBuildNumber/$fileName"
                             val infoParts = it.split(", ")
                             if (infoParts[3] == "master" || "eap" in currentBuildNumber || "release" in currentBuildNumber) {
                                 try {
+                                    println("Important run")
                                     val jsonReport = sendRequest(RequestMethod.GET, accessFileUrl).await()
                                     var report = convert(jsonReport, currentBuildNumber)
                                     println(currentBuildNumber)
