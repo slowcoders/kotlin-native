@@ -541,6 +541,12 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         else -> UnsupportedType
     }
 
+    /**
+     * Check that type is const itself or a typedef to a const type.
+     */
+    private fun isCanonicalTypeConst(type: CValue<CXType>): Boolean =
+            clang_isConstQualifiedType(clang_getCanonicalType(type)) != 0
+
     fun convertType(type: CValue<CXType>, typeAttributes: CValue<CXTypeAttributes>? = null): Type {
         val primitiveType = convertUnqualifiedPrimitiveType(type)
         if (primitiveType != UnsupportedType) {
@@ -584,8 +590,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
             CXType_Pointer -> {
                 val pointeeType = clang_getPointeeType(type)
-                val pointeeIsConst =
-                        (clang_isConstQualifiedType(clang_getCanonicalType(pointeeType)) != 0)
+                val pointeeIsConst = isCanonicalTypeConst(pointeeType)
 
                 val convertedPointeeType = convertType(pointeeType)
                 PointerType(
@@ -828,7 +833,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                         GlobalDecl(
                                 name = entityName!!,
                                 type = convertCursorType(cursor),
-                                isConst = clang_isConstQualifiedType(clang_getCursorType(cursor)) != 0
+                                isConst = isCanonicalTypeConst(clang_getCursorType(cursor))
                         )
                     }
                 }
