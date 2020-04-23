@@ -11,6 +11,7 @@ import kotlin.native.internal.debugDescription
 import kotlin.native.identityHashCode
 import kotlin.reflect.KClass
 import kotlinx.cinterop.*
+import kotlin.native.internal.Escapes
 
 // Implementation details.
 
@@ -77,6 +78,7 @@ external internal fun detachObjectGraphInternal(mode: Int, producer: () -> Any?)
 external internal fun attachObjectGraphInternal(stable: NativePtr): Any?
 
 @SymbolName("Kotlin_Worker_freezeInternal")
+@Escapes(0b1)
 internal external fun freezeInternal(it: Any?)
 
 @SymbolName("Kotlin_Worker_isFrozenInternal")

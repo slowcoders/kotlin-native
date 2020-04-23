@@ -5,7 +5,6 @@
 
 package org.jetbrains.kotlin.backend.konan.optimizations
 
-import org.jetbrains.kotlin.backend.common.ir.ir2stringWhole
 import org.jetbrains.kotlin.backend.konan.*
 import org.jetbrains.kotlin.backend.konan.descriptors.isAbstract
 import org.jetbrains.kotlin.backend.konan.descriptors.target
@@ -264,17 +263,29 @@ internal object DataFlowIR {
         class Variable(values: List<Edge>, val type: Type, val kind: VariableKind) : Node() {
             val values = mutableListOf<Edge>().also { it += values }
         }
+
+        class Scope(val depth: Int, nodes: List<Node>) : Node() {
+            val nodes = mutableSetOf<Node>().also { it += nodes }
+        }
     }
 
-    class FunctionBody(val nodes: List<Node>, val returns: Node.Variable, val throws: Node.Variable)
+    class FunctionBody(val rootScope: Node.Scope, val allScopes: List<Node.Scope>, val returns: Node.Variable, val throws: Node.Variable) {
+        inline fun forEachNonScopeNode(block: (Node) -> Unit) {
+            for (scope in allScopes)
+                for (node in scope.nodes)
+                    if (node !is Node.Scope)
+                        block(node)
+        }
+    }
 
     class Function(val symbol: FunctionSymbol, val body: FunctionBody) {
 
         fun debugOutput() {
             println("FUNCTION $symbol")
             println("Params: ${symbol.parameters.contentToString()}")
-            val ids = body.nodes.withIndex().associateBy({ it.value }, { it.index })
-            body.nodes.forEach {
+            val nodes = listOf(body.rootScope) + body.allScopes.flatMap { it.nodes }
+            val ids = nodes.withIndex().associateBy({ it.value }, { it.index })
+            nodes.forEach {
                 println("    NODE #${ids[it]!!}")
                 printNode(it, ids)
             }
@@ -434,6 +445,15 @@ internal object DataFlowIR {
                             result.appendln()
                         else
                             result.appendln(" CASTED TO ${it.castToType}")
+                    }
+                    result.toString()
+                }
+
+                is Node.Scope -> {
+                    val result = StringBuilder()
+                    result.appendln("       SCOPE ${node.depth}")
+                    node.nodes.forEach {
+                        result.appendln("            SUBNODE #${ids[it]!!}")
                     }
                     result.toString()
                 }
@@ -627,10 +647,16 @@ internal object DataFlowIR {
                             && !irClass.isNonGeneratedAnnotation()
                             && (it.isOverridableOrOverrides || bridgeTarget != null || function.isSpecial || !irClass.isFinal())
                     val symbolTableIndex = if (placeToFunctionsTable) module.numberOfFunctions++ else -1
-                    if (it.isExported())
+                    val frozen = it is IrConstructor && irClass!!.annotations.findAnnotation(KonanFqNames.frozen) != null
+                    val functionSymbol = if (it.isExported())
                         FunctionSymbol.Public(name.localHash.value, module, symbolTableIndex, attributes, it, bridgeTargetSymbol, takeName { name })
                     else
                         FunctionSymbol.Private(privateFunIndex++, module, symbolTableIndex, attributes, it, bridgeTargetSymbol, takeName { name })
+                    if (frozen) {
+                        functionSymbol.escapes = 1
+                        //println("FROZEN: $functionSymbol")
+                    }
+                    functionSymbol
                 }
             }
             functionMap[it] = symbol

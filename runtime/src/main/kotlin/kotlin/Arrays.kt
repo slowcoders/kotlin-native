@@ -528,7 +528,7 @@ public inline fun <reified @PureReifiable T> arrayOfNulls(size: Int): Array<T?> 
  * Returns an array containing the specified elements.
  */
 @TypedIntrinsic(IntrinsicType.IDENTITY)
-@PointsTo(0, 1) // <return> points to <array> argument.
+@PointsTo(0x00, 0x04) // ret.intestines -> elements.intestines
 public external inline fun <reified @PureReifiable T> arrayOf(vararg elements: T): Array<T>
 
 @SymbolName("Kotlin_emptyArray")

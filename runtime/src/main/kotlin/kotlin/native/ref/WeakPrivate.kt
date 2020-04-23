@@ -9,6 +9,7 @@ import kotlinx.cinterop.COpaquePointer
 import kotlin.native.internal.ExportForCppRuntime
 import kotlin.native.internal.Frozen
 import kotlin.native.internal.NoReorderFields
+import kotlin.native.internal.PointsTo
 
 /**
  *   Theory of operations:
@@ -53,6 +54,8 @@ internal abstract class WeakReferenceImpl {
 
 // Get a counter from non-null object.
 @SymbolName("Konan_getWeakReferenceImpl")
+// TODO: Can it be supported for stack objects?
+@PointsTo(0x00, 0x03) // ret.intestines -> referent
 external internal fun getWeakReferenceImpl(referent: Any): WeakReferenceImpl
 
 // Create a counter object.

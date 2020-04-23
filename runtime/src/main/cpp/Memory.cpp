@@ -722,19 +722,55 @@ inline container_size_t objectSize(const ObjHeader* obj) {
   return alignUp(size, kObjectAlignment);
 }
 
+#define GET_SP(var) __asm__("movq %%rsp, %0" : "=m"(var));
+
+inline bool onStack(void const* ptr) {
+  uint8_t* stackPointer;
+  GET_SP(stackPointer);
+  uintptr_t dist;
+  auto a = reinterpret_cast<uintptr_t const>(ptr);
+  auto b = reinterpret_cast<uintptr_t const>(stackPointer);
+  if (a < b)
+    dist = b - a;
+  else
+    dist = a - b;
+  return dist < 100 * 1024 * 1024;
+}
+
 template <typename func>
 inline void traverseObjectFields(ObjHeader* obj, func process) {
+  if (onStack(obj)) {
+    konan::consolePrintf("BUGBUGBUG [traverse]\n");
+    *(int*)1=1;
+  }
   const TypeInfo* typeInfo = obj->type_info();
   if (typeInfo != theArrayTypeInfo) {
     for (int index = 0; index < typeInfo->objOffsetsCount_; index++) {
       ObjHeader** location = reinterpret_cast<ObjHeader**>(
           reinterpret_cast<uintptr_t>(obj) + typeInfo->objOffsets_[index]);
+
+    // Hack. TODO: mark the pointer with a bit as a stack object.
+    // 0x00007fffffffffff
+    //if (reinterpret_cast<uintptr_t>(*location) > 0x00007fffffffffff - 100 * 1024 * 1024) {
+    if (onStack(*location)) {
+      continue;
+    }
+
       process(location);
     }
   } else {
     ArrayHeader* array = obj->array();
     for (int index = 0; index < array->count_; index++) {
-      process(ArrayAddressOfElementAt(array, index));
+      ObjHeader** location = ArrayAddressOfElementAt(array, index);
+
+    // Hack. TODO: mark the pointer with a bit as a stack object.
+    // 0x00007fffffffffff
+    //if (reinterpret_cast<uintptr_t>(*location) > 0x00007fffffffffff - 100 * 1024 * 1024) {
+    if (onStack(*location)) {
+      continue;
+    }
+
+      process(location);
     }
   }
 }
@@ -966,23 +1002,45 @@ ALWAYS_INLINE void runDeallocationHooks(ContainerHeader* container) {
 void freeContainer(ContainerHeader* container) {
   RuntimeAssert(container != nullptr, "this kind of container shalln't be freed");
 
+
   if (isAggregatingFrozenContainer(container)) {
+
+  //konan::consolePrintf("-----freeContainer 1-----\n");
+
     freeAggregatingFrozenContainer(container);
+
+  //konan::consolePrintf("-----freeContainer 2-----\n");
+
     return;
   }
 
+
+  //konan::consolePrintf("-----freeContainer 3-----\n");
+
   runDeallocationHooks(container);
+
+
+  //konan::consolePrintf("-----freeContainer 4-----\n");
 
   // Now let's clean all object's fields in this container.
   traverseContainerObjectFields(container, [container](ObjHeader** location) {
       ZeroHeapRef(location);
   });
 
+
+  //konan::consolePrintf("-----freeContainer 5-----\n");
+
   // And release underlying memory.
   if (isFreeable(container)) {
+
+  //konan::consolePrintf("-----freeContainer 6-----\n");
+
     container->setColorEvenIfGreen(CONTAINER_TAG_GC_BLACK);
     if (!container->buffered())
       scheduleDestroyContainer(memoryState, container);
+
+  //konan::consolePrintf("-----freeContainer 7-----\n");
+
   }
 }
 
@@ -1163,6 +1221,10 @@ inline void decrementRC(ContainerHeader* container) {
 
 template <bool CanCollect>
 inline void enqueueDecrementRC(ContainerHeader* container) {
+  //if (reinterpret_cast<uintptr_t>(container) == 0x00007ffeefbff548)
+  if (onStack(container))
+    //konan::consolePrintf("BUGBUGBUG\n");
+    *(int*)1=1;
   auto* state = memoryState;
   if (CanCollect) {
     if (state->toRelease->size() >= state->gcThreshold && state->gcSuspendCount == 0) {
@@ -1494,6 +1556,10 @@ inline bool tryAddHeapRef(const ObjHeader* header) {
 
 template <bool Strict>
 inline void releaseHeapRef(ContainerHeader* container) {
+  if (onStack(container)) {
+    konan::consolePrintf("BUGBUGBUG [releaseHeapRef(container)]\n");
+    *(int*)1=1;
+  }
   MEMORY_LOG("ReleaseHeapRef %p: rc=%d\n", container, container->refCount())
   UPDATE_RELEASEREF_STAT(memoryState, container, needAtomicAccess(container), canBeCyclic(container), 0)
   if (container->tag() != CONTAINER_TAG_STACK) {
@@ -1506,6 +1572,7 @@ inline void releaseHeapRef(ContainerHeader* container) {
 
 template <bool Strict>
 inline void releaseHeapRef(const ObjHeader* header) {
+  if (header == nullptr) return;
   auto* container = header->container();
   if (container != nullptr)
     releaseHeapRef<Strict>(const_cast<ContainerHeader*>(container));
@@ -1565,6 +1632,12 @@ void processDecrements(MemoryState* state) {
   state->gcSuspendCount++;
   while (toRelease->size() > 0) {
      auto* container = toRelease->back();
+
+  if (onStack(container)) {
+    konan::consolePrintf("BUGBUGBUG\n");
+    *(int*)1=1;
+  }
+
      toRelease->pop_back();
      if (isMarkedAsRemoved(container))
        continue;
@@ -1572,6 +1645,8 @@ void processDecrements(MemoryState* state) {
        container = realShareableContainer(container);
      decrementRC(container);
   }
+
+  //konan::consolePrintf("-----10a-----");
 
   state->foreignRefManager->processEnqueuedReleaseRefsWith([](ObjHeader* obj) {
     ContainerHeader* container = obj->container();
@@ -1604,14 +1679,28 @@ void decrementStack(MemoryState* state) {
 void garbageCollect(MemoryState* state, bool force) {
   RuntimeAssert(!state->gcInProgress, "Recursive GC is disallowed");
 
+  //konan::consolePrintf("-----1-----\n");
+
   uint64_t allocSinceLastGc = state->allocSinceLastGc;
   state->allocSinceLastGc = 0;
 
+
+  //konan::consolePrintf("-----2-----\n");
+
   if (!IsStrictMemoryModel) {
     // In relaxed model we just process finalizer queue and be done with it.
+
+  //konan::consolePrintf("-----3-----\n");
+
     processFinalizerQueue(state);
+
+  //konan::consolePrintf("-----4-----\n");
+
     return;
   }
+
+
+  //konan::consolePrintf("-----5-----\n");
 
   GC_LOG(">>> %s GC: threshold = %d toFree %d toRelease %d alloc = %lld\n", \
      force ? "forced" : "regular", state->gcThreshold, state->toFree->size(),
@@ -1619,10 +1708,19 @@ void garbageCollect(MemoryState* state, bool force) {
 
   auto gcStartTime = konan::getTimeMicros();
 
+
+  //konan::consolePrintf("-----6-----\n");
+
   state->gcInProgress = true;
   state->gcEpoque++;
 
+
+  //konan::consolePrintf("-----7-----\n");
+
   incrementStack(state);
+
+  //konan::consolePrintf("-----8-----\n");
+
 #if USE_CYCLIC_GC
   // Block if the concurrent cycle collector is running.
   // We must do that to ensure collector sees state where actual RC properly upper estimated.
@@ -1639,14 +1737,26 @@ void garbageCollect(MemoryState* state, bool force) {
   auto decrementStackStartTime = konan::getTimeMicros();
 #endif
   size_t beforeDecrements = state->toRelease->size();
+
+  //konan::consolePrintf("-----11-----\n");
+
   decrementStack(state);
+
+  //konan::consolePrintf("-----12-----\n");
+
   size_t afterDecrements = state->toRelease->size();
 #if PROFILE_GC
   auto decrementStackDuration = konan::getTimeMicros() - decrementStackStartTime;
   GC_LOG("||| GC: decrementStackDuration = %lld\n", decrementStackDuration);
 #endif
   long stackReferences = afterDecrements - beforeDecrements;
+
+  //konan::consolePrintf("-----14-----\n");
+
   if (state->gcErgonomics && stackReferences * 5 > state->gcThreshold) {
+
+  //konan::consolePrintf("-----15-----\n");
+
     increaseGcThreshold(state);
     GC_LOG("||| GC: too many stack references, increased threshold to %d\n", state->gcThreshold);
   }
@@ -1687,18 +1797,30 @@ void garbageCollect(MemoryState* state, bool force) {
     state->lastCyclicGcTimestamp = cyclicGcEndTime;
   }
 
+
+  //konan::consolePrintf("-----20-----\n");
+
   state->gcInProgress = false;
   auto gcEndTime = konan::getTimeMicros();
 
   if (state->gcErgonomics) {
+
+  //konan::consolePrintf("-----22-----\n");
+
     auto gcToComputeRatio = double(gcEndTime - gcStartTime) / (gcStartTime - state->lastGcTimestamp + 1);
     if (gcToComputeRatio > kGcToComputeRatioThreshold) {
       increaseGcThreshold(state);
       GC_LOG("Adjusting GC threshold to %d\n", state->gcThreshold);
     }
+
+  //konan::consolePrintf("-----23-----\n");
+
   }
   GC_LOG("GC: gcToComputeRatio=%f duration=%lld sinceLast=%lld\n", double(gcEndTime - gcStartTime) / (gcStartTime - state->lastGcTimestamp + 1), (gcEndTime - gcStartTime), gcStartTime - state->lastGcTimestamp);
   state->lastGcTimestamp = gcEndTime;
+
+
+  //konan::consolePrintf("-----24-----\n");
 
 #if TRACE_MEMORY
   for (auto* obj: *state->toRelease) {
@@ -3103,9 +3225,17 @@ void FreezeSubgraph(ObjHeader* root) {
 // This function is called from field mutators to check if object's header is frozen.
 // If object is frozen or permanent, an exception is thrown.
 void MutationCheck(ObjHeader* obj) {
+  if (obj->local()) return;
   auto* container = obj->container();
   if (container == nullptr || container->frozen())
     ThrowInvalidMutabilityException(obj);
+}
+
+void CheckLifetimesConstraint(ObjHeader* obj, ObjHeader* pointee) {
+  if (!obj->local() && pointee != nullptr && pointee->local()) {
+    konan::consolePrintf("Attempt to store a stack object %p into a heap object %p\n", pointee, obj);
+    *(int*)1=1;
+  }
 }
 
 void EnsureNeverFrozen(ObjHeader* object) {

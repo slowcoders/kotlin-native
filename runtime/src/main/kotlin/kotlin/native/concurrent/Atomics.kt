@@ -11,6 +11,7 @@ import kotlin.native.internal.LeakDetectorCandidate
 import kotlin.native.internal.NoReorderFields
 import kotlin.native.SymbolName
 import kotlinx.cinterop.NativePtr
+import kotlin.native.internal.PointsTo
 
 /**
  * Atomic values and freezing: atomics [AtomicInt], [AtomicLong], [AtomicNativePtr] and [AtomicReference]
@@ -261,6 +262,7 @@ public class AtomicReference<T> {
      * @return the old value
      */
     @SymbolName("Kotlin_AtomicReference_compareAndSwap")
+    @PointsTo(0x0300, 0x0000, 0x0000, 0x0000) // this.intestines -> new
     external public fun compareAndSwap(expected: T, new: T): T
 
     /**
@@ -272,6 +274,7 @@ public class AtomicReference<T> {
      * @return true if successful
      */
     @SymbolName("Kotlin_AtomicReference_compareAndSet")
+    @PointsTo(0x0300, 0x0000, 0x0000, 0x0000) // this.intestines -> new
     external public fun compareAndSet(expected: T, new: T): Boolean
 
     /**
@@ -284,9 +287,11 @@ public class AtomicReference<T> {
 
     // Implementation details.
     @SymbolName("Kotlin_AtomicReference_set")
+    @PointsTo(0x030, 0x000, 0x000) // this.intestines -> new
     private external fun setImpl(new: Any?): Unit
 
     @SymbolName("Kotlin_AtomicReference_get")
+    @PointsTo(0x00, 0x02) // ret -> this.intestines
     private external fun getImpl(): Any?
 }
 

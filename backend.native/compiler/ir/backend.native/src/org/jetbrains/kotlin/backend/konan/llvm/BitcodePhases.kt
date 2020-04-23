@@ -99,11 +99,11 @@ internal val deserializeDFGPhase = makeKonanModuleOpPhase(
         name = "DeserializeDFG",
         description = "Data flow graph deserializing",
         op = { context, _ ->
-            context.externalModulesDFG = DFGSerializer.deserialize(
-                    context,
-                    context.moduleDFG!!.symbolTable.privateTypeIndex,
-                    context.moduleDFG!!.symbolTable.privateFunIndex
-            )
+//            context.externalModulesDFG = DFGSerializer.deserialize(
+//                    context,
+//                    context.moduleDFG!!.symbolTable.privateTypeIndex,
+//                    context.moduleDFG!!.symbolTable.privateFunIndex
+//            )
         }
 )
 
@@ -137,11 +137,14 @@ internal val dcePhase = makeKonanModuleOpPhase(
             val callGraph = CallGraphBuilder(
                     context, context.moduleDFG!!,
                     externalModulesDFG,
-                    context.devirtualizationAnalysisResult!!,
-                    true
+                    context.devirtualizationAnalysisResult!!
             ).build()
 
             val referencedFunctions = mutableSetOf<IrFunction>()
+            callGraph.rootExternalFunctions.forEach {
+                if (!it.isGlobalInitializer)
+                    referencedFunctions.add(it.irFunction ?: error("No IR for: $it"))
+            }
             for (node in callGraph.directEdges.values) {
                 if (!node.symbol.isGlobalInitializer)
                     referencedFunctions.add(node.symbol.irFunction ?: error("No IR for: ${node.symbol}"))
@@ -212,19 +215,19 @@ internal val escapeAnalysisPhase = makeKonanModuleOpPhase(
         // Disabled by default !!!!
         name = "EscapeAnalysis",
         description = "Escape analysis",
-        prerequisite = setOf(buildDFGPhase, deserializeDFGPhase), // TODO: Requires devirtualization.
+        prerequisite = setOf(buildDFGPhase, devirtualizationPhase),
         op = { context, _ ->
-            context.externalModulesDFG?.let { externalModulesDFG ->
+//            context.externalModulesDFG?.let { externalModulesDFG ->
+            val externalModulesDFG = ExternalModulesDFG(emptyList(), emptyMap(), emptyMap(), emptyMap())
                 val callGraph = CallGraphBuilder(
                         context, context.moduleDFG!!,
                         externalModulesDFG,
-                        context.devirtualizationAnalysisResult!!,
-                        false
+                        context.devirtualizationAnalysisResult!!
                 ).build()
                 EscapeAnalysis.computeLifetimes(
                         context, context.moduleDFG!!, externalModulesDFG, callGraph, context.lifetimes
                 )
-            }
+  //          }
         }
 )
 
@@ -242,7 +245,7 @@ internal val serializeDFGPhase = makeKonanModuleOpPhase(
         description = "Data flow graph serializing",
         prerequisite = setOf(buildDFGPhase), // TODO: Requires escape analysis.
         op = { context, _ ->
-            DFGSerializer.serialize(context, context.moduleDFG!!)
+            //DFGSerializer.serialize(context, context.moduleDFG!!)
         }
 )
 

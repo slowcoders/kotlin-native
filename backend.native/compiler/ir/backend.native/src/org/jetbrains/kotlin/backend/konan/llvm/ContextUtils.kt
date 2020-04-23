@@ -21,14 +21,15 @@ import org.jetbrains.kotlin.ir.util.isReal
 import org.jetbrains.kotlin.konan.library.KonanLibrary
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import org.jetbrains.kotlin.library.KotlinLibrary
-import org.jetbrains.kotlin.library.uniqueName
-import org.jetbrains.kotlin.library.unresolvedDependencies
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 internal sealed class SlotType {
+    // An object is statically allocated on stack.
+    object STACK : SlotType()
+
     // Frame local arena slot can be used.
     object ARENA : SlotType()
 
@@ -53,6 +54,12 @@ internal sealed class SlotType {
 
 // Lifetimes class of reference, computed by escape analysis.
 internal sealed class Lifetime(val slotType: SlotType) {
+    object STACK : Lifetime(SlotType.STACK) {
+        override fun toString(): String {
+            return "STACK"
+        }
+    }
+
     // If reference is frame-local (only obtained from some call and never leaves).
     object LOCAL : Lifetime(SlotType.ARENA) {
         override fun toString(): String {
@@ -449,6 +456,7 @@ internal class Llvm(val context: Context, val llvmModule: LLVMModuleRef) {
     val initInstanceFunction = importModelSpecificRtFunction("InitInstance")
     val initSharedInstanceFunction = importModelSpecificRtFunction("InitSharedInstance")
     val updateHeapRefFunction = importModelSpecificRtFunction("UpdateHeapRef")
+    val releaseHeapRefFunction = importModelSpecificRtFunction("ReleaseHeapRef")
     val updateStackRefFunction = importModelSpecificRtFunction("UpdateStackRef")
     val updateReturnRefFunction = importModelSpecificRtFunction("UpdateReturnRef")
     val enterFrameFunction = importModelSpecificRtFunction("EnterFrame")
@@ -464,6 +472,7 @@ internal class Llvm(val context: Context, val llvmModule: LLVMModuleRef) {
     val lookupTLS = importRtFunction("LookupTLS")
     val initRuntimeIfNeeded = importRtFunction("Kotlin_initRuntimeIfNeeded")
     val mutationCheck = importRtFunction("MutationCheck")
+    val lifetimesCheck = importRtFunction("CheckLifetimesConstraint")
     val freezeSubgraph = importRtFunction("FreezeSubgraph")
     val checkMainThread = importRtFunction("CheckIsMainThread")
 

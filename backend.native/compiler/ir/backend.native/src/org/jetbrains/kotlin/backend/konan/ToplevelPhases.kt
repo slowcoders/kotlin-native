@@ -498,7 +498,8 @@ internal fun PhaseConfig.konanPhasesConfig(config: KonanConfig) {
     with(config.configuration) {
         disable(compileTimeEvaluatePhase)
         disable(deserializeDFGPhase)
-        disable(escapeAnalysisPhase)
+        //disable(escapeAnalysisPhase)
+        disable(localEscapeAnalysisPhase)
         disable(serializeDFGPhase)
 
         // Don't serialize anything to a final executable.
@@ -513,8 +514,10 @@ internal fun PhaseConfig.konanPhasesConfig(config: KonanConfig) {
         disableIf(testProcessorPhase, getNotNull(KonanConfigKeys.GENERATE_TEST_RUNNER) == TestRunnerKind.NONE)
         disableUnless(buildDFGPhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
         disableUnless(devirtualizationPhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
-        disableUnless(localEscapeAnalysisPhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
-        disableUnless(dcePhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
+        disableUnless(escapeAnalysisPhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
+        //disableUnless(localEscapeAnalysisPhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
+        //disableUnless(dcePhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
+        disable(dcePhase)
         disableUnless(ghaPhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
         disableUnless(verifyBitcodePhase, config.needCompilerVerification || getBoolean(KonanConfigKeys.VERIFY_BITCODE))
 

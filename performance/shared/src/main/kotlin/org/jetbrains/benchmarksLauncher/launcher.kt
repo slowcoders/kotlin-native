@@ -73,6 +73,8 @@ abstract class Launcher {
                      name: String,
                      recordMeasurement: (RecordTimeMeasurement) -> Unit,
                      benchmark: AbstractBenchmarkEntry) {
+//        if (benchmark is BenchmarkEntryWithInit && benchmark.ctor == null)
+//            println("BUGBUGBUG")
         val benchmarkInstance = (benchmark as? BenchmarkEntryWithInit)?.ctor?.invoke()
         logger.log("Warm up iterations for benchmark $name\n")
         runBenchmark(benchmarkInstance, benchmark, numWarmIterations)

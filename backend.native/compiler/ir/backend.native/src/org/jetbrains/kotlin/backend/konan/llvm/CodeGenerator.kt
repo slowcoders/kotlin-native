@@ -161,6 +161,78 @@ private inline fun <R> generateFunctionBody(
  */
 internal data class LocationInfoRange(var start: LocationInfo, var end: LocationInfo?)
 
+internal interface StackLocalsManager {
+    fun alloc(irClass: IrClass, cleanFieldsExplicitly: Boolean): LLVMValueRef
+
+    fun clean(refsOnly: Boolean)
+}
+
+internal class StackLocalsManagerImpl(
+        val functionGenerationContext: FunctionGenerationContext,
+        val bbInitStackLocalsGetter: () -> LLVMBasicBlockRef
+) : StackLocalsManager {
+    private class StackLocal(val irClass: IrClass, val bodyPtr: LLVMValueRef, val objHeaderPtr: LLVMValueRef)
+
+    private val stackLocals = mutableListOf<StackLocal>()
+
+    private val bbInitStackLocals by lazy { bbInitStackLocalsGetter() }
+
+    override fun alloc(irClass: IrClass, cleanFieldsExplicitly: Boolean): LLVMValueRef = with(functionGenerationContext) {
+        val type = context.llvmDeclarations.forClass(irClass).bodyType
+        //val stackSlot = alloca(type)
+        val stackLocal = appendingTo(bbInitStackLocals) {
+            val stackSlot = LLVMBuildAlloca(builder, type, "")!!
+
+            call(context.llvm.memsetFunction,
+                    listOf(bitcast(kInt8Ptr, stackSlot),
+                            Int8(0).llvm,
+                            Int32(LLVMSizeOfTypeInBits(codegen.llvmTargetData, type).toInt() / 8).llvm,
+                            Int1(0).llvm))
+
+            val objectHeader = structGep(stackSlot, 0, "objHeader")
+            val typeInfo = codegen.typeInfoForAllocation(irClass)
+            setTypeInfoForLocalObject(objectHeader, typeInfo)
+            StackLocal(irClass, stackSlot, objectHeader)
+        }
+        stackLocals += stackLocal
+        if (cleanFieldsExplicitly)
+            clean(stackLocal, false)
+        stackLocal.objHeaderPtr
+    }
+
+    override fun clean(refsOnly: Boolean) = stackLocals.forEach { clean(it, refsOnly) }
+
+    private fun clean(stackLocal: StackLocal, refsOnly: Boolean) = with(functionGenerationContext) {
+//        return
+        val type = context.llvmDeclarations.forClass(stackLocal.irClass).bodyType
+        for (field in context.getLayoutBuilder(stackLocal.irClass).fields) {
+            val fieldIndex = context.llvmDeclarations.forField(field).index
+            val fieldType = LLVMStructGetTypeAtIndex(type, fieldIndex)!!
+
+            if (isObjectType(fieldType)) {
+                val fieldPtr = LLVMBuildStructGEP(builder, stackLocal.bodyPtr, fieldIndex, "")!!
+                if (refsOnly)
+                    storeHeapRef(kNullObjHeaderPtr, fieldPtr)
+                else
+                    call(context.llvm.releaseHeapRefFunction, listOf(LLVMBuildLoad(builder, fieldPtr, "")!!))
+            }
+//                val typePtr = pointerType(fieldInfo.classBodyType)
+//
+//                val typedBodyPtr = functionGenerationContext.bitcast(typePtr, thisPtr)
+        }
+
+        if (!refsOnly) {
+            val bodyPtr = ptrToInt(stackLocal.bodyPtr, codegen.intPtrType)
+            val bodyWithSkippedTypeInfoPtr = intToPtr(add(bodyPtr, LLVMConstInt(codegen.intPtrType, runtime.pointerSize.toLong(), 1)!!), kInt8Ptr)
+            call(context.llvm.memsetFunction,
+                    listOf(bodyWithSkippedTypeInfoPtr,
+                            Int8(0).llvm,
+                            Int32(LLVMSizeOfTypeInBits(codegen.llvmTargetData, type).toInt() / 8 - runtime.pointerSize).llvm,
+                            Int1(0).llvm))
+        }
+    }
+}
+
 internal class FunctionGenerationContext(val function: LLVMValueRef,
                                          val codegen: CodeGenerator,
                                          startLocation: LocationInfo?,
@@ -192,9 +264,15 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
     private val prologueBb = basicBlockInFunction("prologue", startLocation)
     private val localsInitBb = basicBlockInFunction("locals_init", startLocation)
+    private lateinit var stackLocalsInitBb: LLVMBasicBlockRef
     private val entryBb = basicBlockInFunction("entry", startLocation)
     private val epilogueBb = basicBlockInFunction("epilogue", endLocation)
     private val cleanupLandingpad = basicBlockInFunction("cleanup_landingpad", endLocation)
+
+    val stackLocalsManager = StackLocalsManagerImpl(this) {
+        stackLocalsInitBb = basicBlockInFunction("stack_locals_init", startLocation)
+        stackLocalsInitBb
+    }
 
     /**
      * TODO: consider merging this with [ExceptionHandler].
@@ -348,7 +426,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             // This allows appropriate rootset accounting by just looking at the stack slots,
             // along with ability to allocate in appropriate arena.
             val resultSlot = when (resultLifetime.slotType) {
-                SlotType.ARENA -> {
+                SlotType.STACK -> {
                     localAllocs++
                     // Case of local call. Use memory allocated on stack.
                     val type = LLVMGetReturnType(LLVMGetElementType(llvmFunction.type))!!
@@ -426,17 +504,11 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     fun allocInstance(typeInfo: LLVMValueRef, lifetime: Lifetime): LLVMValueRef =
             call(context.llvm.allocInstanceFunction, listOf(typeInfo), lifetime)
 
-    fun allocInstance(irClass: IrClass, lifetime: Lifetime): LLVMValueRef {
-        val typeInfo = codegen.typeInfoForAllocation(irClass)
-        return if (lifetime == Lifetime.LOCAL) {
-            val stackSlot = alloca(context.llvmDeclarations.forClass(irClass).bodyType)
-            val objectHeader = structGep(stackSlot, 0, "objHeader")
-            setTypeInfoForLocalObject(objectHeader, typeInfo)
-            objectHeader
-        } else {
-            allocInstance(typeInfo, lifetime)
-        }
-    }
+    fun allocInstance(irClass: IrClass, lifetime: Lifetime, stackLocalsManager: StackLocalsManager) =
+            if (lifetime == Lifetime.STACK)
+                stackLocalsManager.alloc(irClass, stackLocalsManager != this.stackLocalsManager)
+            else
+                allocInstance(codegen.typeInfoForAllocation(irClass), lifetime)
 
     // TODO: find better place?
     val arrayToElementType = mapOf(
@@ -469,7 +541,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
                    lifetime: Lifetime,
                    exceptionHandler: ExceptionHandler): LLVMValueRef {
         val typeInfo = codegen.typeInfoValue(irClass)
-        return if (lifetime == Lifetime.LOCAL) {
+        return if (lifetime == Lifetime.STACK) {
             val className = irClass.fqNameForIrSerialization.asString()
             assert(className in arrayToElementType)
             allocArrayOnStack(className, count, typeInfo)
@@ -1110,8 +1182,18 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             br(localsInitBb)
         }
 
-        appendingTo(localsInitBb) {
-            br(entryBb)
+        if (!::stackLocalsInitBb.isInitialized) {
+            appendingTo(localsInitBb) {
+                br(entryBb)
+            }
+        } else {
+            appendingTo(localsInitBb) {
+                br(stackLocalsInitBb)
+            }
+
+            appendingTo(stackLocalsInitBb) {
+                br(entryBb)
+            }
         }
 
         appendingTo(epilogueBb) {
@@ -1292,6 +1374,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             call(context.llvm.leaveFrameFunction,
                     listOf(slotsPhi!!, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm))
         }
+        stackLocalsManager.clean(true)
     }
 }
 
