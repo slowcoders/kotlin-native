@@ -28,6 +28,8 @@ import org.jetbrains.kotlin.backend.konan.isObjCMetaClass
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.konan.isNativeStdlib
 import org.jetbrains.kotlin.descriptors.konan.kotlinLibrary
+import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsManglerDesc
+import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsManglerIr
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrClassImpl
 import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
@@ -73,6 +75,7 @@ internal class KonanIrLinker(
     override fun isBuiltInModule(moduleDescriptor: ModuleDescriptor): Boolean = moduleDescriptor.isNativeStdlib()
 
     override val fakeOverrideBuilder = FakeOverrideBuilder(symbolTable, IdSignatureSerializer(KonanManglerIr), builtIns, KonanFakeOverrideClassFilter)
+    override val fakeOverrideChecker = FakeOverrideChecker(KonanManglerIr, KonanManglerDesc)
 
     private val forwardDeclarationDeserializer = forwardModuleDescriptor?.let { KonanForwardDeclarationModuleDeserialier(it) }
 

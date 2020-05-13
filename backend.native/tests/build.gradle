@@ -213,6 +213,13 @@ def update_external_tests() {
     }
 }
 
+void konanc(List<String> args) {
+   def konancScript = isWindows() ? "konanc.bat" : "konanc"
+   def konanc = "$dist/bin/$konancScript"
+   def allArgs = arg.join(" ")
+   "$konanc $allArgs".execute().waitFor()
+}
+
 clean {
     doLast {
         delete(rootProject.file(testOutputRoot))
@@ -3861,7 +3868,20 @@ task library_ir_provider_mismatch(type: KonanDriverTest) {
                 .every { it == true }
     }
 }
-
+/*
+standaloneTest("fake_override_0") {
+    def sources = "serialization/fake_overrides"
+    def dir = buildDir.absolutePath
+    doBeforeBuild {
+        konanc (["$sources/main.kt -p library -o $dir/main"])
+        konanc (["$sources/use.kt -p library -o $dir/use -l $dir/main"])
+        konanc (["$sources/main2.kt -p library -o $dir/main"])
+    }
+    source = "$sources/main.kt"
+    flags = ["-l", "$dir/use"]
+    goldValue = "Moved\n"
+}
+*/
 if (isAppleTarget(project)) {
     task testObjCExport(type: FrameworkTest) {
         final String frameworkName = 'Kt'
