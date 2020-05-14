@@ -7,7 +7,6 @@ package org.jetbrains.kotlin.backend.konan.descriptors
 
 import llvm.LLVMStoreSizeOfType
 import org.jetbrains.kotlin.backend.common.ir.simpleFunctions
-import org.jetbrains.kotlin.backend.common.serialization.target
 import org.jetbrains.kotlin.backend.konan.*
 import org.jetbrains.kotlin.backend.konan.ir.*
 import org.jetbrains.kotlin.backend.konan.llvm.functionName
