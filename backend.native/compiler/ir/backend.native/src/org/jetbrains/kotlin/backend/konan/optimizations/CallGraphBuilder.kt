@@ -56,10 +56,13 @@ internal class CallGraph(val directEdges: Map<DataFlowIR.FunctionSymbol.Declared
 
 }
 
-internal class CallGraphBuilder(val context: Context,
-                                val moduleDFG: ModuleDFG,
-                                val externalModulesDFG: ExternalModulesDFG,
-                                val devirtualizationAnalysisResult: Devirtualization.AnalysisResult) {
+internal class CallGraphBuilder(
+        val context: Context,
+        val moduleDFG: ModuleDFG,
+        val externalModulesDFG: ExternalModulesDFG,
+        val devirtualizationAnalysisResult: Devirtualization.AnalysisResult,
+        val nonDevirtualizedCallSitesUnfoldFactor: Int
+) {
 
     private val DEBUG = 0
 
@@ -223,7 +226,7 @@ internal class CallGraphBuilder(val context: Context,
                         }
                         allPossibleCallees.add(actualCallee)
                     }
-                    if (allPossibleCallees.size <= 5)
+                    if (allPossibleCallees.size <= nonDevirtualizedCallSitesUnfoldFactor)
                         allPossibleCallees.forEach { staticCall(symbol, call, it) }
                     else {
                         val callSite = CallGraphNode.CallSite(call, true, call.callee)

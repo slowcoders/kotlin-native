@@ -137,7 +137,8 @@ internal val dcePhase = makeKonanModuleOpPhase(
             val callGraph = CallGraphBuilder(
                     context, context.moduleDFG!!,
                     externalModulesDFG,
-                    context.devirtualizationAnalysisResult!!
+                    context.devirtualizationAnalysisResult!!,
+                    Int.MAX_VALUE
             ).build()
 
             val referencedFunctions = mutableSetOf<IrFunction>()
@@ -222,7 +223,8 @@ internal val escapeAnalysisPhase = makeKonanModuleOpPhase(
                 val callGraph = CallGraphBuilder(
                         context, context.moduleDFG!!,
                         externalModulesDFG,
-                        context.devirtualizationAnalysisResult!!
+                        context.devirtualizationAnalysisResult!!,
+                        5
                 ).build()
                 EscapeAnalysis.computeLifetimes(
                         context, context.moduleDFG!!, externalModulesDFG, callGraph, context.lifetimes
