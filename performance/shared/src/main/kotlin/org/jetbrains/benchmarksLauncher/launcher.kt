@@ -36,18 +36,16 @@ abstract class Launcher {
         var i = repeatNumber
         return if (benchmark is BenchmarkEntryWithInit) {
             cleanup()
-            val x = measureNanoTime {
+            measureNanoTime {
                 while (i-- > 0) benchmark.lambda(benchmarkInstance!!)
+                cleanup()
             }
-            val y = measureNanoTime { cleanup() }
-            x + y
         } else if (benchmark is BenchmarkEntry) {
             cleanup()
-            val x = measureNanoTime {
+            measureNanoTime {
                 while (i-- > 0) benchmark.lambda()
+                cleanup()
             }
-            val y = measureNanoTime { cleanup() }
-            x + y
         } else if (benchmark is BenchmarkEntryManual) {
             error("runBenchmark cannot run manual benchmark")
         } else {
