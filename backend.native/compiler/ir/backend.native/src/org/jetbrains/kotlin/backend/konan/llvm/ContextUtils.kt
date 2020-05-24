@@ -68,7 +68,7 @@ internal sealed class Lifetime(val slotType: SlotType) {
     }
 
     // If reference is only returned.
-    object RETURN_VALUE : Lifetime(SlotType.RETURN) {
+    object RETURN_VALUE : Lifetime(SlotType.ANONYMOUS) {
         override fun toString(): String {
             return "RETURN_VALUE"
         }
