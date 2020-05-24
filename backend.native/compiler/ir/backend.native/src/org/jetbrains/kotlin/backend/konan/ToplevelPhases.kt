@@ -240,7 +240,7 @@ internal val psiToIrPhase = konanUnitPhase(
                 if (expectActualLinker) expectDescriptorToSymbol else null
             )
 
-            linker.postProcess()
+            linker.postProcess(validate = true)
 
             if (this.stdlibModule in modulesWithoutDCE) {
                 functionIrClassFactory.buildAllClasses()
