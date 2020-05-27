@@ -156,11 +156,11 @@ suspend fun throwCancellationException(): Unit {
 }
 
 abstract class ThrowCancellationException {
-    protected abstract suspend fun throwCancellationException()
+    internal abstract suspend fun throwCancellationException()
 }
 
 class ThrowCancellationExceptionImpl : ThrowCancellationException() {
-    override suspend fun throwCancellationException() {
+    public override suspend fun throwCancellationException() {
         throw CancellationException()
     }
 }
