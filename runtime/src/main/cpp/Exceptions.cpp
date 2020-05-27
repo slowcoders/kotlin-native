@@ -227,21 +227,15 @@ void OnUnhandledException(KRef throwable) {
   }
 }
 
-#if KONAN_REPORT_BACKTRACE_TO_IOS_CRASH_LOG
-static bool terminating = false;
-static SimpleMutex terminatingMutex;
-#endif
+static SimpleMutex terminateHandlerMutex;
 
 RUNTIME_NORETURN void TerminateWithUnhandledException(KRef throwable) {
   OnUnhandledException(throwable);
 
+  LockGuard<SimpleMutex> lockGuard(terminateHandlerMutex);
+
 #if KONAN_REPORT_BACKTRACE_TO_IOS_CRASH_LOG
-  {
-    LockGuard<SimpleMutex> lock(terminatingMutex);
-    if (!terminating) {
-      ReportBacktraceToIosCrashLog(throwable);
-    }
-  }
+  ReportBacktraceToIosCrashLog(throwable);
 #endif
 
   konan::abort();
@@ -254,12 +248,7 @@ RUNTIME_NORETURN void TerminateWithUnhandledException(KRef throwable) {
 static void (*oldTerminateHandler)() = nullptr;
 
 static void callOldTerminateHandler() {
-#if KONAN_REPORT_BACKTRACE_TO_IOS_CRASH_LOG
-  {
-    LockGuard<SimpleMutex> lock(terminatingMutex);
-    terminating = true;
-  }
-#endif
+  LockGuard<SimpleMutex> lockGuard(terminateHandlerMutex);
 
   RuntimeCheck(oldTerminateHandler != nullptr, "Underlying exception handler is not set.");
   oldTerminateHandler();
@@ -282,16 +271,12 @@ static void KonanTerminateHandler() {
   }
 }
 
-static SimpleMutex konanTerminateHandlerInitializationMutex;
-
 void SetKonanTerminateHandler() {
-  if (oldTerminateHandler != nullptr) return; // Already initialized.
+  LockGuard<SimpleMutex> lockGuard(terminateHandlerMutex);
 
-  LockGuard<SimpleMutex> lockGuard(konanTerminateHandlerInitializationMutex);
-
-  if (oldTerminateHandler != nullptr) return; // Already initialized.
-
-  oldTerminateHandler = std::set_terminate(&KonanTerminateHandler);
+  if (!oldTerminateHandler) {
+    oldTerminateHandler = std::set_terminate(&KonanTerminateHandler);
+  }
 }
 
 #else // KONAN_OBJC_INTEROP
