@@ -45,8 +45,7 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
 
 object KonanFakeOverrideClassFilter : PlatformFakeOverrideClassFilter {
-    override fun constructFakeOverrides(clazz: IrClass): Boolean =
-        !(clazz.isObjCClass() || clazz.isObjCMetaClass())
+    override fun constructFakeOverrides(clazz: IrClass): Boolean = !clazz.isObjCClass()
 }
 
 internal class KonanIrLinker(
