@@ -5,6 +5,7 @@ import org.jetbrains.kotlin.backend.common.extensions.IrPluginContextImpl
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.phaser.*
+import org.jetbrains.kotlin.backend.common.serialization.FakeOverrideChecker
 import org.jetbrains.kotlin.backend.common.serialization.mangle.ManglerChecker
 import org.jetbrains.kotlin.backend.common.serialization.mangle.descriptor.Ir2DescriptorManglerAdapter
 import org.jetbrains.kotlin.backend.common.serialization.metadata.KlibMetadataMonolithicSerializer
@@ -240,7 +241,7 @@ internal val psiToIrPhase = konanUnitPhase(
                 if (expectActualLinker) expectDescriptorToSymbol else null
             )
 
-            linker.postProcess(validate = true)
+            linker.postProcess()
 
             if (this.stdlibModule in modulesWithoutDCE) {
                 functionIrClassFactory.buildAllClasses()
@@ -250,6 +251,8 @@ internal val psiToIrPhase = konanUnitPhase(
             stubGenerator.unboundSymbolGeneration = true
 
             module.acceptVoid(ManglerChecker(KonanManglerIr, Ir2DescriptorManglerAdapter(KonanManglerDesc)))
+            val fakeOverrideChecker = FakeOverrideChecker(KonanManglerIr, KonanManglerDesc)
+            linker.modules.values.forEach{ fakeOverrideChecker.check(it) }
 
             irModule = module
             irModules = linker.modules.filterValues { llvmModuleSpecification.containsModule(it) }
