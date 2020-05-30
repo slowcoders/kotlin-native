@@ -885,8 +885,8 @@ public inline fun StringBuilder.setLength(l: Int) = this.setLength(newLength = l
  * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
  */
 @Deprecated(
-        "Use insertRange(index: Int, csq: CharSequence?, start: Int, end: Int) instead",
-        ReplaceWith("insertRange(index, csq, start, end)"),
+        "Use insertRange(index: Int, csq: CharSequence, start: Int, end: Int) instead",
+        ReplaceWith("insertRange(index, csq ?: "null", start, end)"),
         DeprecationLevel.WARNING
 )
 @kotlin.internal.InlineOnly
