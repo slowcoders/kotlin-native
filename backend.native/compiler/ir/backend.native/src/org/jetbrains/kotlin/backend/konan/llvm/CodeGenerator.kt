@@ -296,6 +296,14 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         updateRef(value, ptr, onStack = false)
     }
 
+    fun storeGlobalRef(value: LLVMValueRef, ptr: LLVMValueRef) {
+        updateGlobalRef(value, ptr, onStack = false)
+    }
+
+    fun storeMemberRef(value: LLVMValueRef, ptr: LLVMValueRef, owner: LLVMValueRef) {
+        updateMemberRef(value, ptr, owner)
+    }
+
     fun storeStackRef(value: LLVMValueRef, ptr: LLVMValueRef) {
         updateRef(value, ptr, onStack = true)
     }
@@ -306,6 +314,27 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         } else {
             LLVMBuildStore(builder, value, ptr)
         }
+
+    fun storeLocal(value: LLVMValueRef, ptr: LLVMValueRef) = if (isObjectRef(value)) {
+        storeStackRef(value, ptr)
+        null
+    } else {
+        LLVMBuildStore(builder, value, ptr)
+    }
+
+    fun storeMember(value: LLVMValueRef, ptr: LLVMValueRef, owner: LLVMValueRef) = if (isObjectRef(value)) {
+        storeMemberRef(value, ptr, owner)
+        null
+    } else {
+        LLVMBuildStore(builder, value, ptr)
+    }
+    
+    fun storeGlobal(value: LLVMValueRef, ptr: LLVMValueRef, onStack: Boolean) = if (isObjectRef(value)) {
+        storeGlobalRef(value, ptr)
+        null
+    } else {
+        LLVMBuildStore(builder, value, ptr)
+    }
 
     fun freeze(value: LLVMValueRef, exceptionHandler: ExceptionHandler) {
         if (isObjectRef(value))
@@ -322,6 +351,14 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             store(value, address)
         else
             call(context.llvm.updateReturnRefFunction, listOf(address, value))
+    }
+
+    private fun updateGlobalRef(value: LLVMValueRef, address: LLVMValueRef, onStack: Boolean) {
+        call(context.llvm.updateGlobalRefFunction, listOf(address, value))
+    }
+
+    private fun updateMemberRef(value: LLVMValueRef, address: LLVMValueRef, owner: LLVMValueRef) {
+        call(context.llvm.updateMemberRefFunction, listOf(address, value, owner))
     }
 
     private fun updateRef(value: LLVMValueRef, address: LLVMValueRef, onStack: Boolean) {

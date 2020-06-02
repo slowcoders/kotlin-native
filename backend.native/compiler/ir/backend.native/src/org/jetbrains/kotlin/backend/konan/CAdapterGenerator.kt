@@ -907,6 +907,8 @@ internal class CAdapterGenerator(val context: Context) : DeclarationDescriptorVi
         |extern "C" {
         |void UpdateHeapRef(KObjHeader**, const KObjHeader*) RUNTIME_NOTHROW;
         |void UpdateStackRef(KObjHeader**, const KObjHeader*) RUNTIME_NOTHROW;
+        |void UpdateGlobalRef(KObjHeader**, const KObjHeader*) RUNTIME_NOTHROW;
+        |void UpdateMemberRef(KObjHeader**, const KObjHeader*, const KObjHeader*) RUNTIME_NOTHROW;
         |KObjHeader* AllocInstance(const KTypeInfo*, KObjHeader**) RUNTIME_NOTHROW;
         |KObjHeader* DerefStablePointer(void*, KObjHeader**) RUNTIME_NOTHROW;
         |void* CreateStablePointer(KObjHeader*) RUNTIME_NOTHROW;

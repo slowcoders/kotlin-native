@@ -409,7 +409,13 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                                         )
                                         if (irField.storageKind == FieldStorageKind.SHARED)
                                             freeze(initialization, currentCodeContext.exceptionHandler)
-                                        storeAny(initialization, address, false)
+
+                                        if (true) {
+                                            storeGlobal(initialization, address, false)
+                                        }
+                                        else {
+                                            storeAny(initialization, address, false)
+                                        }    
                                     }
                                 }
                             }
@@ -430,7 +436,12 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                                     val address = context.llvmDeclarations.forStaticField(irField).storageAddressAccess.getAddress(
                                             functionGenerationContext
                                     )
-                                    storeAny(initialization, address, false)
+                                    if (true) {
+                                        storeGlobal(initialization, address, false)
+                                    }
+                                    else {
+                                        storeAny(initialization, address, false)
+                                    }    
                                 }
                             }
                     ret(null)
@@ -1589,7 +1600,12 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                         listOf(functionGenerationContext.bitcast(codegen.kObjHeaderPtr, thisPtr)),
                         Lifetime.IRRELEVANT, ExceptionHandler.Caller)
             }
-            functionGenerationContext.storeAny(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), false)
+            if (true) {
+                functionGenerationContext.storeMember(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), thisPtr)
+            }
+            else {
+                functionGenerationContext.storeAny(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), false)
+            }    
         } else {
             assert(value.receiver == null)
             val globalAddress = context.llvmDeclarations.forStaticField(value.symbol.owner).storageAddressAccess.getAddress(
@@ -1599,7 +1615,12 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 functionGenerationContext.checkMainThread(currentCodeContext.exceptionHandler)
             if (value.symbol.owner.storageKind == FieldStorageKind.SHARED)
                 functionGenerationContext.freeze(valueToAssign, currentCodeContext.exceptionHandler)
-            functionGenerationContext.storeAny(valueToAssign, globalAddress, false)
+            if (true) {
+                functionGenerationContext.storeGlobal(valueToAssign, globalAddress, false)
+            }
+            else {
+                functionGenerationContext.storeAny(valueToAssign, globalAddress, false)
+            }    
         }
         if (store != null && value.value.type.classifierOrNull?.isClassWithFqName(vectorType) == true) {
             LLVMSetAlignment(store, 8)

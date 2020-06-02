@@ -1942,6 +1942,37 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object) {
 }
 
 template <bool Strict>
+void updateMemberRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
+  UPDATE_REF_EVENT(memoryState, *location, object, location, 0);
+  ObjHeader* old = *location;
+  if (old != object) {
+    if (object != nullptr) {
+      addHeapRef(object);
+    }
+    *const_cast<const ObjHeader**>(location) = object;
+    if (reinterpret_cast<uintptr_t>(old) > 1) {
+      releaseHeapRef<Strict>(old);
+    }
+  }
+}
+
+template <bool Strict>
+void updateGlobalRef(ObjHeader** location, const ObjHeader* object) {
+  UPDATE_REF_EVENT(memoryState, *location, object, location, 0);
+  ObjHeader* old = *location;
+  if (old != object) {
+    if (object != nullptr) {
+      addHeapRef(object);
+    }
+    *const_cast<const ObjHeader**>(location) = object;
+    if (reinterpret_cast<uintptr_t>(old) > 1) {
+      releaseHeapRef<Strict>(old);
+    }
+  }
+}
+
+
+template <bool Strict>
 void updateStackRef(ObjHeader** location, const ObjHeader* object) {
   UPDATE_REF_EVENT(memoryState, *location, object, location, 1)
   RuntimeAssert(object != reinterpret_cast<ObjHeader*>(1), "Markers disallowed here");
@@ -1965,6 +1996,7 @@ template <bool Strict>
 void updateReturnRef(ObjHeader** returnSlot, const ObjHeader* value) {
   updateStackRef<Strict>(returnSlot, value);
 }
+
 
 void updateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) {
   if (object != nullptr) {
@@ -2930,6 +2962,20 @@ void UpdateStackRefStrict(ObjHeader** location, const ObjHeader* object) {
 }
 void UpdateStackRefRelaxed(ObjHeader** location, const ObjHeader* object) {
   updateStackRef<false>(location, object);
+}
+
+void UpdateGlobalRefStrict(ObjHeader** location, const ObjHeader* object) {
+  updateGlobalRef<true>(location, object);
+}
+void UpdateGlobalRefRelaxed(ObjHeader** location, const ObjHeader* object) {
+  updateGlobalRef<false>(location, object);
+}
+
+void UpdateMemberRefStrict(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
+  updateMemberRef<true>(location, object, owner);
+}
+void UpdateMemberRefRelaxed(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
+  updateMemberRef<false>(location, object, owner);
 }
 
 void UpdateHeapRefStrict(ObjHeader** location, const ObjHeader* object) {

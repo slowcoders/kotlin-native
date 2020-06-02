@@ -25,7 +25,12 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
     inner class SlotRecord(val address: LLVMValueRef, val refSlot: Boolean, val isVar: Boolean) : Record {
         override fun load() : LLVMValueRef = functionGenerationContext.loadSlot(address, isVar)
         override fun store(value: LLVMValueRef) {
-            functionGenerationContext.storeAny(value, address, true)
+            if (true) {
+                functionGenerationContext.storeLocal(value, address)
+            }
+            else {
+                functionGenerationContext.storeAny(value, address, true)
+            }
         }
         override fun address() : LLVMValueRef = this.address
         override fun toString() = (if (refSlot) "refslot" else "slot") + " for ${address}"
@@ -74,8 +79,14 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         val index = variables.size
         val type = functionGenerationContext.getLLVMType(valueDeclaration.type)
         val slot = functionGenerationContext.alloca(type, valueDeclaration.name.asString(), variableLocation)
-        if (value != null)
-            functionGenerationContext.storeAny(value, slot, true)
+        if (value != null) {
+            if (true) {
+                functionGenerationContext.storeLocal(value, slot)
+            }
+            else {
+                functionGenerationContext.storeAny(value, slot, true)
+            }
+        }
         variables.add(SlotRecord(slot, functionGenerationContext.isObjectType(type), isVar))
         contextVariablesToIndex[valueDeclaration] = index
         return index
@@ -106,8 +117,14 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
     private fun createAnonymousMutable(type: LLVMTypeRef, value: LLVMValueRef? = null) : Int {
         val index = variables.size
         val slot = functionGenerationContext.alloca(type, variableLocation = null)
-        if (value != null)
-            functionGenerationContext.storeAny(value, slot, true)
+        if (value != null) {
+            if (true) {
+                functionGenerationContext.storeLocal(value, slot)
+            }
+            else {  
+                functionGenerationContext.storeAny(value, slot, true)
+            }
+        }
         variables.add(SlotRecord(slot, functionGenerationContext.isObjectType(type), true))
         return index
     }

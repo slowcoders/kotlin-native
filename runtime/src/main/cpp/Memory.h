@@ -506,6 +506,11 @@ void ZeroHeapRef(ObjHeader** location);
 MODEL_VARIANTS(void, ZeroStackRef, ObjHeader** location);
 // Updates stack location.
 MODEL_VARIANTS(void, UpdateStackRef, ObjHeader** location, const ObjHeader* object);
+// Updates global data location.
+MODEL_VARIANTS(void, UpdateGlobalRef, ObjHeader** location, const ObjHeader* object);
+
+// Updates global data location.
+MODEL_VARIANTS(void, UpdateMemberRef, ObjHeader** location, const ObjHeader* object, const ObjHeader* owner);
 // Updates heap/static data location.
 MODEL_VARIANTS(void, UpdateHeapRef, ObjHeader** location, const ObjHeader* object);
 // Updates location if it is null, atomically.

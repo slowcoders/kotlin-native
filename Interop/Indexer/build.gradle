@@ -46,6 +46,7 @@ if (isWindows()) {
 
 List<String> cflags = [
         "-I$llvmDir/include",
+        "-g",
         "-I${project(":libclangext").projectDir.absolutePath + "/src/main/include"}"
 ]*.toString()
 
