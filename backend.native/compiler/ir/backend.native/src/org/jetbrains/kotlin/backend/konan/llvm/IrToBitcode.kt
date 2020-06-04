@@ -410,8 +410,8 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                                         if (irField.storageKind == FieldStorageKind.SHARED)
                                             freeze(initialization, currentCodeContext.exceptionHandler)
 
-                                        if (true) {
-                                            storeGlobal(initialization, address, false)
+                                        if (true) { // RTGC
+                                            storeGlobal(initialization, address)
                                         }
                                         else {
                                             storeAny(initialization, address, false)
@@ -436,8 +436,8 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                                     val address = context.llvmDeclarations.forStaticField(irField).storageAddressAccess.getAddress(
                                             functionGenerationContext
                                     )
-                                    if (true) {
-                                        storeGlobal(initialization, address, false)
+                                    if (true) { // RTGC
+                                        storeGlobal(initialization, address)
                                     }
                                     else {
                                         storeAny(initialization, address, false)
@@ -463,11 +463,22 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                                     val address = context.llvmDeclarations.forStaticField(irField).storageAddressAccess.getAddress(
                                             functionGenerationContext
                                     )
-                                    storeHeapRef(codegen.kNullObjHeaderPtr, address)
+                                    if (true) { // RTGC
+                                        storeGlobal(codegen.kNullObjHeaderPtr, address)
+                                    }
+                                    else {
+                                        storeHeapRef(codegen.kNullObjHeaderPtr, address)
+                                    }    
                                 }
                             }
-                    context.llvm.globalSharedObjects.forEach { address ->
-                        storeHeapRef(codegen.kNullObjHeaderPtr, address)
+                    context.llvm.globalSharedObjects.forEach { address -> {
+                            if (true) { // RTGC
+                                storeGlobal(codegen.kNullObjHeaderPtr, address)
+                            }
+                            else {
+                                storeHeapRef(codegen.kNullObjHeaderPtr, address)
+                            }    
+                        }
                     }
                     ret(null)
                 }
@@ -1600,7 +1611,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                         listOf(functionGenerationContext.bitcast(codegen.kObjHeaderPtr, thisPtr)),
                         Lifetime.IRRELEVANT, ExceptionHandler.Caller)
             }
-            if (true) {
+            if (true) { // RTGC
                 functionGenerationContext.storeMember(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), thisPtr)
             }
             else {
@@ -1615,8 +1626,9 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 functionGenerationContext.checkMainThread(currentCodeContext.exceptionHandler)
             if (value.symbol.owner.storageKind == FieldStorageKind.SHARED)
                 functionGenerationContext.freeze(valueToAssign, currentCodeContext.exceptionHandler)
-            if (true) {
-                functionGenerationContext.storeGlobal(valueToAssign, globalAddress, false)
+
+            if (true) { // RTGC
+                functionGenerationContext.storeGlobal(valueToAssign, globalAddress)
             }
             else {
                 functionGenerationContext.storeAny(valueToAssign, globalAddress, false)

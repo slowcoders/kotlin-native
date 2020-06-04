@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "__string": "cpp",
+        "__tree": "cpp",
+        "algorithm": "cpp",
+        "utility": "cpp",
+        "deque": "cpp",
+        "optional": "cpp",
+        "vector": "cpp"
+    }
+}

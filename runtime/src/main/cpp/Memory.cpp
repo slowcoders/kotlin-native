@@ -1452,6 +1452,7 @@ inline void addHeapRef(ContainerHeader* container) {
   UPDATE_ADDREF_STAT(memoryState, container, needAtomicAccess(container), 0)
   switch (container->tag()) {
     case CONTAINER_TAG_STACK:
+      //  It is allocated in stack.
       break;
     case CONTAINER_TAG_LOCAL:
       incrementRC</* Atomic = */ false>(container);

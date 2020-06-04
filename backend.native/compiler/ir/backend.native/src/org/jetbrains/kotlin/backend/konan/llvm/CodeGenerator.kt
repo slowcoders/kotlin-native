@@ -283,7 +283,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         val value = LLVMBuildLoad(builder, address, name)!!
         if (isObjectRef(value) && isVar) {
             val slot = alloca(LLVMTypeOf(value), variableLocation = null)
-            storeStackRef(value, slot)
+            updateStackRef(value, slot)
         }
         return value
     }
@@ -293,44 +293,34 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     }
 
     fun storeHeapRef(value: LLVMValueRef, ptr: LLVMValueRef) {
-        updateRef(value, ptr, onStack = false)
+        throw Error("storeHeapRef() should not be called in RTGC mode")
+        // updateRef(value, ptr, onStack = false)
     }
 
-    fun storeGlobalRef(value: LLVMValueRef, ptr: LLVMValueRef) {
-        updateGlobalRef(value, ptr, onStack = false)
+    fun storeAny(value: LLVMValueRef, ptr: LLVMValueRef, onStack: Boolean) = if (true) {
+        if (true) throw Error("storeAny() should not be called in RTGC mode")
+        null
     }
-
-    fun storeMemberRef(value: LLVMValueRef, ptr: LLVMValueRef, owner: LLVMValueRef) {
-        updateMemberRef(value, ptr, owner)
+    else {
+        LLVMBuildStore(builder, value, ptr)
     }
-
-    fun storeStackRef(value: LLVMValueRef, ptr: LLVMValueRef) {
-        updateRef(value, ptr, onStack = true)
-    }
-
-    fun storeAny(value: LLVMValueRef, ptr: LLVMValueRef, onStack: Boolean) = if (isObjectRef(value)) {
-            if (onStack) storeStackRef(value, ptr) else storeHeapRef(value, ptr)
-            null
-        } else {
-            LLVMBuildStore(builder, value, ptr)
-        }
 
     fun storeLocal(value: LLVMValueRef, ptr: LLVMValueRef) = if (isObjectRef(value)) {
-        storeStackRef(value, ptr)
+        updateStackRef(value, ptr)
         null
     } else {
         LLVMBuildStore(builder, value, ptr)
     }
 
     fun storeMember(value: LLVMValueRef, ptr: LLVMValueRef, owner: LLVMValueRef) = if (isObjectRef(value)) {
-        storeMemberRef(value, ptr, owner)
+        updateMemberRef(value, ptr, owner)
         null
     } else {
         LLVMBuildStore(builder, value, ptr)
     }
     
-    fun storeGlobal(value: LLVMValueRef, ptr: LLVMValueRef, onStack: Boolean) = if (isObjectRef(value)) {
-        storeGlobalRef(value, ptr)
+    fun storeGlobal(value: LLVMValueRef, ptr: LLVMValueRef) = if (isObjectRef(value)) {
+        updateGlobalRef(value, ptr)
         null
     } else {
         LLVMBuildStore(builder, value, ptr)
@@ -353,7 +343,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             call(context.llvm.updateReturnRefFunction, listOf(address, value))
     }
 
-    private fun updateGlobalRef(value: LLVMValueRef, address: LLVMValueRef, onStack: Boolean) {
+    private fun updateGlobalRef(value: LLVMValueRef, address: LLVMValueRef) {
         call(context.llvm.updateGlobalRefFunction, listOf(address, value))
     }
 
@@ -361,7 +351,15 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         call(context.llvm.updateMemberRefFunction, listOf(address, value, owner))
     }
 
+    private fun updateStackRef(value: LLVMValueRef, address: LLVMValueRef) {
+        if (context.memoryModel == MemoryModel.STRICT)
+            store(value, address)
+        else
+            call(context.llvm.updateStackRefFunction, listOf(address, value))
+    }
+
     private fun updateRef(value: LLVMValueRef, address: LLVMValueRef, onStack: Boolean) {
+        throw Error("storeHeapRef() should not be called in RTGC mode")
         if (onStack) {
             if (context.memoryModel == MemoryModel.STRICT)
                 store(value, address)
