@@ -323,7 +323,7 @@ internal class BlockGenerator(private val codegen: CodeGenerator) {
             listOf(bitcast(int8TypePtr, isa), flags, reserved, invoke, descriptor).forEachIndexed { index, value ->
                 // Although value is actually on the stack, it's not in normal slot area, so we cannot handle it
                 // as if it was on the stack.
-                store(value, structGep(blockOnStackBase, index))
+                storeSlot(value, structGep(blockOnStackBase, index))
             }
 
             call(context.llvm.kRefSharedHolderInitLocal, listOf(refHolder, kotlinRef))

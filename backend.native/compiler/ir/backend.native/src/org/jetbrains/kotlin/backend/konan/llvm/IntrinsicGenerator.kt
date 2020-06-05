@@ -331,7 +331,7 @@ internal class IntrinsicGenerator(private val environment: IntrinsicGeneratorEnv
         val pointerType = pointerType(codegen.getLLVMType(function.valueParameters.last().type))
         val rawPointer = args[1]
         val pointer = bitcast(pointerType, rawPointer)
-        store(args[2], pointer)
+        storeSlot(args[2], pointer)
         return codegen.theUnitInstanceRef.llvm
     }
 
@@ -437,8 +437,8 @@ internal class IntrinsicGenerator(private val environment: IntrinsicGeneratorEnv
 
         val structType = structType(kInt8Ptr, kInt8Ptr)
         val ptr = alloca(structType)
-        store(receiver, LLVMBuildGEP(builder, ptr, cValuesOf(kImmZero, kImmZero), 2, "")!!)
-        store(superClass, LLVMBuildGEP(builder, ptr, cValuesOf(kImmZero, kImmOne), 2, "")!!)
+        storeSlot(receiver, LLVMBuildGEP(builder, ptr, cValuesOf(kImmZero, kImmZero), 2, "")!!)
+        storeSlot(superClass, LLVMBuildGEP(builder, ptr, cValuesOf(kImmZero, kImmOne), 2, "")!!)
         return bitcast(int8TypePtr, ptr)
     }
 

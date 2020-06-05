@@ -336,7 +336,7 @@ internal class ObjCExportCodeGenerator(
 
         val initializer = generateFunction(codegen, functionType(voidType, false), "initObjCExportGlobals") {
             externalGlobalInitializers.forEach { (global, value) ->
-                store(value.llvm, global)
+                storeSlot(value.llvm, global)
             }
             ret(null)
         }
@@ -983,7 +983,7 @@ private fun ObjCExportCodeGenerator.generateKotlinToObjCBridge(
 
                 MethodBridgeValueParameter.ErrorOutParameter ->
                     alloca(int8TypePtr).also {
-                        store(kNullInt8Ptr, it)
+                        storeSlot(kNullInt8Ptr, it)
                         errorOutPtr = it
                     }
 

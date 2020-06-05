@@ -12,6 +12,9 @@ import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrValueDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrVariable
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.ir.expressions.IrDelegatingConstructorCall
+import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
+import org.jetbrains.kotlin.ir.expressions.IrCall
 
 internal fun IrElement.needDebugInfo(context: Context) = context.shouldContainDebugInfo() || (this is IrVariable && this.isVar)
 
@@ -60,8 +63,9 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         contextVariablesToIndex.clear()
     }
 
-    fun createVariable(valueDeclaration: IrValueDeclaration, value: LLVMValueRef? = null, variableLocation: VariableDebugLocation?) : Int {
-        val isVar = valueDeclaration is IrVariable && valueDeclaration.isVar
+    fun createVariable(valueDeclaration: IrVariable, value: LLVMValueRef? = null, variableLocation: VariableDebugLocation?) : Int {
+        val isVar = valueDeclaration.isVar
+
         // Note that we always create slot for object references for memory management.
         if (!functionGenerationContext.context.shouldContainDebugInfo() && !isVar && value != null)
             return createImmutable(valueDeclaration, value)
@@ -73,15 +77,25 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
             return createMutable(valueDeclaration, isVar, value, variableLocation)
     }
 
-    internal fun createMutable(valueDeclaration: IrValueDeclaration,
+    internal fun createMutable(valueDeclaration: IrVariable,
                                isVar: Boolean, value: LLVMValueRef? = null, variableLocation: VariableDebugLocation?) : Int {
         assert(!contextVariablesToIndex.contains(valueDeclaration))
         val index = variables.size
         val type = functionGenerationContext.getLLVMType(valueDeclaration.type)
         val slot = functionGenerationContext.alloca(type, valueDeclaration.name.asString(), variableLocation)
         if (value != null) {
-            if (true) {
-                functionGenerationContext.storeLocal(value, slot)
+            if (true) { // TRGC
+                var isRetValue = (valueDeclaration.initializer != null) && 
+                    when (valueDeclaration.initializer) {
+                        is IrCall -> true
+                        is IrDelegatingConstructorCall -> true
+                        is IrConstructorCall     -> true
+                        else -> false;
+                    }
+                
+                if (!isRetValue) {
+                    functionGenerationContext.storeLocal(value, slot)
+                }
             }
             else {
                 functionGenerationContext.storeAny(value, slot, true)

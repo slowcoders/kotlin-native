@@ -184,6 +184,8 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     private var slotsPhi: LLVMValueRef? = null
     private val frameOverlaySlotCount =
             (LLVMStoreSizeOfType(llvmTargetData, runtime.frameOverlayType) / runtime.pointerSize).toInt()
+            
+    // cf) Ref Variable Count = slotCount - frameOverlaySlotCount
     private var slotCount = frameOverlaySlotCount
     private var localAllocs = 0
     // TODO: remove if exactly unused.
@@ -281,14 +283,16 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
     fun loadSlot(address: LLVMValueRef, isVar: Boolean, name: String = ""): LLVMValueRef {
         val value = LLVMBuildLoad(builder, address, name)!!
-        if (isObjectRef(value) && isVar) {
-            val slot = alloca(LLVMTypeOf(value), variableLocation = null)
-            updateStackRef(value, slot)
+        if (false) { // RTGC
+            if (isObjectRef(value) && isVar) {
+                val slot = alloca(LLVMTypeOf(value), variableLocation = null)
+                updateStackRef(value, slot)
+            }
         }
         return value
     }
 
-    fun store(value: LLVMValueRef, ptr: LLVMValueRef) {
+    fun storeSlot(value: LLVMValueRef, ptr: LLVMValueRef) {
         LLVMBuildStore(builder, value, ptr)
     }
 
@@ -338,7 +342,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
     private fun updateReturnRef(value: LLVMValueRef, address: LLVMValueRef) {
         if (context.memoryModel == MemoryModel.STRICT)
-            store(value, address)
+            storeSlot(value, address)
         else
             call(context.llvm.updateReturnRefFunction, listOf(address, value))
     }
@@ -353,7 +357,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
     private fun updateStackRef(value: LLVMValueRef, address: LLVMValueRef) {
         if (context.memoryModel == MemoryModel.STRICT)
-            store(value, address)
+            storeSlot(value, address)
         else
             call(context.llvm.updateStackRefFunction, listOf(address, value))
     }
@@ -362,7 +366,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         throw Error("storeHeapRef() should not be called in RTGC mode")
         if (onStack) {
             if (context.memoryModel == MemoryModel.STRICT)
-                store(value, address)
+                storeSlot(value, address)
             else
                 call(context.llvm.updateStackRefFunction, listOf(address, value))
         } else {
@@ -518,7 +522,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         // Set tag OBJECT_TAG_PERMANENT_CONTAINER | OBJECT_TAG_NONTRIVIAL_CONTAINER.
         val typeInfoValue = intToPtr(or(ptrToInt(typeInfoPointer, codegen.intPtrType),
                 codegen.immThreeIntPtrType), kTypeInfoPtr)
-        store(typeInfoValue, typeInfo)
+        storeSlot(typeInfoValue, typeInfo)
     }
 
     fun allocArrayOnStack(arrayTypeName: String, count: LLVMValueRef, typeInfo: LLVMValueRef): LLVMValueRef {
@@ -529,7 +533,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         val arrayHeaderSlot = structGep(arraySlot, 0, "arrayHeader")
         setTypeInfoForLocalObject(arrayHeaderSlot, typeInfo)
         val sizeField = structGep(arrayHeaderSlot, 1, "count_")
-        store(count, sizeField)
+        storeSlot(count, sizeField)
         call(context.llvm.memsetFunction,
                 listOf(bitcast(kInt8Ptr, structGep(arraySlot, 1, "arrayBody")),
                         Int8(0).llvm,
