@@ -283,9 +283,13 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
     fun loadSlot(address: LLVMValueRef, isVar: Boolean, name: String = ""): LLVMValueRef {
         val value = LLVMBuildLoad(builder, address, name)!!
-        if (false) { // RTGC
-            if (isObjectRef(value) && isVar) {
-                val slot = alloca(LLVMTypeOf(value), variableLocation = null)
+        if (isObjectRef(value) && isVar) {
+            // loads field of Object or Exception Ptinter.
+            val slot = alloca(LLVMTypeOf(value), variableLocation = null)
+            if (true) { // RTGC
+                updateStackRef(value, slot)
+            }
+            else {
                 updateStackRef(value, slot)
             }
         }
@@ -1163,10 +1167,20 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
                 returns.isNotEmpty() -> {
                     val returnPhi = phi(returnType!!)
                     addPhiIncoming(returnPhi, *returns.toList().toTypedArray())
-                    if (returnSlot != null) {
-                        updateReturnRef(returnPhi, returnSlot!!)
+                    if (true) { // RTGC
+                        if (returnSlot != null) {
+                            releaseVars(returnPhi, returnSlot!!)
+                        }
+                        else {
+                            releaseVars()
+                        }
                     }
-                    releaseVars()
+                    else {
+                        if (returnSlot != null) {
+                            updateReturnRef(returnPhi, returnSlot!!)
+                        }
+                        releaseVars()
+                    }
                     LLVMBuildRet(builder, returnPhi)
                 }
                 // Do nothing, all paths throw.
@@ -1330,6 +1344,16 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         if (needSlots) {
             call(context.llvm.leaveFrameFunction,
                     listOf(slotsPhi!!, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm))
+        }
+    }
+
+    private fun releaseVars(phi: LLVMValueRef, returnSlot: LLVMValueRef) {
+        if (needSlots) {
+            call(context.llvm.leaveFrameAndReturnRefFunction,
+                    listOf(slotsPhi!!, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm, phi))
+        }
+        else {
+            updateReturnRef(phi, returnSlot)
         }
     }
 }

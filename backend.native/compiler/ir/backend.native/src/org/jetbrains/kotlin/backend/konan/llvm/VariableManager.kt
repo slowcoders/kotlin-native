@@ -93,7 +93,10 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
                         else -> false;
                     }
                 
-                if (!isRetValue) {
+                if (isRetValue) {
+                     functionGenerationContext.storeSlot(value, slot)
+                }
+                else {
                     functionGenerationContext.storeLocal(value, slot)
                 }
             }
