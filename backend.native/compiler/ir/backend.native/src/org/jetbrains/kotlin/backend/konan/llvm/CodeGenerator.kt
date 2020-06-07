@@ -284,7 +284,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     fun loadSlot(address: LLVMValueRef, isVar: Boolean, name: String = ""): LLVMValueRef {
         val value = LLVMBuildLoad(builder, address, name)!!
         if (isObjectRef(value) && isVar) {
-            // loads field of Object or Exception Ptinter.
+            // loads field of Object or Exception Pointer.
             val slot = alloca(LLVMTypeOf(value), variableLocation = null)
             if (true) { // RTGC
                 updateStackRef(value, slot)
@@ -1347,6 +1347,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         }
     }
 
+    // for RTGC only
     private fun releaseVars(phi: LLVMValueRef, returnSlot: LLVMValueRef) {
         if (needSlots) {
             call(context.llvm.leaveFrameAndReturnRefFunction,

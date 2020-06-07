@@ -6,6 +6,7 @@
         "utility": "cpp",
         "deque": "cpp",
         "optional": "cpp",
-        "vector": "cpp"
+        "vector": "cpp",
+        "typeinfo": "cpp"
     }
 }

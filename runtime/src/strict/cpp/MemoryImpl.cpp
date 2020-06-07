@@ -61,8 +61,8 @@ void LeaveFrame(ObjHeader** start, int parameters, int count) {
   LeaveFrameStrict(start, parameters, count);
 }
 
-void LeaveFrameAndReturnRef(ObjHeader** start, int parameters, int count) {
-  LeaveFrameAndReturnRefStrict(start, parameters, count);
+void LeaveFrameAndReturnRef(ObjHeader** start, int parameters, int count, ObjHeader* returnRef) {
+  LeaveFrameAndReturnRefStrict(start, parameters, count, returnRef);
 }
 
 }  // extern "C"

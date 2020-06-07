@@ -42,9 +42,9 @@
 // http://researcher.watson.ibm.com/researcher/files/us-bacon/Bacon03Pure.pdf.
 #define USE_GC 1
 // Define to 1 to print all memory operations.
-#define TRACE_MEMORY 0
+#define TRACE_MEMORY 1
 // Define to 1 to print major GC events.
-#define TRACE_GC 0
+#define TRACE_GC 1
 // Collect memory manager events statistics.
 #define COLLECT_STATISTIC 0
 // Define to 1 to print detailed time statistics for GC events.
@@ -965,6 +965,7 @@ ALWAYS_INLINE void runDeallocationHooks(ContainerHeader* container) {
 
 void freeContainer(ContainerHeader* container) {
   RuntimeAssert(container != nullptr, "this kind of container shalln't be freed");
+  MEMORY_LOG("freeContainer %x\n", container + 1)
 
   if (isAggregatingFrozenContainer(container)) {
     freeAggregatingFrozenContainer(container);

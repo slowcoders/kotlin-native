@@ -26,9 +26,16 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
     }
 
     inner class SlotRecord(val address: LLVMValueRef, val refSlot: Boolean, val isVar: Boolean) : Record {
-        override fun load() : LLVMValueRef = functionGenerationContext.loadSlot(address, isVar)
+        override fun load() : LLVMValueRef {
+            if (true) { // RTGC 
+                return functionGenerationContext.loadSlot(address, false)
+            }
+            else {
+                return functionGenerationContext.loadSlot(address, isVar)
+            }
+        }
         override fun store(value: LLVMValueRef) {
-            if (true) {
+            if (true) { // RTGC
                 functionGenerationContext.storeLocal(value, address)
             }
             else {
@@ -84,7 +91,7 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         val type = functionGenerationContext.getLLVMType(valueDeclaration.type)
         val slot = functionGenerationContext.alloca(type, valueDeclaration.name.asString(), variableLocation)
         if (value != null) {
-            if (true) { // TRGC
+            if (true) { // RTGC
                 var isRetValue = (valueDeclaration.initializer != null) && 
                     when (valueDeclaration.initializer) {
                         is IrCall -> true
@@ -93,7 +100,7 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
                         else -> false;
                     }
                 
-                if (isRetValue) {
+                if (false && isRetValue) {
                      functionGenerationContext.storeSlot(value, slot)
                 }
                 else {
@@ -135,7 +142,7 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         val index = variables.size
         val slot = functionGenerationContext.alloca(type, variableLocation = null)
         if (value != null) {
-            if (true) {
+            if (true) { // RTGC
                 functionGenerationContext.storeLocal(value, slot)
             }
             else {  
