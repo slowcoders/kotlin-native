@@ -530,6 +530,9 @@ OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock) RUNTIME_N
 MODEL_VARIANTS(void, EnterFrame, ObjHeader** start, int parameters, int count);
 // Called on frame leave, if it has object slots.
 MODEL_VARIANTS(void, LeaveFrame, ObjHeader** start, int parameters, int count);
+
+MODEL_VARIANTS(void, LeaveFrameAndReturnRef, ObjHeader** start, int parameters, int count, ObjHeader* returnRef);
+
 // Clears object subgraph references from memory subsystem, and optionally
 // checks if subgraph referenced by given root is disjoint from the rest of
 // object graph, i.e. no external references exists.

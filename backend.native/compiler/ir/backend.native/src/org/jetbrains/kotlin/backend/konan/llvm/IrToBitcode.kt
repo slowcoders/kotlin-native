@@ -1594,7 +1594,12 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                         listOf(functionGenerationContext.bitcast(codegen.kObjHeaderPtr, thisPtr)),
                         Lifetime.IRRELEVANT, ExceptionHandler.Caller)
             }
-            functionGenerationContext.storeAny(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), false)
+            if (functionGenerationContext.RTGC) {
+                functionGenerationContext.storeMember(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner))
+            }
+            else {
+                functionGenerationContext.storeAny(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), false)
+            }
         } else {
             assert(value.receiver == null)
             val globalAddress = context.llvmDeclarations.forStaticField(value.symbol.owner).storageAddressAccess.getAddress(

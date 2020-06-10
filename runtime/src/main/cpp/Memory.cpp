@@ -2130,7 +2130,7 @@ void enterFrame(ObjHeader** start, int parameters, int count) {
 }
 
 template <bool Strict>
-void leaveFrame(ObjHeader** start, int parameters, int count) {
+void leaveFrameAndReturnRef(ObjHeader** start, int parameters, int count, ObjHeader* returnRef) {
   MEMORY_LOG("LeaveFrame %p: %d parameters %d locals\n", start, parameters, count)
   FrameOverlay* frame = reinterpret_cast<FrameOverlay*>(start);
   if (Strict) {
@@ -2141,11 +2141,22 @@ void leaveFrame(ObjHeader** start, int parameters, int count) {
     while (count-- > kFrameOverlaySlots) {
       ObjHeader* object = *current;
       if (object != nullptr) {
+        if (object == returnRef) {
+          printf("leave %p = %p\n", current, object);
+          returnRef = NULL;
+        }
+        else {
           releaseHeapRef<false>(object);
         }
-        current++;
       }
+      current++;
+    }
   }
+}
+
+template <bool Strict>
+void leaveFrame(ObjHeader** start, int parameters, int count) {
+  leaveFrameAndReturnRef<Strict>(start, parameters, count, NULL);
 }
 
 void suspendGC() {
@@ -2942,6 +2953,14 @@ void LeaveFrameStrict(ObjHeader** start, int parameters, int count) {
 void LeaveFrameRelaxed(ObjHeader** start, int parameters, int count) {
   leaveFrame<false>(start, parameters, count);
 }
+
+void LeaveFrameAndReturnRefStrict(ObjHeader** start, int parameters, int count, ObjHeader* returnRef) {
+  leaveFrameAndReturnRef<true>(start, parameters, count, returnRef);
+}
+void LeaveFrameAndReturnRefRelaxed(ObjHeader** start, int parameters, int count, ObjHeader* returnRef) {
+  leaveFrameAndReturnRef<false>(start, parameters, count, returnRef);
+}
+
 
 void Kotlin_native_internal_GC_collect(KRef) {
 #if USE_GC

@@ -172,6 +172,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
                                          internal val irFunction: IrFunction? = null): ContextUtils {
 
     override val context = codegen.context
+    val RTGC:Boolean = true;
     val vars = VariableManager(this)
     private val basicBlockToLastLocation = mutableMapOf<LLVMBasicBlockRef, LocationInfoRange>()
 
@@ -304,8 +305,22 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         updateRef(value, ptr, onStack = true)
     }
 
+    fun storeRoot(value: LLVMValueRef, ptr: LLVMValueRef) = if (isObjectRef(value)) {
+        storeStackRef(value, ptr)
+        null
+    } else {
+        LLVMBuildStore(builder, value, ptr)
+    }
+
+    fun storeMember(value: LLVMValueRef, ptr: LLVMValueRef) = if (isObjectRef(value)) {
+        storeHeapRef(value, ptr)
+        null
+    } else {
+        LLVMBuildStore(builder, value, ptr)
+    }
+
     fun storeAny(value: LLVMValueRef, ptr: LLVMValueRef, onStack: Boolean) = if (isObjectRef(value)) {
-            if (onStack) storeStackRef(value, ptr) else storeHeapRef(value, ptr)
+            if (RTGC || onStack) storeStackRef(value, ptr) else storeHeapRef(value, ptr)
             null
         } else {
             LLVMBuildStore(builder, value, ptr)
@@ -1109,10 +1124,20 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
                 returns.isNotEmpty() -> {
                     val returnPhi = phi(returnType!!)
                     addPhiIncoming(returnPhi, *returns.toList().toTypedArray())
-                    if (returnSlot != null) {
-                        updateReturnRef(returnPhi, returnSlot!!)
+                    if (true) { // RTGC
+                        if (returnSlot != null) {
+                            releaseVars(returnPhi, returnSlot!!)
+                        }
+                        else {
+                            releaseVars()
+                        }
                     }
-                    releaseVars()
+                    else {
+                        if (returnSlot != null) {
+                            updateReturnRef(returnPhi, returnSlot!!)
+                        }
+                        releaseVars()
+                    }
                     LLVMBuildRet(builder, returnPhi)
                 }
                 // Do nothing, all paths throw.
@@ -1278,6 +1303,17 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
                     listOf(slotsPhi!!, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm))
         }
     }
+
+    private fun releaseVars(phi: LLVMValueRef, returnSlot: LLVMValueRef) {
+        if (needSlots) {
+            call(context.llvm.leaveFrameAndReturnRefFunction,
+                listOf(slotsPhi!!, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm, phi))
+        }
+        else {
+            updateReturnRef(phi, returnSlot)
+        }
+    }
+
 }
 
 
