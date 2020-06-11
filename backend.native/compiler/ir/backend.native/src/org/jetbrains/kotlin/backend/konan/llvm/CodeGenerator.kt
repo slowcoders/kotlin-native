@@ -1124,7 +1124,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
                 returns.isNotEmpty() -> {
                     val returnPhi = phi(returnType!!)
                     addPhiIncoming(returnPhi, *returns.toList().toTypedArray())
-                    if (true) { // RTGC
+                    if (RTGC) {
                         if (returnSlot != null) {
                             releaseVars(returnPhi, returnSlot!!)
                         }

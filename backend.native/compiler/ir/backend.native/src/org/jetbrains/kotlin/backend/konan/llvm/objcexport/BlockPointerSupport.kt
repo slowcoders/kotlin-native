@@ -91,7 +91,7 @@ internal fun ObjCExportCodeGeneratorBase.generateBlockToKotlinFunctionConverter(
                     retainedBlockPtr,
                     Lifetime.ARGUMENT
             )
-            if (RTGC) { // RTGC ?? storeGlobal ??
+            if (RTGC) { // storeGlobal ??
                 storeStackRef(holder, structGep(bodyPtr, 1))
             }
             else {

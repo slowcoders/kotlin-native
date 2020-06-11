@@ -35,11 +35,13 @@
 // http://researcher.watson.ibm.com/researcher/files/us-bacon/Bacon03Pure.pdf.
 #define USE_GC 1
 // Define to 1 to print all memory operations.
-#define TRACE_MEMORY 0
+#define TRACE_MEMORY 1
 // Define to 1 to print major GC events.
-#define TRACE_GC 0
+#define TRACE_GC 1
 // Collect memory manager events statistics.
 #define COLLECT_STATISTIC 0
+
+#define RTGC 1
 
 #if COLLECT_STATISTIC
 #include <algorithm>
@@ -2141,8 +2143,7 @@ void leaveFrameAndReturnRef(ObjHeader** start, int parameters, int count, ObjHea
     while (count-- > kFrameOverlaySlots) {
       ObjHeader* object = *current;
       if (object != nullptr) {
-        if (object == returnRef) {
-          printf("leave %p = %p\n", current, object);
+        if (RTGC && object == returnRef) {
           returnRef = NULL;
         }
         else {
@@ -2150,6 +2151,10 @@ void leaveFrameAndReturnRef(ObjHeader** start, int parameters, int count, ObjHea
         }
       }
       current++;
+    }
+    if (returnRef != NULL) {
+      addHeapRef(returnRef);
+      printf("*** returns in leave %p\n", returnRef);
     }
   }
 }

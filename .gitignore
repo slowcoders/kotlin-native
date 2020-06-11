@@ -62,3 +62,5 @@ llvmCoverageMappingC/CMakeLists.txt
 tools/performance-server/node_modules
 tools/performance-server/server
 tools/performance-server/ui/js
+org.eclipse.buildship.core.prefs
+settings.json

@@ -26,7 +26,7 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
     }
 
     inner class SlotRecord(val address: LLVMValueRef, val refSlot: Boolean, val isVar: Boolean) : Record {
-        override fun load() : LLVMValueRef = functionGenerationContext.loadSlot(address, false/*RTGC*/ && isVar)
+        override fun load() : LLVMValueRef = functionGenerationContext.loadSlot(address, !functionGenerationContext.RTGC && isVar)
         override fun store(value: LLVMValueRef) {
             functionGenerationContext.storeAny(value, address, true)
         }
@@ -59,7 +59,7 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
     }
 
     fun createVariable(valueDeclaration: IrVariable, value: LLVMValueRef? = null, variableLocation: VariableDebugLocation?) : Int {
-        val isVar = valueDeclaration is IrVariable && valueDeclaration.isVar
+        val isVar = valueDeclaration.isVar
         // Note that we always create slot for object references for memory management.
         if (!functionGenerationContext.context.shouldContainDebugInfo() && !isVar && value != null)
             return createImmutable(valueDeclaration, value)
@@ -78,7 +78,7 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         val type = functionGenerationContext.getLLVMType(valueDeclaration.type)
         val slot = functionGenerationContext.alloca(type, valueDeclaration.name.asString(), variableLocation)
         if (value != null) {
-            if (true) { // TRGC
+            if (functionGenerationContext.RTGC) {
                 var isRetValue = (valueDeclaration.initializer != null) &&
                         when (valueDeclaration.initializer) {
                             is IrCall -> true
@@ -87,7 +87,7 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
                             else -> false;
                         }
 
-                if (isRetValue) {
+                if (false && isRetValue) {
                     functionGenerationContext.store(value, slot)
                 }
                 else {
