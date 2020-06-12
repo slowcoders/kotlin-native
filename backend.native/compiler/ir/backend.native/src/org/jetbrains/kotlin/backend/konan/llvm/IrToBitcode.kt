@@ -1312,6 +1312,20 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
 
     private fun generateVariable(variable: IrVariable) {
         context.log{"generateVariable               : ${ir2string(variable)}"}
+
+        var idxVar = -1;
+        if (false && functionGenerationContext.RTGC) {
+
+            val type = functionGenerationContext.getLLVMType(variable.type)
+            if (functionGenerationContext.isObjectType(type)) {
+                idxVar = currentCodeContext.genDeclareVariable(
+                    variable, null, debugInfoIfNeeded(
+                    (currentCodeContext.functionScope() as FunctionScope).declaration, variable))
+
+                functionGenerationContext.anonymousRetValue = functionGenerationContext.vars.addressOf(idxVar);
+            }
+        }
+
         val value = variable.initializer?.let {
             val callSiteOrigin = (it as? IrBlock)?.origin as? InlinerExpressionLocationHint
             val inlineAtFunctionSymbol = callSiteOrigin?.inlineAtSymbol as? IrFunctionSymbol
@@ -1321,9 +1335,16 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 }
             } ?: evaluateExpression(it)
         }
-        currentCodeContext.genDeclareVariable(
+
+        if (idxVar < 0) {
+            currentCodeContext.genDeclareVariable(
                 variable, value, debugInfoIfNeeded(
                 (currentCodeContext.functionScope() as FunctionScope).declaration, variable))
+        }
+        else if (functionGenerationContext.anonymousRetValue != null && value != null) {
+            functionGenerationContext.vars.store(value!!, idxVar)
+        }
+        functionGenerationContext.anonymousRetValue = null;
     }
 
     //-------------------------------------------------------------------------//

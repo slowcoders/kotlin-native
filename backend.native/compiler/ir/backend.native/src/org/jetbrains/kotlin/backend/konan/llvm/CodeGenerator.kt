@@ -186,6 +186,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     val constructedClass: IrClass?
         get() = (irFunction as? IrConstructor)?.constructedClass
     private var returnSlot: LLVMValueRef? = null
+    var anonymousRetValue: LLVMValueRef? = null
     private var slotsPhi: LLVMValueRef? = null
     private val frameOverlaySlotCount =
             (LLVMStoreSizeOfType(llvmTargetData, runtime.frameOverlayType) / runtime.pointerSize).toInt()
@@ -380,7 +381,14 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
                 SlotType.RETURN -> returnSlot!!
 
-                SlotType.ANONYMOUS -> vars.createAnonymousSlot()
+                SlotType.ANONYMOUS -> if (anonymousRetValue != null) {
+                    var v = anonymousRetValue!!
+                    anonymousRetValue = null;
+                    v
+                }
+                else {
+                    vars.createAnonymousSlot()
+                }
 
                 else -> throw Error("Incorrect slot type: ${resultLifetime.slotType}")
             }

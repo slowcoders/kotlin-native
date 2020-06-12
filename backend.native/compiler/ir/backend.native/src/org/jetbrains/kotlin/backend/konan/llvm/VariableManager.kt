@@ -78,25 +78,7 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         val type = functionGenerationContext.getLLVMType(valueDeclaration.type)
         val slot = functionGenerationContext.alloca(type, valueDeclaration.name.asString(), variableLocation)
         if (value != null) {
-            if (functionGenerationContext.RTGC) {
-                var isRetValue = (valueDeclaration.initializer != null) &&
-                        when (valueDeclaration.initializer) {
-                            is IrCall -> true
-                            is IrDelegatingConstructorCall -> true
-                            is IrConstructorCall -> true
-                            else -> false;
-                        }
-
-                if (false && isRetValue) {
-                    functionGenerationContext.store(value, slot)
-                }
-                else {
-                    functionGenerationContext.storeAny(value, slot, true)
-                }
-            }
-            else {
-                functionGenerationContext.storeAny(value, slot, true)
-            }
+            functionGenerationContext.storeAny(value, slot, true)
         }
         variables.add(SlotRecord(slot, functionGenerationContext.isObjectType(type), isVar))
         contextVariablesToIndex[valueDeclaration] = index

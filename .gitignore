@@ -64,3 +64,4 @@ tools/performance-server/server
 tools/performance-server/ui/js
 org.eclipse.buildship.core.prefs
 settings.json
+temp
