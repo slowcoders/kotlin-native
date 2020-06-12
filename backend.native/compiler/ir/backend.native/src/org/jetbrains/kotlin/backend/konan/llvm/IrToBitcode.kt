@@ -1314,10 +1314,18 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         context.log{"generateVariable               : ${ir2string(variable)}"}
 
         var idxVar = -1;
-        if (false && functionGenerationContext.RTGC) {
+        if (functionGenerationContext.RTGC) {
 
             val type = functionGenerationContext.getLLVMType(variable.type)
-            if (functionGenerationContext.isObjectType(type)) {
+            var isRetValue = (variable.initializer != null) &&
+                when (variable.initializer) {
+                    is IrCall -> true
+                    is IrDelegatingConstructorCall -> true
+                    is IrConstructorCall -> true
+                    else -> false;
+                }
+
+            if (isRetValue && functionGenerationContext.isObjectType(type)) {
                 idxVar = currentCodeContext.genDeclareVariable(
                     variable, null, debugInfoIfNeeded(
                     (currentCodeContext.functionScope() as FunctionScope).declaration, variable))
