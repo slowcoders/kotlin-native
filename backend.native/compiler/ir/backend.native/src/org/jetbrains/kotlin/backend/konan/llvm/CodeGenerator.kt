@@ -172,7 +172,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
                                          internal val irFunction: IrFunction? = null): ContextUtils {
 
     override val context = codegen.context
-    val RTGC:Boolean = true;
+    val RTGC:Boolean = context.memoryModel == MemoryModel.RELAXED;
     val vars = VariableManager(this)
     private val basicBlockToLastLocation = mutableMapOf<LLVMBasicBlockRef, LocationInfoRange>()
 
@@ -381,7 +381,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
                 SlotType.RETURN -> returnSlot!!
 
-                SlotType.ANONYMOUS -> if (anonymousRetValue != null) {
+                SlotType.ANONYMOUS -> if (RTGC && anonymousRetValue != null) {
                     var v = anonymousRetValue!!
                     anonymousRetValue = null;
                     v
@@ -1314,8 +1314,8 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
     private fun releaseVars(phi: LLVMValueRef, returnSlot: LLVMValueRef) {
         if (needSlots) {
-            call(context.llvm.leaveFrameAndReturnRefFunction,
-                listOf(slotsPhi!!, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm, phi))
+            callRaw(context.llvm.leaveFrameAndReturnRefFunction,
+                listOf(slotsPhi!!, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm, phi), ExceptionHandler.None)
         }
         else {
             updateReturnRef(phi, returnSlot)

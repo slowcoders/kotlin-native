@@ -61,8 +61,8 @@ void LeaveFrame(ObjHeader** start, int parameters, int count) {
   LeaveFrameRelaxed(start, parameters, count);
 }
 
-void LeaveFrameAndReturnRef(ObjHeader** start, int parameters, int count, ObjHeader* returnRef) {
-  LeaveFrameAndReturnRefRelaxed(start, parameters, count, returnRef);
+const ObjHeader* LeaveFrameAndReturnRef(ObjHeader** start, int parameters, int count, const ObjHeader* returnRef) {
+  return LeaveFrameAndReturnRefRelaxed(start, parameters, count, returnRef);
 }
 
 }  // extern "C"

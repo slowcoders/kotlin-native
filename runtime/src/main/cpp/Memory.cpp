@@ -35,9 +35,9 @@
 // http://researcher.watson.ibm.com/researcher/files/us-bacon/Bacon03Pure.pdf.
 #define USE_GC 1
 // Define to 1 to print all memory operations.
-#define TRACE_MEMORY 0
+#define TRACE_MEMORY 1
 // Define to 1 to print major GC events.
-#define TRACE_GC 0
+#define TRACE_GC 1
 // Collect memory manager events statistics.
 #define COLLECT_STATISTIC 0
 
@@ -2132,7 +2132,7 @@ void enterFrame(ObjHeader** start, int parameters, int count) {
 }
 
 template <bool Strict>
-void leaveFrameAndReturnRef(ObjHeader** start, int parameters, int count, ObjHeader* returnRef) {
+const ObjHeader* leaveFrameAndReturnRef(ObjHeader** start, int parameters, int count, const ObjHeader* returnRef) {
   MEMORY_LOG("LeaveFrame %p: %d parameters %d locals\n", start, parameters, count)
   FrameOverlay* frame = reinterpret_cast<FrameOverlay*>(start);
   if (Strict) {
@@ -2152,11 +2152,12 @@ void leaveFrameAndReturnRef(ObjHeader** start, int parameters, int count, ObjHea
       }
       current++;
     }
-    if (returnRef != NULL) {
+    if (RTGC && returnRef != NULL) {
       addHeapRef(returnRef);
       MEMORY_LOG("*** returns in leave %p\n", returnRef);
     }
   }
+  return returnRef;
 }
 
 template <bool Strict>
@@ -2959,11 +2960,11 @@ void LeaveFrameRelaxed(ObjHeader** start, int parameters, int count) {
   leaveFrame<false>(start, parameters, count);
 }
 
-void LeaveFrameAndReturnRefStrict(ObjHeader** start, int parameters, int count, ObjHeader* returnRef) {
-  leaveFrameAndReturnRef<true>(start, parameters, count, returnRef);
+const ObjHeader* LeaveFrameAndReturnRefStrict(ObjHeader** start, int parameters, int count, const ObjHeader* returnRef) {
+  return leaveFrameAndReturnRef<true>(start, parameters, count, returnRef);
 }
-void LeaveFrameAndReturnRefRelaxed(ObjHeader** start, int parameters, int count, ObjHeader* returnRef) {
-  leaveFrameAndReturnRef<false>(start, parameters, count, returnRef);
+const ObjHeader* LeaveFrameAndReturnRefRelaxed(ObjHeader** start, int parameters, int count, const ObjHeader* returnRef) {
+  return leaveFrameAndReturnRef<false>(start, parameters, count, returnRef);
 }
 
 
