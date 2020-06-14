@@ -1098,7 +1098,9 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
                         listOf(slotsMem, Int8(0).llvm,
                                 Int32(slotCount * codegen.runtime.pointerSize).llvm,
                                 Int1(0).llvm))
-                call(context.llvm.enterFrameFunction, listOf(slots, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm))
+                if (!RTGC) {                
+                    call(context.llvm.enterFrameFunction, listOf(slots, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm))
+                }
             }
             addPhiIncoming(slotsPhi!!, prologueBb to slots)
             memScoped {
@@ -1313,12 +1315,13 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     }
 
     private fun releaseVars(phi: LLVMValueRef, returnSlot: LLVMValueRef) {
+        updateReturnRef(phi, returnSlot!!)
         if (needSlots) {
             callRaw(context.llvm.leaveFrameAndReturnRefFunction,
                 listOf(slotsPhi!!, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm, phi), ExceptionHandler.None)
         }
         else {
-            updateReturnRef(phi, returnSlot)
+            //updateReturnRef(phi, returnSlot)
         }
     }
 

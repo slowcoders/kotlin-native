@@ -1920,6 +1920,9 @@ inline void checkIfGcNeeded(MemoryState* state) {
 template <bool Strict>
 OBJ_GETTER(allocInstance, const TypeInfo* type_info) {
   RuntimeAssert(type_info->instanceSize_ >= 0, "must be an object");
+  const char * type_ = CreateCStringFromString(type_info->relativeName_);
+  MEMORY_LOG("allocate %s\n", type_);
+  //free(type_);
   auto* state = memoryState;
 #if USE_GC
   checkIfGcNeeded(state);
@@ -2153,7 +2156,7 @@ const ObjHeader* leaveFrameAndReturnRef(ObjHeader** start, int parameters, int c
       current++;
     }
     if (RTGC && returnRef != NULL) {
-      addHeapRef(returnRef);
+      //addHeapRef(returnRef);
       MEMORY_LOG("*** returns in leave %p\n", returnRef);
     }
   }
