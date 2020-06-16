@@ -22,6 +22,8 @@
 #include "TypeInfo.h"
 #include "Atomic.h"
 
+#define RTGC 1
+
 typedef enum {
   // Those bit masks are applied to refCount_ field.
   // Container is normal thread-local container.
@@ -514,9 +516,9 @@ MODEL_VARIANTS(void, ZeroStackRef, ObjHeader** location);
 // Updates stack location.
 MODEL_VARIANTS(void, UpdateStackRef, ObjHeader** location, const ObjHeader* object);
 // Updates heap/static data location.
-MODEL_VARIANTS(void, UpdateHeapRef, ObjHeader** location, const ObjHeader* object);
+MODEL_VARIANTS(void, UpdateHeapRef, ObjHeader** location, const ObjHeader* object, const ObjHeader* owner);
 // Updates location if it is null, atomically.
-MODEL_VARIANTS(void, UpdateHeapRefIfNull, ObjHeader** location, const ObjHeader* object);
+MODEL_VARIANTS(void, UpdateHeapRefIfNull, ObjHeader** location, const ObjHeader* object, const ObjHeader* owner);
 // Updates reference in return slot.
 MODEL_VARIANTS(void, UpdateReturnRef, ObjHeader** returnSlot, const ObjHeader* object);
 // Compares and swaps reference with taken lock.

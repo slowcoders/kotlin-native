@@ -45,8 +45,8 @@ void SetHeapRef(ObjHeader** location, const ObjHeader* object) {
   SetHeapRefRelaxed(location, object);
 }
 
-void UpdateHeapRef(ObjHeader** location, const ObjHeader* object) {
-  UpdateHeapRefRelaxed(location, object);
+void UpdateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
+  UpdateHeapRefRelaxed(location, object, owner);
 }
 
 void UpdateReturnRef(ObjHeader** returnSlot, const ObjHeader* object) {

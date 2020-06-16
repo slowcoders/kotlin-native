@@ -45,8 +45,8 @@ void ZeroStackRef(ObjHeader** location) {
   ZeroStackRefStrict(location);
 }
 
-void UpdateHeapRef(ObjHeader** location, const ObjHeader* object) {
-  UpdateHeapRefStrict(location, object);
+void UpdateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
+  UpdateHeapRefStrict(location, object, owner);
 }
 
 void UpdateReturnRef(ObjHeader** returnSlot, const ObjHeader* object) {

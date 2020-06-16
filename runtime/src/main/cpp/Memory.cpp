@@ -41,8 +41,6 @@
 // Collect memory manager events statistics.
 #define COLLECT_STATISTIC 0
 
-#define RTGC 1
-
 #if COLLECT_STATISTIC
 #include <algorithm>
 #endif
@@ -1849,7 +1847,7 @@ void zeroStackRef(ObjHeader** location) {
 }
 
 template <bool Strict>
-void updateHeapRef(ObjHeader** location, const ObjHeader* object) {
+void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
   UPDATE_REF_EVENT(memoryState, *location, object, location, 0);
   ObjHeader* old = *location;
   if (old != object) {
@@ -1888,7 +1886,7 @@ void updateReturnRef(ObjHeader** returnSlot, const ObjHeader* value) {
   updateStackRef<Strict>(returnSlot, value);
 }
 
-void updateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) {
+void updateHeapRefIfNull(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
   if (object != nullptr) {
 #if KONAN_NO_THREADS
     ObjHeader* old = *location;
@@ -1976,7 +1974,7 @@ OBJ_GETTER(initInstance,
     RETURN_OBJ(value);
   }
   ObjHeader* object = allocInstance<Strict>(typeInfo, OBJ_RESULT);
-  updateHeapRef<Strict>(location, object);
+  updateStackRef<Strict>(location, object);
 #if KONAN_NO_EXCEPTIONS
   ctor(object);
   return object;
@@ -2002,7 +2000,7 @@ OBJ_GETTER(initSharedInstance,
     RETURN_OBJ(value);
   }
   ObjHeader* object = AllocInstance(typeInfo, OBJ_RESULT);
-  UpdateHeapRef(location, object);
+  UpdateStackRef(location, object);
 #if KONAN_NO_EXCEPTIONS
   ctor(object);
   FreezeSubgraph(object);
@@ -2032,12 +2030,12 @@ OBJ_GETTER(initSharedInstance,
     RETURN_OBJ(value);
   }
   ObjHeader* object = AllocInstance(typeInfo, OBJ_RESULT);
-  UpdateHeapRef(localLocation, object);
+  UpdateStackRef(localLocation, object);
 #if KONAN_NO_EXCEPTIONS
   ctor(object);
   if (Strict)
     FreezeSubgraph(object);
-  UpdateHeapRef(location, object);
+  UpdateStackRef(location, object);
   synchronize();
   return object;
 #else  // KONAN_NO_EXCEPTIONS
@@ -2045,7 +2043,7 @@ OBJ_GETTER(initSharedInstance,
     ctor(object);
     if (Strict)
       FreezeSubgraph(object);
-    UpdateHeapRef(location, object);
+    UpdateStackRef(location, object);
     synchronize();
     return object;
   } catch (...) {
@@ -2569,6 +2567,7 @@ void shareAny(ObjHeader* obj) {
   container->makeShared();
 }
 
+#ifndef RTGC
 OBJ_GETTER0(detectCyclicReferences) {
   // Collect rootset, hold references to simplify remaining code.
   KRefList rootset;
@@ -2661,6 +2660,7 @@ OBJ_GETTER(findCycle, KRef root) {
   }
   RETURN_OBJ(result->obj());
 }
+#endif
 
 }  // namespace
 
@@ -2947,11 +2947,11 @@ void UpdateStackRefRelaxed(ObjHeader** location, const ObjHeader* object) {
   updateStackRef<false>(location, object);
 }
 
-void UpdateHeapRefStrict(ObjHeader** location, const ObjHeader* object) {
-  updateHeapRef<true>(location, object);
+void UpdateHeapRefStrict(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
+  updateHeapRef<true>(location, object, owner);
 }
-void UpdateHeapRefRelaxed(ObjHeader** location, const ObjHeader* object) {
-  updateHeapRef<false>(location, object);
+void UpdateHeapRefRelaxed(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
+  updateHeapRef<false>(location, object, owner);
 }
 
 void UpdateReturnRefStrict(ObjHeader** returnSlot, const ObjHeader* value) {
@@ -2961,8 +2961,8 @@ void UpdateReturnRefRelaxed(ObjHeader** returnSlot, const ObjHeader* value) {
   updateReturnRef<false>(returnSlot, value);
 }
 
-void UpdateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) {
-  updateHeapRefIfNull(location, object);
+void UpdateHeapRefIfNull(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
+  updateHeapRefIfNull(location, object, owner);
 }
 
 OBJ_GETTER(SwapHeapRefLocked,
@@ -3076,6 +3076,7 @@ KBoolean Kotlin_native_internal_GC_getTuneThreshold(KRef) {
 #endif
 }
 
+#ifndef RTGC
 OBJ_GETTER(Kotlin_native_internal_GC_detectCycles, KRef) {
   if (!KonanNeedDebugInfo || !g_checkLeaks) RETURN_OBJ(nullptr);
   RETURN_RESULT_OF0(detectCyclicReferences);
@@ -3084,6 +3085,7 @@ OBJ_GETTER(Kotlin_native_internal_GC_detectCycles, KRef) {
 OBJ_GETTER(Kotlin_native_internal_GC_findCycle, KRef, KRef root) {
   RETURN_RESULT_OF(findCycle, root);
 }
+#endif
 
 KNativePtr CreateStablePointer(KRef any) {
   return createStablePointer(any);
@@ -3151,7 +3153,7 @@ void ClearTLSRecord(MemoryState* memory, void** key) {
     KRef* start = it->second.first;
     int count = it->second.second;
     for (int i = 0; i < count; i++) {
-      UpdateHeapRef(start + i, nullptr);
+      UpdateStackRef(start + i, nullptr);
     }
     konanFreeMemory(start);
     tlsMap->erase(it);
