@@ -35,9 +35,9 @@
 // http://researcher.watson.ibm.com/researcher/files/us-bacon/Bacon03Pure.pdf.
 #define USE_GC 1
 // Define to 1 to print all memory operations.
-#define TRACE_MEMORY 1
+#define TRACE_MEMORY 0
 // Define to 1 to print major GC events.
-#define TRACE_GC 1
+#define TRACE_GC 0
 // Collect memory manager events statistics.
 #define COLLECT_STATISTIC 0
 
@@ -1920,8 +1920,6 @@ inline void checkIfGcNeeded(MemoryState* state) {
 template <bool Strict>
 OBJ_GETTER(allocInstance, const TypeInfo* type_info) {
   RuntimeAssert(type_info->instanceSize_ >= 0, "must be an object");
-  const char * type_ = CreateCStringFromString(type_info->relativeName_);
-  MEMORY_LOG("allocate %s\n", type_);
   //free(type_);
   auto* state = memoryState;
 #if USE_GC
@@ -2134,19 +2132,35 @@ void enterFrame(ObjHeader** start, int parameters, int count) {
   }
 }
 
+// for RTGC only
 template <bool Strict>
-const ObjHeader* leaveFrameAndReturnRef(ObjHeader** start, int parameters, int count, const ObjHeader* returnRef) {
+const ObjHeader* leaveFrameAndReturnRef(ObjHeader** start, int param_count, ObjHeader** resultSlot, const ObjHeader* returnRef) {
+  int parameters = param_count >> 16;
+  int count = (int16_t)param_count;
   MEMORY_LOG("LeaveFrame %p: %d parameters %d locals\n", start, parameters, count)
+  const ObjHeader* res = *resultSlot;
+  if (res != returnRef) {
+    *resultSlot = (ObjHeader*)returnRef;
+    if (res != NULL) {
+      releaseHeapRef<Strict>(res);
+    }
+    res = returnRef;
+  }
+  else {
+    returnRef = NULL; 
+  }
+
   FrameOverlay* frame = reinterpret_cast<FrameOverlay*>(start);
   if (Strict) {
     currentFrame = frame->previous;
   } else {
     ObjHeader** current = start + parameters + kFrameOverlaySlots;
+    MEMORY_LOG("LeaveFrame start:%p: start-1:%p current:%p, current-1:%p start[0]:%p: start[-1]%p current[0]%p, current[-1]%p\n", start[0], start-1, current, current-1, start[0], start[-1], start[parameters], start[parameters-1]);
     count -= parameters;
     while (count-- > kFrameOverlaySlots) {
       ObjHeader* object = *current;
       if (object != nullptr) {
-        if (RTGC && object == returnRef) {
+        if (object == returnRef) {
           returnRef = NULL;
         }
         else {
@@ -2155,17 +2169,32 @@ const ObjHeader* leaveFrameAndReturnRef(ObjHeader** start, int parameters, int c
       }
       current++;
     }
-    if (RTGC && returnRef != NULL) {
-      //addHeapRef(returnRef);
+    if (returnRef != NULL) {
+      addHeapRef(returnRef);
       MEMORY_LOG("*** returns in leave %p\n", returnRef);
     }
   }
-  return returnRef;
+  return res;
 }
 
 template <bool Strict>
 void leaveFrame(ObjHeader** start, int parameters, int count) {
-  leaveFrameAndReturnRef<Strict>(start, parameters, count, NULL);
+  MEMORY_LOG("LeaveFrame %p: %d parameters %d locals\n", start, parameters, count)
+  FrameOverlay* frame = reinterpret_cast<FrameOverlay*>(start);
+  if (Strict) {
+    currentFrame = frame->previous;
+  } else {
+
+    ObjHeader** current = start + parameters + kFrameOverlaySlots;
+    count -= parameters;
+    while (count-- > kFrameOverlaySlots) {
+      ObjHeader* object = *current;
+      if (object != nullptr) {
+        releaseHeapRef<false>(object);
+      }
+      current++;
+    }
+  }
 }
 
 void suspendGC() {
@@ -2687,6 +2716,7 @@ void ObjectContainer::Init(MemoryState* state, const TypeInfo* typeInfo) {
   // header->refCount_ is zero initialized by allocContainer().
   SetHeader(GetPlace(), typeInfo);
   OBJECT_ALLOC_EVENT(memoryState, typeInfo->instanceSize_, GetPlace())
+  MEMORY_LOG("allocate %s\n", CreateCStringFromString(typeInfo->relativeName_));
 }
 
 void ArrayContainer::Init(MemoryState* state, const TypeInfo* typeInfo, uint32_t elements) {
@@ -2702,6 +2732,7 @@ void ArrayContainer::Init(MemoryState* state, const TypeInfo* typeInfo, uint32_t
   GetPlace()->count_ = elements;
   SetHeader(GetPlace()->obj(), typeInfo);
   OBJECT_ALLOC_EVENT(memoryState, arrayObjectSize(typeInfo, elements), GetPlace()->obj())
+  MEMORY_LOG("array allocated %s\n", CreateCStringFromString(typeInfo->relativeName_));
 }
 
 // TODO: store arena containers in some reuseable data structure, similar to
@@ -2778,6 +2809,7 @@ ObjHeader* ArenaContainer::PlaceObject(const TypeInfo* type_info) {
     return nullptr;
   }
   OBJECT_ALLOC_EVENT(memoryState, type_info->instanceSize_, result)
+  MEMORY_LOG("Arena allocate %s\n", CreateCStringFromString(type_info->relativeName_));
   currentChunk_->asHeader()->incObjectCount();
   setHeader(result, type_info);
   return result;
@@ -2791,6 +2823,7 @@ ArrayHeader* ArenaContainer::PlaceArray(const TypeInfo* type_info, uint32_t coun
     return nullptr;
   }
   OBJECT_ALLOC_EVENT(memoryState, arrayObjectSize(type_info, count), result->obj())
+  MEMORY_LOG("Arena Array allocate %s\n", CreateCStringFromString(type_info->relativeName_));
   currentChunk_->asHeader()->incObjectCount();
   setHeader(result->obj(), type_info);
   result->count_ = count;
@@ -2963,11 +2996,11 @@ void LeaveFrameRelaxed(ObjHeader** start, int parameters, int count) {
   leaveFrame<false>(start, parameters, count);
 }
 
-const ObjHeader* LeaveFrameAndReturnRefStrict(ObjHeader** start, int parameters, int count, const ObjHeader* returnRef) {
-  return leaveFrameAndReturnRef<true>(start, parameters, count, returnRef);
+const ObjHeader* LeaveFrameAndReturnRefStrict(ObjHeader** start, int param_count, ObjHeader** resultSlot, const ObjHeader* returnRef) {
+  return leaveFrameAndReturnRef<true>(start, param_count, resultSlot, returnRef);
 }
-const ObjHeader* LeaveFrameAndReturnRefRelaxed(ObjHeader** start, int parameters, int count, const ObjHeader* returnRef) {
-  return leaveFrameAndReturnRef<false>(start, parameters, count, returnRef);
+const ObjHeader* LeaveFrameAndReturnRefRelaxed(ObjHeader** start, int param_count, ObjHeader** resultSlot, const ObjHeader* returnRef) {
+  return leaveFrameAndReturnRef<false>(start, param_count, resultSlot, returnRef);
 }
 
 

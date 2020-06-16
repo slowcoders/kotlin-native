@@ -41,14 +41,11 @@ extern "C" KInt Konan_start(const ObjHeader*);
 
 extern "C" KInt Konan_run_start(int argc, const char** argv) {
     ObjHolder args;
-  printf("1#############");
     setupArgs(argc, argv, args.slot());
-  printf("2#############");
     return Konan_start(args.obj());
 }
 
 extern "C" RUNTIME_USED int Init_and_run_start(int argc, const char** argv, int memoryDeInit) {
-  printf("3#############");
 #ifdef KONAN_NO_CTORS_SECTION
   extern void _Konan_constructors(void);
   _Konan_constructors();
@@ -56,13 +53,10 @@ extern "C" RUNTIME_USED int Init_and_run_start(int argc, const char** argv, int 
 
   Kotlin_initRuntimeIfNeeded();
 
-  printf("4#############");
   KInt exitStatus = Konan_run_start(argc, argv);
 
-  printf("5#############");
   if (memoryDeInit) Kotlin_deinitRuntimeIfNeeded();
 
-  printf("6#############");
   return exitStatus;
 }
 

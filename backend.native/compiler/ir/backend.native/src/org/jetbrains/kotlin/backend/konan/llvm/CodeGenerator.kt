@@ -186,7 +186,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     val constructedClass: IrClass?
         get() = (irFunction as? IrConstructor)?.constructedClass
     private var returnSlot: LLVMValueRef? = null
-    var anonymousRetValue: LLVMValueRef? = null
+    var anonymousRetValue: Int = -1
     private var slotsPhi: LLVMValueRef? = null
     private val frameOverlaySlotCount =
             (LLVMStoreSizeOfType(llvmTargetData, runtime.frameOverlayType) / runtime.pointerSize).toInt()
@@ -361,6 +361,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
              resultLifetime: Lifetime = Lifetime.IRRELEVANT,
              exceptionHandler: ExceptionHandler = ExceptionHandler.None,
              verbatim: Boolean = false): LLVMValueRef {
+        var idxResVar: Int = -1;          
         val callArgs = if (verbatim || !isObjectReturn(llvmFunction.type)) {
             args
         } else {
@@ -381,10 +382,10 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
                 SlotType.RETURN -> returnSlot!!
 
-                SlotType.ANONYMOUS -> if (RTGC && anonymousRetValue != null) {
-                    var v = anonymousRetValue!!
-                    anonymousRetValue = null;
-                    v
+                SlotType.ANONYMOUS -> if (RTGC && anonymousRetValue >= 0) {
+                    idxResVar = anonymousRetValue
+                    anonymousRetValue = -1;
+                    vars.addressOf(idxResVar)
                 }
                 else {
                     vars.createAnonymousSlot()
@@ -394,7 +395,11 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             }
             args + resultSlot
         }
-        return callRaw(llvmFunction, callArgs, exceptionHandler)
+        val res = callRaw(llvmFunction, callArgs, exceptionHandler)
+        if (idxResVar >= 0) {
+            vars.attachReturnValue(res, idxResVar)
+        }
+        return res;
     }
 
     private fun callRaw(llvmFunction: LLVMValueRef, args: List<LLVMValueRef>,
@@ -1315,13 +1320,14 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     }
 
     private fun releaseVars(phi: LLVMValueRef, returnSlot: LLVMValueRef) {
-        updateReturnRef(phi, returnSlot!!)
+        //updateReturnRef(phi, returnSlot!!)
         if (needSlots) {
+            val param_count = (vars.skipSlots * 256 * 256) + slotCount;
             callRaw(context.llvm.leaveFrameAndReturnRefFunction,
-                listOf(slotsPhi!!, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm, phi), ExceptionHandler.None)
+                listOf(slotsPhi!!, Int32(param_count).llvm, returnSlot, phi), ExceptionHandler.None)
         }
         else {
-            //updateReturnRef(phi, returnSlot)
+            updateReturnRef(phi, returnSlot)
         }
     }
 

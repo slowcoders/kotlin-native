@@ -497,6 +497,9 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
 
     override fun visitFile(declaration: IrFile) {
         // TODO: collect those two in one place.
+        // if (!declaration.fileEntry.name.startsWith("/Users/zeedh/slowcoders/")) {
+        //     println(declaration.fileEntry.name);
+        // }
         context.llvm.fileInitializers.clear()
         context.llvm.objects.clear()
         context.llvm.sharedObjects.clear()
@@ -1314,23 +1317,16 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         context.log{"generateVariable               : ${ir2string(variable)}"}
 
         var idxVar = -1;
+        val oldAnonymousVar = functionGenerationContext.anonymousRetValue;
+        functionGenerationContext.anonymousRetValue = -1;
         if (functionGenerationContext.RTGC) {
 
             val type = functionGenerationContext.getLLVMType(variable.type)
-            var isRetValue = (variable.initializer != null) &&
-                when (variable.initializer) {
-                    is IrCall -> true
-                    is IrDelegatingConstructorCall -> true
-                    is IrConstructorCall -> true
-                    else -> false;
-                }
-
-            if (isRetValue && functionGenerationContext.isObjectType(type)) {
+            if (functionGenerationContext.isObjectType(type)) {
                 idxVar = currentCodeContext.genDeclareVariable(
                     variable, null, debugInfoIfNeeded(
                     (currentCodeContext.functionScope() as FunctionScope).declaration, variable))
-
-                functionGenerationContext.anonymousRetValue = functionGenerationContext.vars.addressOf(idxVar);
+                functionGenerationContext.anonymousRetValue = idxVar;
             }
         }
 
@@ -1349,10 +1345,15 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 variable, value, debugInfoIfNeeded(
                 (currentCodeContext.functionScope() as FunctionScope).declaration, variable))
         }
-        else if (functionGenerationContext.anonymousRetValue != null && value != null) {
-            functionGenerationContext.vars.store(value!!, idxVar)
+        else if (value != null) {
+            if (functionGenerationContext.anonymousRetValue < 0 && value == functionGenerationContext.vars.getAttachedReturnValue(idxVar)) {
+                // returnSlot consumed
+            }
+            else {
+                functionGenerationContext.vars.store(value!!, idxVar)
+            }
         }
-        functionGenerationContext.anonymousRetValue = null;
+        functionGenerationContext.anonymousRetValue = oldAnonymousVar;
     }
 
     //-------------------------------------------------------------------------//
