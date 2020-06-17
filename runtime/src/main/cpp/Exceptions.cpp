@@ -145,7 +145,7 @@ OBJ_GETTER(GetStackTraceStrings, KConstRef stackTrace) {
   ObjHeader* result = AllocArrayInstance(theArrayTypeInfo, 1, OBJ_RESULT);
   ObjHolder holder;
   CreateStringFromCString("<UNIMPLEMENTED>", holder.slot());
-  UpdateHeapRef(ArrayAddressOfElementAt(result->array(), 0), holder.obj(), result->array());
+  UpdateHeapRef(ArrayAddressOfElementAt(result->array(), 0), holder.obj(), result);
   return result;
 #else
   uint32_t size = stackTrace->array()->count_;
@@ -163,7 +163,7 @@ OBJ_GETTER(GetStackTraceStrings, KConstRef stackTrace) {
     konan::snprintf(line, sizeof(line) - 1, "%s (%p)", symbol, (void*)(intptr_t)address);
     ObjHolder holder;
     CreateStringFromCString(line, holder.slot());
-    UpdateHeapRef(ArrayAddressOfElementAt(strings->array(), index), holder.obj(), strings->array());
+    UpdateHeapRef(ArrayAddressOfElementAt(strings->array(), index), holder.obj(), strings);
   }
 #else
   if (size > 0) {
