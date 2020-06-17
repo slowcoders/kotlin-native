@@ -452,14 +452,14 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                                     val address = context.llvmDeclarations.forStaticField(irField).storageAddressAccess.getAddress(
                                             functionGenerationContext
                                     )
-                                    storeHeapRef(codegen.kNullObjHeaderPtr, address)
+                                    storeGlobalRef(codegen.kNullObjHeaderPtr, address)
                                 }
                             }
                     context.llvm.sharedObjects.forEach { irClass ->
                         val address = context.llvmDeclarations.forSingleton(irClass).instanceStorage.getAddress(
                                 functionGenerationContext
                         )
-                        storeHeapRef(codegen.kNullObjHeaderPtr, address)
+                        storeGlobalRef(codegen.kNullObjHeaderPtr, address)
                     }
                     ret(null)
                 }
@@ -1350,7 +1350,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 // returnSlot consumed
             }
             else {
-                functionGenerationContext.vars.store(value!!, idxVar)
+                functionGenerationContext.vars.store(value, idxVar)
             }
         }
         functionGenerationContext.anonymousRetValue = oldAnonymousVar;
@@ -1625,7 +1625,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                         Lifetime.IRRELEVANT, ExceptionHandler.Caller)
             }
             if (functionGenerationContext.RTGC) {
-                functionGenerationContext.storeMember(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner))
+                functionGenerationContext.storeMember(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), thisPtr)
             }
             else {
                 functionGenerationContext.storeAny(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), false)

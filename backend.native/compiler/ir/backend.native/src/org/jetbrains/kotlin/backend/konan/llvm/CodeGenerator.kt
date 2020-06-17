@@ -298,12 +298,19 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         LLVMBuildStore(builder, value, ptr)
     }
 
-    fun storeHeapRef(value: LLVMValueRef, ptr: LLVMValueRef) {
-        updateRef(value, ptr, onStack = false)
+    fun storeHeapRef(value: LLVMValueRef, ptr: LLVMValueRef, owner: LLVMValueRef) {
+        call(context.llvm.updateHeapRefFunction, listOf(ptr, value, owner))
     }
 
     fun storeStackRef(value: LLVMValueRef, ptr: LLVMValueRef) {
-        updateRef(value, ptr, onStack = true)
+        if (context.memoryModel == MemoryModel.STRICT)
+            store(ptr, ptr)
+        else
+            call(context.llvm.updateStackRefFunction, listOf(ptr, value))
+    }
+
+    fun storeGlobalRef(value: LLVMValueRef, ptr: LLVMValueRef) {
+        storeStackRef(value, ptr)
     }
 
     fun storeRoot(value: LLVMValueRef, ptr: LLVMValueRef) = if (isObjectRef(value)) {
@@ -313,15 +320,15 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         LLVMBuildStore(builder, value, ptr)
     }
 
-    fun storeMember(value: LLVMValueRef, ptr: LLVMValueRef) = if (isObjectRef(value)) {
-        storeHeapRef(value, ptr)
+    fun storeMember(value: LLVMValueRef, ptr: LLVMValueRef, owner: LLVMValueRef) = if (isObjectRef(value)) {
+        storeHeapRef(value, ptr, owner)
         null
     } else {
         LLVMBuildStore(builder, value, ptr)
     }
 
     fun storeAny(value: LLVMValueRef, ptr: LLVMValueRef, onStack: Boolean) = if (isObjectRef(value)) {
-            if (RTGC || onStack) storeStackRef(value, ptr) else storeHeapRef(value, ptr)
+            if (RTGC || onStack) storeStackRef(value, ptr) else storeHeapRef(value, ptr, value)
             null
         } else {
             LLVMBuildStore(builder, value, ptr)
@@ -344,16 +351,16 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             call(context.llvm.updateReturnRefFunction, listOf(address, value))
     }
 
-    private fun updateRef(value: LLVMValueRef, address: LLVMValueRef, onStack: Boolean) {
-        if (onStack) {
-            if (context.memoryModel == MemoryModel.STRICT)
-                store(value, address)
-            else
-                call(context.llvm.updateStackRefFunction, listOf(address, value))
-        } else {
-            call(context.llvm.updateHeapRefFunction, listOf(address, value))
-        }
-    }
+    // private fun updateRef(value: LLVMValueRef, address: LLVMValueRef, onStack: Boolean) {
+    //     if (onStack) {
+    //         if (context.memoryModel == MemoryModel.STRICT)
+    //             store(value, address)
+    //         else
+    //             call(context.llvm.updateStackRefFunction, listOf(address, value))
+    //     } else {
+    //         call(context.llvm.updateHeapRefFunction, listOf(address, value))
+    //     }
+    // }
 
     //-------------------------------------------------------------------------//
 

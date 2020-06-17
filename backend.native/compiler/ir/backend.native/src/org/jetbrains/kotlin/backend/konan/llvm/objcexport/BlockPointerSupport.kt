@@ -95,7 +95,7 @@ internal fun ObjCExportCodeGeneratorBase.generateBlockToKotlinFunctionConverter(
                 storeStackRef(holder, structGep(bodyPtr, 1))
             }
             else {
-                storeHeapRef(holder, structGep(bodyPtr, 1))
+                storeGlobalRef(holder, structGep(bodyPtr, 1))
             }
             result
         } else {
