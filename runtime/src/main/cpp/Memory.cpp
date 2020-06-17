@@ -1874,7 +1874,11 @@ void updateStackRef(ObjHeader** location, const ObjHeader* object) {
           addHeapRef(object);
         }
         *const_cast<const ObjHeader**>(location) = object;
+#ifdef RTGC        
+        if (reinterpret_cast<uintptr_t>(old) > 1) {
+#else          
         if (old != nullptr) {
+#endif          
            releaseHeapRef<false>(old);
         }
      }
@@ -1886,7 +1890,7 @@ void updateReturnRef(ObjHeader** returnSlot, const ObjHeader* value) {
   updateStackRef<Strict>(returnSlot, value);
 }
 
-void updateHeapRefIfNull(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
+void updateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) {
   if (object != nullptr) {
 #if KONAN_NO_THREADS
     ObjHeader* old = *location;
@@ -2567,7 +2571,6 @@ void shareAny(ObjHeader* obj) {
   container->makeShared();
 }
 
-#ifndef RTGC
 OBJ_GETTER0(detectCyclicReferences) {
   // Collect rootset, hold references to simplify remaining code.
   KRefList rootset;
@@ -2607,7 +2610,7 @@ OBJ_GETTER0(detectCyclicReferences) {
   ArrayHeader* result = AllocArrayInstance(theArrayTypeInfo, numElements, OBJ_RESULT)->array();
   KRef* place = ArrayAddressOfElementAt(result, 0);
   for (auto* it: cyclic) {
-    UpdateHeapRef(place++, it);
+    UpdateHeapRef(place++, it, result->obj());
   }
   for (auto* root: rootset) {
     ReleaseHeapRef(root);
@@ -2655,12 +2658,11 @@ OBJ_GETTER(findCycle, KRef root) {
     result = AllocArrayInstance(theArrayTypeInfo, path.size(), OBJ_RESULT)->array();
     KRef* place = ArrayAddressOfElementAt(result, 0);
     for (auto* it: path) {
-        UpdateHeapRef(place++, it);
+        UpdateHeapRef(place++, it, result->obj());
     }
   }
   RETURN_OBJ(result->obj());
 }
-#endif
 
 }  // namespace
 
@@ -2961,8 +2963,8 @@ void UpdateReturnRefRelaxed(ObjHeader** returnSlot, const ObjHeader* value) {
   updateReturnRef<false>(returnSlot, value);
 }
 
-void UpdateHeapRefIfNull(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
-  updateHeapRefIfNull(location, object, owner);
+void UpdateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) {
+  updateHeapRefIfNull(location, object);
 }
 
 OBJ_GETTER(SwapHeapRefLocked,
@@ -3076,7 +3078,6 @@ KBoolean Kotlin_native_internal_GC_getTuneThreshold(KRef) {
 #endif
 }
 
-#ifndef RTGC
 OBJ_GETTER(Kotlin_native_internal_GC_detectCycles, KRef) {
   if (!KonanNeedDebugInfo || !g_checkLeaks) RETURN_OBJ(nullptr);
   RETURN_RESULT_OF0(detectCyclicReferences);
@@ -3085,7 +3086,6 @@ OBJ_GETTER(Kotlin_native_internal_GC_detectCycles, KRef) {
 OBJ_GETTER(Kotlin_native_internal_GC_findCycle, KRef, KRef root) {
   RETURN_RESULT_OF(findCycle, root);
 }
-#endif
 
 KNativePtr CreateStablePointer(KRef any) {
   return createStablePointer(any);

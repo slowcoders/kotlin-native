@@ -61,9 +61,6 @@ OBJ_GETTER(Konan_getWeakReferenceImpl, ObjHeader* referred) {
   }
 #endif // KONAN_OBJC_INTEROP
 
-#ifdef RTGC
-  assert(false);
-#else
   if (meta->WeakReference.counter_ == nullptr) {
      ObjHolder counterHolder;
      // Cast unneeded, just to emphasize we store an object reference as void*.
@@ -71,7 +68,6 @@ OBJ_GETTER(Konan_getWeakReferenceImpl, ObjHeader* referred) {
      UpdateHeapRefIfNull(&meta->WeakReference.counter_, counter);
   }
   RETURN_OBJ(meta->WeakReference.counter_);
-#endif
 }
 
 // Materialize a weak reference to either null or the real reference.
