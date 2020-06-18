@@ -22,7 +22,7 @@
 #include "TypeInfo.h"
 #include "Atomic.h"
 
-#define RTGC 1
+#include "RTGC.h"
 
 typedef enum {
   // Those bit masks are applied to refCount_ field.
@@ -38,9 +38,10 @@ typedef enum {
   // Shift to get actual counter.
   CONTAINER_TAG_SHIFT = 2,
   // Actual value to increment/decrement container by. Tag is in lower bits.
-  CONTAINER_TAG_INCREMENT = 1 << CONTAINER_TAG_SHIFT,
+  CONTAINER_TAG_INCREMENT = 1,// << CONTAINER_TAG_SHIFT,
   // Mask for container type.
-  CONTAINER_TAG_MASK = CONTAINER_TAG_INCREMENT - 1,
+  CONTAINER_TAG_MASK = (1 << CONTAINER_TAG_SHIFT) - 1,
+
 
   // Shift to get actual object count, if has it.
   CONTAINER_TAG_GC_SHIFT     = 7,
@@ -71,6 +72,7 @@ typedef enum {
   CONTAINER_TAG_GC_SEEN     = 1 << (CONTAINER_TAG_COLOR_SHIFT + 2),
   // If indeed has more that one object.
   CONTAINER_TAG_GC_HAS_OBJECT_COUNT = 1 << (CONTAINER_TAG_COLOR_SHIFT + 3)
+  
 } ContainerTag;
 
 typedef enum {
@@ -85,30 +87,47 @@ typedef uint32_t container_size_t;
 
 // Header of all container objects. Contains reference counter.
 struct ContainerHeader {
+private:  
   // Reference counter of container. Uses CONTAINER_TAG_SHIFT, lower bits of counter
   // for container type (for polymorphism in ::Release()).
-  uint32_t refCount_;
+  uint16_t flags_;
+  uint16_t rootRefCount_;
+  uint32_t foreignMemberRefCount_;
+
+  // RTGC Node
+  GCNode* node_;
+
   // Number of objects in the container.
   uint32_t objectCount_;
 
+public:  
+
   inline bool local() const {
-      return (refCount_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_LOCAL;
+      return (flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_LOCAL;
   }
 
   inline bool frozen() const {
-    return (refCount_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_FROZEN;
+    return (flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_FROZEN;
+  }
+
+  inline void markFrozen() {
+    flags_ |= CONTAINER_TAG_FROZEN;
+  }
+
+  inline void setFlags(uint16_t flags) {
+    flags_ = flags;
   }
 
   inline void freeze() {
-    refCount_ = (refCount_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_FROZEN;
+    flags_ = (flags_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_FROZEN;
   }
 
   inline void makeShared() {
-      refCount_ = (refCount_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_SHARED;
+      flags_ = (flags_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_SHARED;
   }
 
   inline bool shared() const {
-    return (refCount_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_SHARED;
+    return (flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_SHARED;
   }
 
   inline bool shareable() const {
@@ -116,26 +135,27 @@ struct ContainerHeader {
   }
 
   inline bool stack() const {
-    return (refCount_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_STACK;
+    return (flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_STACK;
   }
 
-  inline int refCount() const {
-    return (int)refCount_ >> CONTAINER_TAG_SHIFT;
+  inline int64_t refCount() const {
+    return ((int64_t)foreignMemberRefCount_ << 32) + rootRefCount_;
   }
 
-  inline void setRefCount(unsigned refCount) {
-    refCount_ = tag() | (refCount << CONTAINER_TAG_SHIFT);
+  inline void setRefCount(int64_t refCount) {
+    foreignMemberRefCount_ = (unsigned)(refCount >> 32);
+    rootRefCount_ = (uint16_t)refCount;
   }
 
   template <bool Atomic>
   inline void incRefCount() {
 #ifdef KONAN_NO_THREADS
-    refCount_ += CONTAINER_TAG_INCREMENT;
+    rootRefCount_ += CONTAINER_TAG_INCREMENT;
 #else
     if (Atomic)
-      __sync_add_and_fetch(&refCount_, CONTAINER_TAG_INCREMENT);
+      __sync_add_and_fetch(&rootRefCount_, CONTAINER_TAG_INCREMENT);
     else
-      refCount_ += CONTAINER_TAG_INCREMENT;
+      rootRefCount_ += CONTAINER_TAG_INCREMENT;
 #endif
   }
 
@@ -143,9 +163,9 @@ struct ContainerHeader {
   inline bool tryIncRefCount() {
     if (Atomic) {
       while (true) {
-        uint32_t currentRefCount_ = refCount_;
+        uint16_t currentRefCount_ = rootRefCount_;
         if (((int)currentRefCount_ >> CONTAINER_TAG_SHIFT) > 0) {
-          if (compareAndSet(&refCount_, currentRefCount_, currentRefCount_ + CONTAINER_TAG_INCREMENT)) {
+          if (compareAndSet(&rootRefCount_, currentRefCount_, (uint16_t)(currentRefCount_ + CONTAINER_TAG_INCREMENT))) {
             return true;
           }
         } else {
@@ -168,26 +188,26 @@ struct ContainerHeader {
   template <bool Atomic>
   inline int decRefCount() {
 #ifdef KONAN_NO_THREADS
-    int value = refCount_ -= CONTAINER_TAG_INCREMENT;
+    int value = rootRefCount_ -= CONTAINER_TAG_INCREMENT;
 #else
     int value = Atomic ?
-       __sync_sub_and_fetch(&refCount_, CONTAINER_TAG_INCREMENT) : refCount_ -= CONTAINER_TAG_INCREMENT;
+       __sync_sub_and_fetch(&rootRefCount_, CONTAINER_TAG_INCREMENT) : rootRefCount_ -= CONTAINER_TAG_INCREMENT;
 #endif
-    return value >> CONTAINER_TAG_SHIFT;
+    return refCount();//value >> CONTAINER_TAG_SHIFT;
   }
 
   inline int decRefCount() {
   #ifdef KONAN_NO_THREADS
-      int value = refCount_ -= CONTAINER_TAG_INCREMENT;
+      int value = rootRefCount_ -= CONTAINER_TAG_INCREMENT;
   #else
       int value = shareable() ?
-         __sync_sub_and_fetch(&refCount_, CONTAINER_TAG_INCREMENT) : refCount_ -= CONTAINER_TAG_INCREMENT;
+         __sync_sub_and_fetch(&rootRefCount_, CONTAINER_TAG_INCREMENT) : rootRefCount_ -= CONTAINER_TAG_INCREMENT;
   #endif
-      return value >> CONTAINER_TAG_SHIFT;
+      return refCount();//value >> CONTAINER_TAG_SHIFT;
   }
 
   inline unsigned tag() const {
-    return refCount_ & CONTAINER_TAG_MASK;
+    return flags_ & CONTAINER_TAG_MASK;
   }
 
   inline unsigned objectCount() const {

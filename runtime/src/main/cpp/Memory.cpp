@@ -441,14 +441,15 @@ struct MemoryState {
   // Objects to be released.
   ContainerHeaderList* toRelease;
 
-  ForeignRefManager* foreignRefManager;
-
   bool gcErgonomics;
   uint64_t lastGcTimestamp;
 
   uint64_t allocSinceLastGc;
   uint64_t allocSinceLastGcThreshold;
 #endif // USE_GC
+
+  ForeignRefManager* foreignRefManager;
+
 
 #if COLLECT_STATISTIC
   #define CONTAINER_ALLOC_STAT(state, size, container) state->statistic.incAlloc(size, container);
@@ -555,7 +556,7 @@ class Container {
     obj->typeInfoOrMeta_ = const_cast<TypeInfo*>(type_info);
     // Take into account typeInfo's immutability for ARC strategy.
     if ((type_info->flags_ & TF_IMMUTABLE) != 0)
-      header_->refCount_ |= CONTAINER_TAG_FROZEN;
+      header_->markFrozen();
     if ((type_info->flags_ & TF_ACYCLIC) != 0)
       header_->setColorEvenIfGreen(CONTAINER_TAG_GC_GREEN);
   }
@@ -963,6 +964,7 @@ void freeContainer(ContainerHeader* container) {
 
   // Now let's clean all object's fields in this container.
   traverseContainerObjectFields(container, [container](ObjHeader** location) {
+      // @zee is stack or heap object?
       ZeroHeapRef(location);
   });
 
@@ -1066,8 +1068,32 @@ inline void incrementRC(ContainerHeader* container) {
 
 template <bool Atomic, bool UseCycleCollector>
 inline void decrementRC(ContainerHeader* container) {
-  if (container->decRefCount<Atomic>() == 0) {
-    freeContainer(container);
+  if (false && RTGC) {
+    /*
+    if (container->decRefCount<Atomic>() >= 0) return;
+    GCNode* node = container->node_;
+    if (!node->foreignReferrers.isEmpty()) {
+      CyclicNode* cyclic = node->asCyclic();
+      if (cyclic != NULL) {
+        cyclic->rootObjectCount --;
+      }
+    }
+    else {
+      CyclicNode* cyclic = node->asCyclic();
+      if (cyclic != NULL) {
+        cyclic->garbageTestList->add(container);
+        cyclic->markDamaged();
+      }
+      else {
+        freeContainer(container);
+      }
+    }
+    */
+  }
+  else {
+    if (container->decRefCount<Atomic>() == 0) {
+      freeContainer(container);
+    }
   }
 }
 
@@ -1660,6 +1686,7 @@ void deinitInstanceBody(const TypeInfo* typeInfo, void* body) {
   for (int index = 0; index < typeInfo->objOffsetsCount_; index++) {
     ObjHeader** location = reinterpret_cast<ObjHeader**>(
         reinterpret_cast<uintptr_t>(body) + typeInfo->objOffsets_[index]);
+    // @zee maybe member field iteration
     ZeroHeapRef(location);
   }
 }
@@ -1836,6 +1863,7 @@ void zeroHeapRef(ObjHeader** location) {
 
 template<bool Strict>
 void zeroStackRef(ObjHeader** location) {
+  // currently not used
   MEMORY_LOG("ZeroStackRef %p\n", location)
   if (Strict) {
     *location = nullptr;
@@ -1874,11 +1902,7 @@ void updateStackRef(ObjHeader** location, const ObjHeader* object) {
           addHeapRef(object);
         }
         *const_cast<const ObjHeader**>(location) = object;
-#ifdef RTGC        
-        if (reinterpret_cast<uintptr_t>(old) > 1) {
-#else          
         if (old != nullptr) {
-#endif          
            releaseHeapRef<false>(old);
         }
      }
@@ -1911,12 +1935,14 @@ void updateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) {
 }
 
 inline void checkIfGcNeeded(MemoryState* state) {
+#if USE_GC  
   if (state != nullptr && state->allocSinceLastGc > state->allocSinceLastGcThreshold) {
     // To avoid GC trashing check that at least 10ms passed since last GC.
     if (konan::getTimeMicros() - state->lastGcTimestamp > 10 * 1000) {
       garbageCollect(state, false);
     }
   }
+#endif  
 }
 
 template <bool Strict>
@@ -2039,7 +2065,11 @@ OBJ_GETTER(initSharedInstance,
   ctor(object);
   if (Strict)
     FreezeSubgraph(object);
+#ifdef RTGC
+  setStackRef<Strict>(location, object);
+#else    
   UpdateStackRef(location, object);
+#endif  
   synchronize();
   return object;
 #else  // KONAN_NO_EXCEPTIONS
@@ -2047,7 +2077,11 @@ OBJ_GETTER(initSharedInstance,
     ctor(object);
     if (Strict)
       FreezeSubgraph(object);
+#ifdef RTGC
+    setStackRef<Strict>(location, object);
+#else    
     UpdateStackRef(location, object);
+#endif
     synchronize();
     return object;
   } catch (...) {
@@ -2071,8 +2105,10 @@ OBJ_GETTER(swapHeapRefLocked,
     SetHeapRef(location, newValue);
     shallRelease = oldValue != nullptr;
   } else {
+#if USE_GC    
     if (IsStrictMemoryModel && oldValue != nullptr)
       rememberNewContainer(oldValue->container());
+#endif      
   }
   unlock(spinlock);
 
@@ -2199,6 +2235,7 @@ void leaveFrame(ObjHeader** start, int parameters, int count) {
   }
 }
 
+#if USE_GC
 void suspendGC() {
   GC_LOG("suspendGC\n")
   memoryState->gcSuspendCount++;
@@ -2275,6 +2312,7 @@ KBoolean getTuneGCThreshold() {
   GC_LOG("getTuneGCThreshold %d\n")
   return memoryState->gcErgonomics;
 }
+#endif
 
 KNativePtr createStablePointer(KRef any) {
   if (any == nullptr) return nullptr;
@@ -2769,7 +2807,7 @@ bool ArenaContainer::allocContainer(container_size_t minSize) {
   if (result == nullptr) return false;
   result->next = currentChunk_;
   result->arena = this;
-  result->asHeader()->refCount_ = (CONTAINER_TAG_STACK | CONTAINER_TAG_INCREMENT);
+  result->asHeader()->setFlags(CONTAINER_TAG_STACK | CONTAINER_TAG_INCREMENT);
   currentChunk_ = result;
   current_ = reinterpret_cast<uint8_t*>(result->asHeader() + 1);
   end_ = reinterpret_cast<uint8_t*>(result) + size;
