@@ -85,20 +85,33 @@ typedef enum {
 
 typedef uint32_t container_size_t;
 
+#define RTGC_ROOT_REF_BITS         12  // 4K
+#define RTGC_MEMBER_REF_BITS       28  // 256M
+#define RTGC_NODE_SLOT_BITS        (64 - RTGC_ROOT_REF_BITS - RTGC_ROOT_REF_BITS)
+
+#define RTGC_ROOT_REF_INCREEMENT   1
+#define RTGC_MEMBER_REF_INCREEMENT (1 << RTGC_ROOT_REF_BITS)
+
+#define RTGC_REF_COUNT_MASK        (((uint64_t)-1) >> RTGC_NODE_SLOT_BITS)
+
+
 // Header of all container objects. Contains reference counter.
 struct ContainerHeader {
 private:  
   // Reference counter of container. Uses CONTAINER_TAG_SHIFT, lower bits of counter
   // for container type (for polymorphism in ::Release()).
-  uint16_t flags_;
-  uint16_t rootRefCount_;
-  uint32_t foreignMemberRefCount_;
-
-  // RTGC Node
-  GCNode* node_;
+  union {
+    struct RTGCRef {
+      uint64_t root: RTGC_ROOT_REF_BITS;
+      uint64_t obj:  RTGC_MEMBER_REF_BITS;
+      uint64_t node: RTGC_NODE_SLOT_BITS;
+    } rtgc;
+    uint64_t count;
+  } ref_;
 
   // Number of objects in the container.
   uint32_t objectCount_;
+  uint32_t flags_;
 
 public:  
 
@@ -139,23 +152,22 @@ public:
   }
 
   inline int64_t refCount() const {
-    return ((int64_t)foreignMemberRefCount_ << 32) + rootRefCount_;
+    return ref_.count & RTGC_REF_COUNT_MASK;
   }
 
   inline void setRefCount(int64_t refCount) {
-    foreignMemberRefCount_ = (unsigned)(refCount >> 32);
-    rootRefCount_ = (uint16_t)refCount;
+    ref_.count = (ref_.count & ~RTGC_REF_COUNT_MASK) + refCount;
   }
 
   template <bool Atomic>
   inline void incRefCount() {
 #ifdef KONAN_NO_THREADS
-    rootRefCount_ += CONTAINER_TAG_INCREMENT;
+    ref_.count += CONTAINER_TAG_INCREMENT;
 #else
     if (Atomic)
-      __sync_add_and_fetch(&rootRefCount_, CONTAINER_TAG_INCREMENT);
+      __sync_add_and_fetch(&ref_.count, CONTAINER_TAG_INCREMENT);
     else
-      rootRefCount_ += CONTAINER_TAG_INCREMENT;
+      ref_.count += CONTAINER_TAG_INCREMENT;
 #endif
   }
 
@@ -163,9 +175,9 @@ public:
   inline bool tryIncRefCount() {
     if (Atomic) {
       while (true) {
-        uint16_t currentRefCount_ = rootRefCount_;
-        if (((int)currentRefCount_ >> CONTAINER_TAG_SHIFT) > 0) {
-          if (compareAndSet(&rootRefCount_, currentRefCount_, (uint16_t)(currentRefCount_ + CONTAINER_TAG_INCREMENT))) {
+        uint64_t currentRefCount_ = ref_.count;
+        if (refCount() > 0) {
+          if (compareAndSet(&ref_.count, currentRefCount_, currentRefCount_ + CONTAINER_TAG_INCREMENT)) {
             return true;
           }
         } else {
@@ -188,20 +200,20 @@ public:
   template <bool Atomic>
   inline int decRefCount() {
 #ifdef KONAN_NO_THREADS
-    int value = rootRefCount_ -= CONTAINER_TAG_INCREMENT;
+    int value = ref_.count -= CONTAINER_TAG_INCREMENT;
 #else
     int value = Atomic ?
-       __sync_sub_and_fetch(&rootRefCount_, CONTAINER_TAG_INCREMENT) : rootRefCount_ -= CONTAINER_TAG_INCREMENT;
+       __sync_sub_and_fetch(&ref_.count, CONTAINER_TAG_INCREMENT) : ref_.count -= CONTAINER_TAG_INCREMENT;
 #endif
     return refCount();//value >> CONTAINER_TAG_SHIFT;
   }
 
   inline int decRefCount() {
   #ifdef KONAN_NO_THREADS
-      int value = rootRefCount_ -= CONTAINER_TAG_INCREMENT;
+      int value = ref_.count -= CONTAINER_TAG_INCREMENT;
   #else
       int value = shareable() ?
-         __sync_sub_and_fetch(&rootRefCount_, CONTAINER_TAG_INCREMENT) : rootRefCount_ -= CONTAINER_TAG_INCREMENT;
+         __sync_sub_and_fetch(&ref_.count, CONTAINER_TAG_INCREMENT) : ref_.count -= CONTAINER_TAG_INCREMENT;
   #endif
       return refCount();//value >> CONTAINER_TAG_SHIFT;
   }
