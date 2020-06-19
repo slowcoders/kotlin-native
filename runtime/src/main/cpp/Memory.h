@@ -85,15 +85,6 @@ typedef enum {
 
 typedef uint32_t container_size_t;
 
-#define RTGC_ROOT_REF_BITS         12  // 4K
-#define RTGC_MEMBER_REF_BITS       28  // 256M
-#define RTGC_NODE_SLOT_BITS        (64 - RTGC_ROOT_REF_BITS - RTGC_ROOT_REF_BITS)
-
-#define RTGC_ROOT_REF_INCREEMENT   1
-#define RTGC_MEMBER_REF_INCREEMENT (1 << RTGC_ROOT_REF_BITS)
-
-#define RTGC_REF_COUNT_MASK        (((uint64_t)-1) >> RTGC_NODE_SLOT_BITS)
-
 
 // Header of all container objects. Contains reference counter.
 struct ContainerHeader {
@@ -101,19 +92,15 @@ private:
   // Reference counter of container. Uses CONTAINER_TAG_SHIFT, lower bits of counter
   // for container type (for polymorphism in ::Release()).
   union {
-    struct RTGCRef {
-      uint64_t root: RTGC_ROOT_REF_BITS;
-      uint64_t obj:  RTGC_MEMBER_REF_BITS;
-      uint64_t node: RTGC_NODE_SLOT_BITS;
-    } rtgc;
+    RTGCRef rtgc;
     uint64_t count;
   } ref_;
 
   // Number of objects in the container.
   uint32_t objectCount_;
-  uint32_t flags_;
-
+  uint32_t flags_;   
 public:  
+
 
   inline bool local() const {
       return (flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_LOCAL;
@@ -195,6 +182,68 @@ public:
         return false;
       }
     }
+  }
+
+  bool isGCNodeAttached() {
+    return ref_.rtgc.node != 0;
+  }
+
+  RTGCRef attachNode() {
+    if (!isGCNodeAttached()) {
+      ref_.rtgc.node = OnewayNode::create();
+    }
+    return ref_.rtgc;
+  }
+
+  template <bool Atomic>
+  inline RTGCRef incMemberRefCount() {
+#ifdef KONAN_NO_THREADS
+    ref_.count += RTGC_MEMBER_REF_INCREEMENT;
+#else
+    int64_t value = 0;
+    if (!isGCNodeAttached()) {
+      attachNode();
+      value = ref_.count += RTGC_MEMBER_REF_INCREEMENT;
+    }
+    else {
+      value = Atomic ?
+        __sync_add_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count += RTGC_MEMBER_REF_INCREEMENT;
+    }
+#endif
+    return *(RTGCRef*)&value;
+  }
+
+  template <bool Atomic>
+  inline RTGCRef decMemberRefCount() {
+#ifdef KONAN_NO_THREADS
+    int64_t value = ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
+#else
+    int64_t value = Atomic ?
+       __sync_sub_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
+#endif
+    return *(RTGCRef*)&value;
+  }
+
+  template <bool Atomic>
+  inline RTGCRef incRootCount() {
+#ifdef KONAN_NO_THREADS
+    ref_.count += CONTAINER_TAG_INCREMENT;
+#else
+    int64_t value = Atomic ?
+       __sync_fetch_and_add(&ref_.count, CONTAINER_TAG_INCREMENT) : ref_.count += CONTAINER_TAG_INCREMENT;
+#endif
+    return *(RTGCRef*)&value;
+  }
+
+  template <bool Atomic>
+  inline RTGCRef decRootCount() {
+#ifdef KONAN_NO_THREADS
+    int64_t value = ref_.count -= CONTAINER_TAG_INCREMENT;
+#else
+    int64_t value = Atomic ?
+       __sync_sub_and_fetch(&ref_.count, CONTAINER_TAG_INCREMENT) : ref_.count -= CONTAINER_TAG_INCREMENT;
+#endif
+    return *(RTGCRef*)&value;
   }
 
   template <bool Atomic>
