@@ -16,6 +16,7 @@
 
 #ifndef RUNTIME_MEMORY_H
 #define RUNTIME_MEMORY_H
+#include <stdio.h>
 
 #include "KAssert.h"
 #include "Common.h"
@@ -114,8 +115,9 @@ public:
     flags_ |= CONTAINER_TAG_FROZEN;
   }
 
-  inline void setFlags(uint16_t flags) {
-    flags_ = flags;
+
+  inline void setRefCountAndFlags(uint32_t refCount, uint16_t flags) {
+    ref_.count = refCount; flags_ = flags;
   }
 
   inline void freeze() {
@@ -149,12 +151,12 @@ public:
   template <bool Atomic>
   inline void incRefCount() {
 #ifdef KONAN_NO_THREADS
-    ref_.count += CONTAINER_TAG_INCREMENT;
+    ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #else
     if (Atomic)
-      __sync_add_and_fetch(&ref_.count, CONTAINER_TAG_INCREMENT);
+      __sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT);
     else
-      ref_.count += CONTAINER_TAG_INCREMENT;
+      ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #endif
   }
 
@@ -164,7 +166,7 @@ public:
       while (true) {
         uint64_t currentRefCount_ = ref_.count;
         if (refCount() > 0) {
-          if (compareAndSet(&ref_.count, currentRefCount_, currentRefCount_ + CONTAINER_TAG_INCREMENT)) {
+          if (compareAndSet(&ref_.count, currentRefCount_, currentRefCount_ + RTGC_ROOT_REF_INCREEMENT)) {
             return true;
           }
         } else {
@@ -227,10 +229,10 @@ public:
   template <bool Atomic>
   inline RTGCRef incRootCount() {
 #ifdef KONAN_NO_THREADS
-    ref_.count += CONTAINER_TAG_INCREMENT;
+    ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #else
     int64_t value = Atomic ?
-       __sync_fetch_and_add(&ref_.count, CONTAINER_TAG_INCREMENT) : ref_.count += CONTAINER_TAG_INCREMENT;
+       __sync_fetch_and_add(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #endif
     return *(RTGCRef*)&value;
   }
@@ -238,10 +240,10 @@ public:
   template <bool Atomic>
   inline RTGCRef decRootCount() {
 #ifdef KONAN_NO_THREADS
-    int64_t value = ref_.count -= CONTAINER_TAG_INCREMENT;
+    int64_t value = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #else
     int64_t value = Atomic ?
-       __sync_sub_and_fetch(&ref_.count, CONTAINER_TAG_INCREMENT) : ref_.count -= CONTAINER_TAG_INCREMENT;
+       __sync_sub_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #endif
     return *(RTGCRef*)&value;
   }
@@ -249,20 +251,20 @@ public:
   template <bool Atomic>
   inline int decRefCount() {
 #ifdef KONAN_NO_THREADS
-    int value = ref_.count -= CONTAINER_TAG_INCREMENT;
+    int value = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #else
     int value = Atomic ?
-       __sync_sub_and_fetch(&ref_.count, CONTAINER_TAG_INCREMENT) : ref_.count -= CONTAINER_TAG_INCREMENT;
+       __sync_sub_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #endif
     return refCount();//value >> CONTAINER_TAG_SHIFT;
   }
 
   inline int decRefCount() {
   #ifdef KONAN_NO_THREADS
-      int value = ref_.count -= CONTAINER_TAG_INCREMENT;
+      int value = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #else
       int value = shareable() ?
-         __sync_sub_and_fetch(&ref_.count, CONTAINER_TAG_INCREMENT) : ref_.count -= CONTAINER_TAG_INCREMENT;
+         __sync_sub_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #endif
       return refCount();//value >> CONTAINER_TAG_SHIFT;
   }

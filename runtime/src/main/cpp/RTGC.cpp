@@ -44,15 +44,23 @@ bool isGlobalLocked() {
     return true;
 }
 
+inline void* GET_NEXT_FREE(void* chain) {
+    return *(void**)chain;
+}
+
+inline void* SET_NEXT_FREE(void* chain, void* next) {
+    return (*(void**)chain = next);
+}
+
 GCRefChain* popFreeChain() {
     GCRefChain* freeChain = g_freeRefChain;
     assert(isGlobalLocked());
-    g_freeRefChain = *(GCRefChain**)&freeChain;
+    g_freeRefChain = (GCRefChain*)GET_NEXT_FREE(freeChain);
     return freeChain;
 }
 
 void recycleChain(GCRefChain* expired) {
-    *(void**)&expired = g_freeRefChain;
+    SET_NEXT_FREE(expired, g_freeRefChain);
     g_freeRefChain = expired;
 }
 
@@ -65,15 +73,15 @@ void GCRefList::add(GCObject* item) {
 
 void GCRefList::remove(GCObject* item) {
     GCRefChain* prev = first_;
-    if (prev->obj() == item) {
-        first_ = prev->next();
+    if (prev->obj_ == item) {
+        first_ = prev->next_;
         return;
     }
 
-    GCRefChain* chain = prev->next();
-    while (chain->obj() != item) {
+    GCRefChain* chain = prev->next_;
+    while (chain->obj_ != item) {
         prev = chain;
-        chain = chain->next();
+        chain = chain->next_;
     }
     prev->next_ = chain->next_;
     recycleChain(chain);
@@ -88,15 +96,14 @@ int OnewayNode::create() {
     OnewayNode* node = g_freeOnewayNode;
     int node_id = node - g_onewayNodes;
         //if (__sync_bool_compare_and_swap(pRef, ref, new_ref)) {
-    g_freeOnewayNode = *(OnewayNode**)&node;
-    *(void**)node = NULL;
+    g_freeOnewayNode = (OnewayNode*)GET_NEXT_FREE(node);
+    SET_NEXT_FREE(node, NULL);
     return node_id;
 }
 
 void CyclicNode::addCyclicTest(GCNode* node) {
     
 }
-
 
 void GCNode::initMemory() {
     g_freeRefChain = new GCRefChain[CNT_REF_CHAIN];
@@ -108,17 +115,17 @@ void GCNode::initMemory() {
 
     int i = CNT_ONEWAY_NODE-1;
     for (OnewayNode* node = g_freeOnewayNode; --i >= 0;) {
-        node = *(OnewayNode**)&node = node + 1;
+        node = (OnewayNode*)SET_NEXT_FREE(node, node + 1);
     }
     
     i = CNT_CYCLIC_NODE-1;
     for (CyclicNode* node = g_freeCyclicNode; --i >= 0;) {
-        node = *(CyclicNode**)&node = node + 1;
+        node = (CyclicNode*)SET_NEXT_FREE(node, node + 1);
     }
 
     i = CNT_REF_CHAIN-1;
     for (GCRefChain* node = g_freeRefChain; --i >= 0;) {
-        node = *(GCRefChain**)&node = node + 1;
+        node = (GCRefChain*)SET_NEXT_FREE(node, node + 1);
     }
 }
 

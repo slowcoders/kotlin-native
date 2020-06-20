@@ -12,12 +12,13 @@ typedef struct ContainerHeader GCObject;
 
 #define RTGC_ROOT_REF_BITS         12  // 4K
 #define RTGC_MEMBER_REF_BITS       28  // 256M
-#define RTGC_NODE_SLOT_BITS        (64 - RTGC_ROOT_REF_BITS - RTGC_ROOT_REF_BITS - 1)
+#define RTGC_REF_COUNT_BITS        (RTGC_ROOT_REF_BITS + RTGC_MEMBER_REF_BITS)
+#define RTGC_NODE_SLOT_BITS        (64 - RTGC_REF_COUNT_BITS - 1)
 
 #define RTGC_ROOT_REF_INCREEMENT   1
 #define RTGC_MEMBER_REF_INCREEMENT (1 << RTGC_ROOT_REF_BITS)
 
-#define RTGC_REF_COUNT_MASK        (((uint64_t)-1) >> RTGC_NODE_SLOT_BITS)
+#define RTGC_REF_COUNT_MASK        ((1L << RTGC_REF_COUNT_BITS) -1)
 
 struct RTGCRef {
   uint64_t root: RTGC_ROOT_REF_BITS;

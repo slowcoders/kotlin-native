@@ -1106,38 +1106,27 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   GCNode* val_node;
   GCNode* owner_node;
   RTGCRef ref;
-  printf("incrementMemberRC 0\n");
   RTGCRef owner_ref = owner->attachNode();
-  printf("incrementMemberRC 1\n");
 
   if (!container->isGCNodeAttached()) {
-    printf("incrementMemberRC 2\n");
     ref = container->incMemberRefCount<false>();
-    printf("incrementMemberRC 2-1\n");
     val_node = GCNode::getNode(ref);
-    printf("incrementMemberRC 2-2\n");
     owner_node = GCNode::getNode(owner_ref);
-    printf("incrementMemberRC 2-3\n");
   }
   else {
-    printf("incrementMemberRC 3\n");
     ref = container->incMemberRefCount<Atomic>();
     if (ref.node == owner_ref.node) {
-      printf("incrementMemberRC 3-1 %d\n", (int)owner_ref.node);
-
       return;
     }
     
     val_node = GCNode::getNode(ref);
     owner_node = GCNode::getNode(owner_ref);
 
-    printf("incrementMemberRC 4\n");
     if (val_node->externalReferrers.isEmpty() &&
       !owner_node->externalReferrers.isEmpty()) {
         CyclicNode::addCyclicTest(val_node);
     }
   }
-  printf("incrementMemberRC 5 %d\n", (int)ref.node);
   val_node->externalReferrers.add(owner);
 }
 
@@ -1147,25 +1136,18 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   GCNode* val_node;
   GCNode* owner_node;
   RTGCRef ref;
-  printf("decrementMemberRC 0\n");
   RTGCRef owner_ref = owner->attachNode();
-  printf("decrementMemberRC 1\n");
 
   ref = container->decMemberRefCount<Atomic>();
-  printf("decrementMemberRC 2\n");
   if (ref.node == owner_ref.node) return;
   
   val_node = GCNode::getNode(ref);
   owner_node = GCNode::getNode(owner_ref);
-  printf("decrementMemberRC 3\n");
   val_node->externalReferrers.remove(owner);
-  printf("decrementMemberRC 4\n");
 
   if (!val_node->externalReferrers.isEmpty()) {
-    printf("decrementMemberRC 5\n");
       CyclicNode::addCyclicTest(val_node);
   }
-  printf("decrementMemberRC 6\n");
 }
 
 #if USE_GC
@@ -1998,7 +1980,9 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeade
 
   if (object != nullptr) {
     ContainerHeader* container = object->container();
-    switch(container->tag()) {
+    if (container == nullptr) {
+    }
+    else switch(container->tag()) {
       case CONTAINER_TAG_STACK:
         break;
       case CONTAINER_TAG_LOCAL:
@@ -2014,7 +1998,9 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeade
 
   if (reinterpret_cast<uintptr_t>(old) > 1) {
     ContainerHeader* container = old->container();
-    switch(container->tag()) {
+    if (container == nullptr) {
+    }
+    else switch(container->tag()) {
       case CONTAINER_TAG_STACK:
         break;
       case CONTAINER_TAG_LOCAL:
@@ -2966,7 +2952,7 @@ bool ArenaContainer::allocContainer(container_size_t minSize) {
   if (result == nullptr) return false;
   result->next = currentChunk_;
   result->arena = this;
-  result->asHeader()->setFlags(CONTAINER_TAG_STACK | CONTAINER_TAG_INCREMENT);
+  result->asHeader()->setRefCountAndFlags(1, CONTAINER_TAG_STACK);
   currentChunk_ = result;
   current_ = reinterpret_cast<uint8_t*>(result->asHeader() + 1);
   end_ = reinterpret_cast<uint8_t*>(result) + size;
