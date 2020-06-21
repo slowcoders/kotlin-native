@@ -303,6 +303,8 @@ inline bool isShareable(ContainerHeader* container) {
 
 void garbageCollect();
 
+void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner);
+
 }  // namespace
 
 class ForeignRefManager {
@@ -538,7 +540,7 @@ namespace {
   PRINT_STAT(state)
 
 // Forward declarations.
-void freeContainer(ContainerHeader* header) NO_INLINE;
+void freeContainer(ContainerHeader* header, bool isLocked=false) NO_INLINE;
 #if USE_GC
 void garbageCollect(MemoryState* state, bool force) NO_INLINE;
 void rememberNewContainer(ContainerHeader* container);
@@ -711,19 +713,19 @@ inline void traverseObjectFields(ObjHeader* obj, func process) {
     for (int index = 0; index < typeInfo->objOffsetsCount_; index++) {
       ObjHeader** location = reinterpret_cast<ObjHeader**>(
           reinterpret_cast<uintptr_t>(obj) + typeInfo->objOffsets_[index]);
-      process(location);
+      process(location, obj);
     }
   } else {
     ArrayHeader* array = obj->array();
     for (int index = 0; index < array->count_; index++) {
-      process(ArrayAddressOfElementAt(array, index));
+      process(ArrayAddressOfElementAt(array, index), obj);
     }
   }
 }
 
 template <typename func>
 inline void traverseReferredObjects(ObjHeader* obj, func process) {
-  traverseObjectFields(obj, [process](ObjHeader** location) {
+  traverseObjectFields(obj, [process](ObjHeader** location, ObjHeader* unused) {
     ObjHeader* ref = *location;
     if (ref != nullptr) process(ref);
   });
@@ -743,7 +745,7 @@ inline void traverseContainerObjectFields(ContainerHeader* container, func proce
 
 template <typename func>
 inline void traverseContainerReferredObjects(ContainerHeader* container, func process) {
-  traverseContainerObjectFields(container, [process](ObjHeader** location) {
+  traverseContainerObjectFields(container, [process](ObjHeader** location, ObjHeader* owner) {
     ObjHeader* ref = *location;
     if (ref != nullptr) process(ref);
   });
@@ -883,9 +885,11 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 
 #endif  // USE_GC
 
-void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container) {
+void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container, bool isLocked=false) {
 #if USE_GC
   RuntimeAssert(container != nullptr, "Cannot destroy null container");
+  GCNode::onDeallocObject(container, isLocked);
+
   container->setNextLink(state->finalizerQueue);
   state->finalizerQueue = container;
   state->finalizerQueueSize++;
@@ -952,7 +956,7 @@ void runDeallocationHooks(ContainerHeader* container) {
   }
 }
 
-void freeContainer(ContainerHeader* container) {
+void freeContainer(ContainerHeader* container, bool isLocked) {
   RuntimeAssert(container != nullptr, "this kind of container shalln't be freed");
 
   if (isAggregatingFrozenContainer(container)) {
@@ -961,18 +965,31 @@ void freeContainer(ContainerHeader* container) {
   }
 
   runDeallocationHooks(container);
-
-  // Now let's clean all object's fields in this container.
-  traverseContainerObjectFields(container, [container](ObjHeader** location) {
-      // @zee is stack or heap object?
-      ZeroHeapRef(location);
-  });
-
+  if (RTGC && isFreeable(container)) {
+      traverseContainerObjectFields(container, [container, isLocked](ObjHeader** location, ObjHeader* owner) {
+        MEMORY_LOG("--- cleaning fields %p, %p\n", owner, container + 1);
+        if (isLocked) {
+          ObjHeader* old = *location;
+          if (old != NULL) {
+            *location = NULL;
+            updateHeapRef_internal(NULL, old, (ObjHeader*)(container + 1));
+          }
+        } else {
+          UpdateHeapRef(location, NULL, (ObjHeader*)(container + 1));
+        }
+      });
+  }
+  else {
+    // Now let's clean all object's fields in this container.
+    traverseContainerObjectFields(container, [container](ObjHeader** location, ObjHeader* owner) {
+          ZeroHeapRef(location);
+    });
+  }
   // And release underlying memory.
   if (isFreeable(container)) {
     container->setColorEvenIfGreen(CONTAINER_TAG_GC_BLACK);
     if (!container->buffered())
-      scheduleDestroyContainer(memoryState, container);
+      scheduleDestroyContainer(memoryState, container, isLocked);
   }
 }
 
@@ -1063,7 +1080,7 @@ inline bool tryIncrementRC(ContainerHeader* container) {
 template <bool Atomic>
 inline void incrementRC(ContainerHeader* container) {
   RTGCRef ref = container->incRootCount<Atomic>();
-  if (ref.root != 0) return;
+  if (ref.root != 1) return;
 
   CyclicNode* cyclic = GCNode::getCyclicNode(ref);
   if (cyclic != NULL) {
@@ -1078,14 +1095,13 @@ inline void decrementRC(ContainerHeader* container) {
 
   CyclicNode* cyclic = GCNode::getCyclicNode(ref);
   if (cyclic != NULL) {
-    if (ref.obj > 0) {
-      cyclic->decRootObjectCount();
-    }
-    else {
-      cyclic->markDamaged(container);
+    if (0 == cyclic->decRootObjectCount()
+    &&  cyclic->externalReferrers.isEmpty()) {
+      cyclic->freeNode(container);
+      return;
     }
   }
-  else if (ref.obj == 0) {
+  if (ref.obj == 0) {
     freeContainer(container);
   }
 }
@@ -1104,14 +1120,14 @@ template <bool Atomic>
 void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   // @zee rootRef 변경으로 인해 Atomic 처리 필요.
   GCNode* val_node;
-  GCNode* owner_node;
   RTGCRef ref;
   RTGCRef owner_ref = owner->attachNode();
+
+  MEMORY_LOG("incrementMemberRC %p: rc=%d\n", container, container->refCount() + RTGC_MEMBER_REF_INCREEMENT);
 
   if (!container->isGCNodeAttached()) {
     ref = container->incMemberRefCount<false>();
     val_node = GCNode::getNode(ref);
-    owner_node = GCNode::getNode(owner_ref);
   }
   else {
     ref = container->incMemberRefCount<Atomic>();
@@ -1119,6 +1135,7 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
       return;
     }
     
+    GCNode* owner_node;
     val_node = GCNode::getNode(ref);
     owner_node = GCNode::getNode(owner_ref);
 
@@ -1139,7 +1156,19 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   RTGCRef owner_ref = owner->attachNode();
 
   ref = container->decMemberRefCount<Atomic>();
-  if (ref.node == owner_ref.node) return;
+  MEMORY_LOG("decrementMemberRC %p: rc=%d\n", container, container->refCount());
+
+  if (ref.node == owner_ref.node) {
+    CyclicNode* cyclic = GCNode::getCyclicNode(ref);
+    assert(cyclic != NULL);
+    cyclic->markSuspectedGarbage(container);
+    return;
+  }
+
+  if (container->refCount() == 0) {
+    freeContainer(container, true);
+    return;
+  }
   
   val_node = GCNode::getNode(ref);
   owner_node = GCNode::getNode(owner_ref);
@@ -1508,7 +1537,7 @@ void collectWhite(MemoryState* state, ContainerHeader* start) {
      toVisit.pop_front();
      if (container->color() != CONTAINER_TAG_GC_WHITE || container->buffered()) continue;
      container->setColorAssertIfGreen(CONTAINER_TAG_GC_BLACK);
-     traverseContainerObjectFields(container, [state, &toVisit](ObjHeader** location) {
+     traverseContainerObjectFields(container, [state, &toVisit](ObjHeader** location, ObjHeader* owner) {
         auto* ref = *location;
         if (ref == nullptr) return;
         auto* childContainer = ref->container();
@@ -1963,22 +1992,9 @@ void zeroStackRef(ObjHeader** location) {
 }
 
 #if RTGC
-template <bool Strict>
-void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
-  UPDATE_REF_EVENT(memoryState, *location, object, location, 0);
-  ObjHeader* old;
-  while (true) {
-    old = *location;
-    if (__sync_bool_compare_and_swap(location, old, const_cast<ObjHeader*>(object))) {
-      break;
-    }
-  }
+void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner) {
 
-  if (old == object) return;
-  
-  void* lock = GCNode::lock(NULL, NULL, NULL);
-
-  if (object != nullptr) {
+  if (object != nullptr && object != owner) {
     ContainerHeader* container = object->container();
     if (container == nullptr) {
     }
@@ -1996,7 +2012,7 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeade
     //addHeapRef(object);
   }
 
-  if (reinterpret_cast<uintptr_t>(old) > 1) {
+  if (reinterpret_cast<uintptr_t>(old) > 1 && old != owner) {
     ContainerHeader* container = old->container();
     if (container == nullptr) {
     }
@@ -2012,6 +2028,18 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeade
         break;      
     }
     //releaseHeapRef<Strict>(old);
+  }
+}
+
+template <bool Strict>
+void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
+  UPDATE_REF_EVENT(memoryState, *location, object, location, 0);
+  void* lock = GCNode::lock(NULL, NULL, NULL);
+
+  ObjHeader* old = *location;
+  if (old != object) {
+    *location = (ObjHeader*)object;
+    updateHeapRef_internal(object, old, owner);
   }
   GCNode::unlock(lock);
 }
@@ -2240,9 +2268,9 @@ OBJ_GETTER(initSharedInstance,
 #endif  // KONAN_NO_THREADS
 }
 
-OBJ_GETTER(swapHeapRefLocked,
+OBJ_GETTER(swapGlobalRefLocked,
     ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock) {
-  lock(spinlock);
+  if (!RTGC || true) lock(spinlock);
   ObjHeader* oldValue = *location;
   bool shallRelease = false;
   // We do not use UpdateRef() here to avoid having ReleaseRef() on return slot under the lock.
@@ -2255,7 +2283,7 @@ OBJ_GETTER(swapHeapRefLocked,
       rememberNewContainer(oldValue->container());
 #endif      
   }
-  unlock(spinlock);
+  if (!RTGC || true) unlock(spinlock);
 
   UpdateReturnRef(OBJ_RESULT, oldValue);
   if (shallRelease) {
@@ -2266,13 +2294,49 @@ OBJ_GETTER(swapHeapRefLocked,
   return oldValue;
 }
 
-void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock) {
-  lock(spinlock);
+void setGlobalRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock) {
+  if (!RTGC || true) lock(spinlock);
   ObjHeader* oldValue = *location;
   // We do not use UpdateRef() here to avoid having ReleaseRef() on old value under the lock.
   SetHeapRef(location, newValue);
-  unlock(spinlock);
-  if (oldValue != nullptr)
+  if (!RTGC || true) unlock(spinlock);
+  if (!RTGC && oldValue != nullptr)
+    ReleaseHeapRef(oldValue);
+}
+
+OBJ_GETTER(swapHeapRefLocked,
+    ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock, ObjHeader* RTGCOwner) {
+  if (!RTGC || true) lock(spinlock);
+  ObjHeader* oldValue = *location;
+  bool shallRelease = false;
+  // We do not use UpdateRef() here to avoid having ReleaseRef() on return slot under the lock.
+  if (oldValue == expectedValue) {
+    UpdateHeapRef(location, newValue, RTGCOwner);
+    shallRelease = oldValue != nullptr;
+  } else {
+#if USE_GC    
+    if (IsStrictMemoryModel && oldValue != nullptr)
+      rememberNewContainer(oldValue->container());
+#endif      
+  }
+  if (!RTGC || true) unlock(spinlock);
+
+  UpdateReturnRef(OBJ_RESULT, oldValue);
+  if (!RTGC && shallRelease) {
+    // No need to rememberNewContainer() on this path, as if `oldValue` is not null - it is explicitly released
+    // anyway, and thus can not escape GC.
+    ReleaseHeapRef(oldValue);
+  }
+  return oldValue;
+}
+
+void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock, ObjHeader* RTGCOwner) {
+  if (!RTGC || true) lock(spinlock);
+  ObjHeader* oldValue = *location;
+  // We do not use UpdateRef() here to avoid having ReleaseRef() on old value under the lock.
+  UpdateHeapRef(location, newValue, RTGCOwner);
+  if (!RTGC || true) unlock(spinlock);
+  if (!RTGC && oldValue != nullptr)
     ReleaseHeapRef(oldValue);
 }
 
@@ -3151,12 +3215,21 @@ void UpdateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) {
 }
 
 OBJ_GETTER(SwapHeapRefLocked,
-    ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock) {
-  RETURN_RESULT_OF(swapHeapRefLocked, location, expectedValue, newValue, spinlock);
+    ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner) {
+  RETURN_RESULT_OF(swapHeapRefLocked, location, expectedValue, newValue, spinlock, owner);
 }
 
-void SetHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock) {
-  setHeapRefLocked(location, newValue, spinlock);
+void SetHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner) {
+  setHeapRefLocked(location, newValue, spinlock, owner);
+}
+
+OBJ_GETTER(SwapGlobalRefLocked,
+    ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock) {
+  RETURN_RESULT_OF(swapGlobalRefLocked, location, expectedValue, newValue, spinlock);
+}
+
+void SetGlobalRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock) {
+  setGlobalRefLocked(location, newValue, spinlock);
 }
 
 OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock) {

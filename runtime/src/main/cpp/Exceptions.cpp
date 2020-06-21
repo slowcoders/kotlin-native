@@ -210,13 +210,13 @@ void ThrowException(KRef exception) {
 }
 
 OBJ_GETTER(Kotlin_setUnhandledExceptionHook, KRef hook) {
-  RETURN_RESULT_OF(SwapHeapRefLocked,
+  RETURN_RESULT_OF(SwapGlobalRefLocked,
     &currentUnhandledExceptionHook, currentUnhandledExceptionHook, hook, &currentUnhandledExceptionHookLock);
 }
 
 void OnUnhandledException(KRef throwable) {
   ObjHolder handlerHolder;
-  auto* handler = SwapHeapRefLocked(&currentUnhandledExceptionHook, currentUnhandledExceptionHook, nullptr,
+  auto* handler = SwapGlobalRefLocked(&currentUnhandledExceptionHook, currentUnhandledExceptionHook, nullptr,
      &currentUnhandledExceptionHookLock, handlerHolder.slot());
   if (handler == nullptr) {
     ReportUnhandledException(throwable);

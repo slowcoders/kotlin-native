@@ -13,7 +13,7 @@ typedef struct ContainerHeader GCObject;
 #define RTGC_ROOT_REF_BITS         12  // 4K
 #define RTGC_MEMBER_REF_BITS       28  // 256M
 #define RTGC_REF_COUNT_BITS        (RTGC_ROOT_REF_BITS + RTGC_MEMBER_REF_BITS)
-#define RTGC_NODE_SLOT_BITS        (64 - RTGC_REF_COUNT_BITS - 1)
+#define RTGC_NODE_SLOT_BITS        (64 - RTGC_REF_COUNT_BITS)
 
 #define RTGC_ROOT_REF_INCREEMENT   1
 #define RTGC_MEMBER_REF_INCREEMENT (1 << RTGC_ROOT_REF_BITS)
@@ -23,7 +23,6 @@ typedef struct ContainerHeader GCObject;
 struct RTGCRef {
   uint64_t root: RTGC_ROOT_REF_BITS;
   uint64_t obj:  RTGC_MEMBER_REF_BITS;  
-  uint64_t cylic: 1;
   uint64_t node: RTGC_NODE_SLOT_BITS;
 };
 
@@ -63,10 +62,13 @@ protected:
   static CyclicNode* g_cyclicNodes;
   static int64_t g_memberUpdateLock;
 
+  static GCNode* getNode(int node_id);
+
 public:
+
   static void initMemory();
 
-  static GCNode* getNode(RTGCRef ref);
+  static GCNode* getNode(RTGCRef ref) { return getNode((int)ref.node); }
   static CyclicNode* getCyclicNode(RTGCRef ref);
 
   static void* lock(GCObject* owner, GCObject* assigned, GCObject* erased) {
@@ -76,6 +78,9 @@ public:
   static void unlock(void* lock) {
     g_memberUpdateLock = 0;
   }
+
+  static void freeNode(GCObject* last);
+  static void onDeallocObject(GCObject* obj, bool isLocked);
 
 };
 
@@ -96,7 +101,7 @@ public:
 
   void markDamaged();
 
-  void markDamaged(GCObject* suspectedGarbage) {
+  void markSuspectedGarbage(GCObject* suspectedGarbage) {
       garbageTestList.add(suspectedGarbage);
       markDamaged();
   }
@@ -105,19 +110,28 @@ public:
     this->rootObjectCount ++;
   }
 
-  void decRootObjectCount() {
-    this->rootObjectCount --;
+  int decRootObjectCount() {
+    return --this->rootObjectCount;
   }
 
   static void addCyclicTest(GCNode* node);
 };
 
+static const int CYCLIC_NODE_ID_START = (1 << RTGC_NODE_SLOT_BITS) * 3 / 4;
+
 inline CyclicNode* GCNode::getCyclicNode(RTGCRef ref) {
-  return ref.cylic ? g_cyclicNodes + ref.node : nullptr;
+  int n_id = (int)ref.node;
+  return n_id >= CYCLIC_NODE_ID_START ? (CyclicNode*)getNode(n_id) : nullptr;
 }
 
-inline GCNode* GCNode::getNode(RTGCRef ref) {
-  return ref.cylic ? (GCNode*)(g_cyclicNodes + ref.node) : (GCNode*)(g_onewayNodes + ref.node);
+inline GCNode* GCNode::getNode(int n_id) {
+  if (n_id >= CYCLIC_NODE_ID_START) {
+    return g_cyclicNodes + (n_id - CYCLIC_NODE_ID_START);
+  }
+  else {
+    return g_onewayNodes + n_id;
+  }
 }
+
 
 #endif // RTGC_H

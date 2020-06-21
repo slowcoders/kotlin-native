@@ -189,6 +189,10 @@ public:
   bool isGCNodeAttached() {
     return ref_.rtgc.node != 0;
   }
+  
+  RTGCRef getRTGCRef() {
+    return ref_.rtgc;
+  }
 
   RTGCRef attachNode() {
     if (!isGCNodeAttached()) {
@@ -232,7 +236,7 @@ public:
     ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #else
     int64_t value = Atomic ?
-       __sync_fetch_and_add(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count += RTGC_ROOT_REF_INCREEMENT;
+       __sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #endif
     return *(RTGCRef*)&value;
   }
@@ -606,10 +610,17 @@ MODEL_VARIANTS(void, UpdateHeapRefIfNull, ObjHeader** location, const ObjHeader*
 MODEL_VARIANTS(void, UpdateReturnRef, ObjHeader** returnSlot, const ObjHeader* object);
 // Compares and swaps reference with taken lock.
 OBJ_GETTER(SwapHeapRefLocked,
+    ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner) RUNTIME_NOTHROW;
+// Sets reference with taken lock.
+void SetHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner) RUNTIME_NOTHROW;
+// Reads reference with taken lock.
+
+OBJ_GETTER(SwapGlobalRefLocked,
     ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock) RUNTIME_NOTHROW;
 // Sets reference with taken lock.
-void SetHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock) RUNTIME_NOTHROW;
+void SetGlobalRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock) RUNTIME_NOTHROW;
 // Reads reference with taken lock.
+
 OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock) RUNTIME_NOTHROW;
 // Called on frame enter, if it has object slots.
 MODEL_VARIANTS(void, EnterFrame, ObjHeader** start, int parameters, int count);
