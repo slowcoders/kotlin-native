@@ -2640,7 +2640,7 @@ void freezeAcyclic(ContainerHeader* rootContainer, ContainerHeaderSet* newlyFroz
     // color and similar attributes shall not be used.
     if (!current->frozen())
       newlyFrozen->insert(current);
-    MEMORY_LOG("freezing %p\n", current)
+    MEMORY_LOG("freezing acyclic %p\n", current)
     current->freeze();
     traverseContainerReferredObjects(current, [current, &queue](ObjHeader* obj) {
         ContainerHeader* objContainer = obj->container();
@@ -2720,7 +2720,7 @@ void freezeCyclic(ObjHeader* root,
         newlyFrozen->insert(container);
       // Note, that once object is frozen, it could be concurrently accessed, so
       // color and similar attributes shall not be used.
-      MEMORY_LOG("freezing %p\n", container)
+      MEMORY_LOG("freezing Cyclic %p\n", container)
       container->freeze();
       // We set refcount of original container to zero, so that it is seen as such after removal
       // meta-object, where aggregating container is stored.
@@ -2781,9 +2781,10 @@ void freezeSubgraph(ObjHeader* root) {
   }
   ContainerHeaderSet newlyFrozen;
   // Now unmark all marked objects, and freeze them, if no cycles detected.
-  if (hasCycles) {
+  if (!RTGC && hasCycles) {
     freezeCyclic(root, order, &newlyFrozen);
   } else {
+    if (hasCycles) { MEMORY_LOG("freeCycle ignored in RTGC mode."); }
     freezeAcyclic(rootContainer, &newlyFrozen);
   }
   MEMORY_LOG("Graph of %p is %s with %d elements\n", root, hasCycles ? "cyclic" : "acyclic", newlyFrozen.size())
