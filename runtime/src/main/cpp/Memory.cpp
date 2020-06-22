@@ -303,7 +303,6 @@ inline bool isShareable(ContainerHeader* container) {
 
 void garbageCollect();
 
-void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner);
 
 }  // namespace
 
@@ -540,7 +539,9 @@ namespace {
   PRINT_STAT(state)
 
 // Forward declarations.
-void freeContainer(ContainerHeader* header, bool isLocked=false) NO_INLINE;
+#ifndef RTGC
+void freeContainer(ContainerHeader* header, int garbageNodeId=-1) NO_INLINE;
+#endif
 #if USE_GC
 void garbageCollect(MemoryState* state, bool force) NO_INLINE;
 void rememberNewContainer(ContainerHeader* container);
@@ -722,7 +723,14 @@ inline void traverseObjectFields(ObjHeader* obj, func process) {
     }
   }
 }
-
+} // namespce
+void RTGC_traverseObjectFields(ContainerHeader* container, RTGC_FIELD_TRAVERSE_CALLBACK process) {
+  traverseObjectFields((ObjHeader*)(container + 1), [process](ObjHeader** location, ObjHeader* unused) {
+    ObjHeader* ref = *location;
+    if (ref != nullptr) process(ref->container());
+  });
+}
+namespace {
 template <typename func>
 inline void traverseReferredObjects(ObjHeader* obj, func process) {
   traverseObjectFields(obj, [process](ObjHeader** location, ObjHeader* unused) {
@@ -888,7 +896,7 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container, bool isLocked=false) {
 #if USE_GC
   RuntimeAssert(container != nullptr, "Cannot destroy null container");
-  GCNode::onDeallocObject(container, isLocked);
+  GCNode::dealloc(container->getNodeId(), isLocked);
 
   container->setNextLink(state->finalizerQueue);
   state->finalizerQueue = container;
@@ -955,8 +963,8 @@ void runDeallocationHooks(ContainerHeader* container) {
     obj = reinterpret_cast<ObjHeader*>(reinterpret_cast<uintptr_t>(obj) + objectSize(obj));
   }
 }
-
-void freeContainer(ContainerHeader* container, bool isLocked) {
+} // namespace
+void freeContainer(ContainerHeader* container, int garbageNodeId) {
   RuntimeAssert(container != nullptr, "this kind of container shalln't be freed");
 
   if (isAggregatingFrozenContainer(container)) {
@@ -966,13 +974,18 @@ void freeContainer(ContainerHeader* container, bool isLocked) {
 
   runDeallocationHooks(container);
   if (RTGC && isFreeable(container)) {
-      traverseContainerObjectFields(container, [container, isLocked](ObjHeader** location, ObjHeader* owner) {
+      traverseContainerObjectFields(container, [container, garbageNodeId](ObjHeader** location, ObjHeader* owner) {
         MEMORY_LOG("--- cleaning fields %p, %p\n", owner, container + 1);
-        if (isLocked) {
+        if (garbageNodeId >= 0) {
           ObjHeader* old = *location;
+          *location = NULL;
           if (old != NULL) {
-            *location = NULL;
-            updateHeapRef_internal(NULL, old, (ObjHeader*)(container + 1));
+            if (old->container()->getNodeId() == garbageNodeId) {
+              freeContainer(old->container(), garbageNodeId);
+            }
+            else {
+              updateHeapRef_internal(NULL, old, (ObjHeader*)(container + 1));
+            }
           }
         } else {
           UpdateHeapRef(location, NULL, (ObjHeader*)(container + 1));
@@ -989,10 +1002,11 @@ void freeContainer(ContainerHeader* container, bool isLocked) {
   if (isFreeable(container)) {
     container->setColorEvenIfGreen(CONTAINER_TAG_GC_BLACK);
     if (!container->buffered())
-      scheduleDestroyContainer(memoryState, container, isLocked);
+      scheduleDestroyContainer(memoryState, container, garbageNodeId >= 0);
   }
 }
 
+namespace {
 /**
   * Do DFS cycle detection with three colors:
   *  - 'marked' bit as BLACK marker (object and its descendants processed)
@@ -1095,14 +1109,18 @@ inline void decrementRC(ContainerHeader* container) {
 
   CyclicNode* cyclic = GCNode::getCyclicNode(ref);
   if (cyclic != NULL) {
+    GCNode::lock(0, 0, 0);
     if (0 == cyclic->decRootObjectCount()
     &&  cyclic->externalReferrers.isEmpty()) {
-      cyclic->freeNode(container);
+      freeContainer(container, cyclic->getId());
+      GCNode::unlock(0);
+      //cyclic->freeNode(container);
       return;
     }
+    GCNode::unlock(0);
   }
   if (ref.obj == 0) {
-    freeContainer(container);
+    freeContainer(container, -1);
   }
 }
 
@@ -1139,9 +1157,10 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     val_node = GCNode::getNode(ref);
     owner_node = GCNode::getNode(owner_ref);
 
-    if (val_node->externalReferrers.isEmpty() &&
+    if (!val_node->isSuspectedCyclic() &&
+      val_node->externalReferrers.isEmpty() &&
       !owner_node->externalReferrers.isEmpty()) {
-        CyclicNode::addCyclicTest(val_node);
+        CyclicNode::addCyclicTest(container);
     }
   }
   val_node->externalReferrers.add(owner);
@@ -1166,7 +1185,7 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   }
 
   if (container->refCount() == 0) {
-    freeContainer(container, true);
+    freeContainer(container, container->getNodeId());
     return;
   }
   
@@ -1174,8 +1193,9 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   owner_node = GCNode::getNode(owner_ref);
   val_node->externalReferrers.remove(owner);
 
-  if (!val_node->externalReferrers.isEmpty()) {
-      CyclicNode::addCyclicTest(val_node);
+  if (!val_node->isSuspectedCyclic() &&
+    !val_node->externalReferrers.isEmpty()) {
+      CyclicNode::addCyclicTest(container);
   }
 }
 
@@ -1725,6 +1745,7 @@ void garbageCollect(MemoryState* state, bool force) {
   state->allocSinceLastGc = 0;
 
   if (!IsStrictMemoryModel) {
+    CyclicNode::detectCycles();
     // In relaxed model we just process finalizer queue and be done with it.
     processFinalizerQueue(state);
     return;
@@ -1992,6 +2013,7 @@ void zeroStackRef(ObjHeader** location) {
 }
 
 #if RTGC
+} // namespace
 void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner) {
 
   if (object != nullptr && object != owner) {
@@ -2030,6 +2052,7 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
     //releaseHeapRef<Strict>(old);
   }
 }
+namespace {
 
 template <bool Strict>
 void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {

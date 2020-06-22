@@ -5,6 +5,8 @@
 #include "Common.h"
 #include "TypeInfo.h"
 #include "Atomic.h"
+#include <functional>
+#include <utility>
 
 #define RTGC 1
 
@@ -19,6 +21,8 @@ typedef struct ContainerHeader GCObject;
 #define RTGC_MEMBER_REF_INCREEMENT (1 << RTGC_ROOT_REF_BITS)
 
 #define RTGC_REF_COUNT_MASK        ((1L << RTGC_REF_COUNT_BITS) -1)
+static const int CYCLIC_NODE_ID_START = (1 << RTGC_NODE_SLOT_BITS) * 3 / 4;
+
 
 struct RTGCRef {
   uint64_t root: RTGC_ROOT_REF_BITS;
@@ -31,7 +35,7 @@ enum GCFlags {
 };
 
 enum TraceState {
-  NOT_TRCAED,
+  NOT_TRACED,
   IN_TRACING,
   TRACE_FINISHED,
   OUT_OF_SCOPE
@@ -43,19 +47,27 @@ struct GCRefList {
 private:  
   GCRefChain* first_;
 public:
+  GCRefList() { first_ = NULL; }
   GCRefChain* first() { return first_; }
+  GCRefChain* find(GCObject* obj);
+  GCRefChain* find(int node_id);
   void add(GCObject* obj);
   void remove(GCObject* obj);
+  void moveTo(GCObject* retiree, GCRefList* receiver);
+  bool tryRemove(GCObject* obj);
   bool isEmpty() { return first_ == nullptr; }
+  void setFirst(GCRefChain* last);
+  void clear() { setFirst(NULL); }
 };
 
 struct CyclicNode;
 struct OnewayNode;
 
 struct GCNode {
+  friend CyclicNode;  
   GCRefList externalReferrers;
 protected:  
-  TraceState state;
+  TraceState traceState;
   bool needCyclicTest;
 
   static OnewayNode* g_onewayNodes;
@@ -63,8 +75,14 @@ protected:
   static int64_t g_memberUpdateLock;
 
   static GCNode* getNode(int node_id);
+  void clearSuspectedCyclic() { needCyclicTest = false; } 
+  void markSuspectedCyclic() { needCyclicTest = true; } 
 
 public:
+
+  bool isSuspectedCyclic() {
+    return needCyclicTest;
+  }
 
   static void initMemory();
 
@@ -79,13 +97,22 @@ public:
     g_memberUpdateLock = 0;
   }
 
-  static void freeNode(GCObject* last);
-  static void onDeallocObject(GCObject* obj, bool isLocked);
+  static bool isLocked(void* lock) {
+    return g_memberUpdateLock != 0;
+  }
+
+  static void dealloc(int nodeId, bool isLocked);
 
 };
 
 struct OnewayNode : GCNode {
   static int create();
+
+  int getId() {
+    return (this - g_onewayNodes);
+  }
+
+
 };
 
 struct CyclicNode : GCNode {
@@ -93,11 +120,26 @@ private:
   int32_t rootObjectCount;
   CyclicNode* nextDamaged;
   GCRefList garbageTestList;
+
+  static CyclicNode* g_damagedCylicNodes;
+  static GCRefList g_cyclicTestNodes;
+
+  void addCyclicObject(GCObject* obj);
+  void mergeCyclicNode(GCObject* obj, int expiredNodeId);
+  static void detectCyclicNodes(GCObject* tracingObj, GCRefList* traceList, GCRefList* finishedList);
 public:
+
+  int getId() {
+    return (this - g_cyclicNodes) + CYCLIC_NODE_ID_START;
+  }
 
   bool isDamaged() {
     return nextDamaged != 0;
   }
+
+  bool isGarbage() {
+    return rootObjectCount == 0 && externalReferrers.first() == 0;
+  }  
 
   void markDamaged();
 
@@ -114,10 +156,17 @@ public:
     return --this->rootObjectCount;
   }
 
-  static void addCyclicTest(GCNode* node);
+  void freeNode(GCObject* last);
+
+  static CyclicNode* create();
+  static void addCyclicTest(GCObject* node);
+  static void detectCycles();
 };
 
-static const int CYCLIC_NODE_ID_START = (1 << RTGC_NODE_SLOT_BITS) * 3 / 4;
+using RTGC_FIELD_TRAVERSE_CALLBACK = std::function<void(GCObject*)>;
+
+void RTGC_traverseObjectFields(GCObject* obj, RTGC_FIELD_TRAVERSE_CALLBACK process);
+
 
 inline CyclicNode* GCNode::getCyclicNode(RTGCRef ref) {
   int n_id = (int)ref.node;

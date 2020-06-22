@@ -49,6 +49,18 @@ object GC {
     external fun stop()
 
     /**
+     * print RTGC statistics.
+     */
+    @SymbolName("Kotlin_native_internal_GC_rtgcLog")
+    external fun rtgcLog()
+
+    /**
+     * print RTGC statistics.
+     */
+    @SymbolName("Kotlin_native_internal_GC_refCount")
+    external fun refCount(obj: Any?) : Int
+
+    /**
      * Start garbage collection. Cyclical garbage produced while GC was stopped
      * cannot be reclaimed, but all new garbage is collected.
      */

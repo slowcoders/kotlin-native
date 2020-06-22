@@ -13,52 +13,30 @@
 #include "Natives.h"
 #include "Porting.h"
 #include "Runtime.h"
+#include "RTGCPrivate.h"
 
-const static int CNT_ONEWAY_NODE = 1000*1000;
-const static int CNT_CYCLIC_NODE = 1000*1000;
-const static int CNT_REF_CHAIN = 1000*1000;
+int RTGCGlobal::cntRefChain = 0;
+int RTGCGlobal::cntOneWayNodes = 0;
+int RTGCGlobal::cntCyclicNodes = 0;
 
-struct GCRefChain {
-    friend GCRefList;
-private:
-  GCObject* obj_;
-  GCRefChain* next_;
-public:
-  GCObject* obj() { return obj_; }
-  GCRefChain* next() { return next_; }
-};
+OnewayNode* RTGCGlobal::g_freeOnewayNode;
+CyclicNode* RTGCGlobal::g_freeCyclicNode;
 
+
+GCRefChain* RTGCGlobal::g_refChains;
+GCRefChain* RTGCGlobal::g_freeRefChain;
 
 OnewayNode* GCNode::g_onewayNodes = NULL;
-CyclicNode* GCNode::g_cyclicNodes;
-
-static OnewayNode* g_freeOnewayNode;
-static CyclicNode* g_freeCyclicNode;
-
-static CyclicNode* g_damagedCylicNodes = NULL;
-static GCNode* g_cyclicTestNodes = NULL;
+CyclicNode* GCNode::g_cyclicNodes = NULL;
 int64_t GCNode::g_memberUpdateLock = 0;
 
-static GCRefChain* g_refChains;
-static GCRefChain* g_freeRefChain;
-
-bool isGlobalLocked() {
-    return true;
-}
-
-inline void* GET_NEXT_FREE(void* chain) {
-    return *(void**)chain;
-}
-
-inline void* SET_NEXT_FREE(void* chain, void* next) {
-    return (*(void**)chain = next);
-}
 
 GCRefChain* popFreeChain() {
-    GCRefChain* freeChain = g_freeRefChain;
-    assert(isGlobalLocked());
-    g_freeRefChain = (GCRefChain*)GET_NEXT_FREE(freeChain);
-    int node_id = freeChain - g_refChains;
+    GCRefChain* freeChain = RTGCGlobal::g_freeRefChain;
+    assert(GCNode::isLocked(0));
+    RTGCGlobal::g_freeRefChain = (GCRefChain*)GET_NEXT_FREE(freeChain);
+    RTGCGlobal::cntRefChain ++;
+    int node_id = freeChain - RTGCGlobal::g_refChains;
     if (true || node_id % 1000 == 0) {
        // printf("RTGC Ref chain: %d, %p\n", node_id, g_freeRefChain);
     }
@@ -66,12 +44,13 @@ GCRefChain* popFreeChain() {
 }
 
 void recycleChain(GCRefChain* expired, const char* type) {
-    SET_NEXT_FREE(expired, g_freeRefChain);
-    int node_id = expired - g_refChains;
+    SET_NEXT_FREE(expired, RTGCGlobal::g_freeRefChain);
+    RTGCGlobal::cntRefChain --;
+    int node_id = expired - RTGCGlobal::g_refChains;
     if (true || node_id % 1000 == 0) {
        // printf("RTGC Recycle chain: %s %d, %p\n", type, node_id, expired);
     }
-    g_freeRefChain = expired;
+    RTGCGlobal::g_freeRefChain = expired;
 }
 
 void GCRefList::add(GCObject* item) {
@@ -80,6 +59,7 @@ void GCRefList::add(GCObject* item) {
     chain->next_ = first_;
     first_ = chain;
 }
+
 
 void GCRefList::remove(GCObject* item) {
     GCRefChain* prev = first_;
@@ -98,44 +78,132 @@ void GCRefList::remove(GCObject* item) {
     recycleChain(chain, "next");
 }
 
-void CyclicNode::markDamaged() {
+void GCRefList::moveTo(GCObject* item, GCRefList* receiver) {
+    GCRefChain* prev = first_;
+    if (prev->obj_ == item) {
+        first_ = prev->next_;
+        // move to receiver;
+        prev->next_ = receiver->first_;
+        receiver->first_ = prev;
+        return;
+    }
 
+    GCRefChain* chain = prev->next_;
+    while (chain->obj_ != item) {
+        prev = chain;
+        chain = chain->next_;
+    }
+    prev->next_ = chain->next_;
+    // move to receiver;
+    chain->next_ = receiver->first_;
+    receiver->first_ = chain;
+}
+
+
+bool GCRefList::tryRemove(GCObject* item) {
+    GCRefChain* prev = NULL;
+    for (GCRefChain* chain = first_; chain != NULL; chain = chain->next()) {
+        if (chain->obj_ == item) {
+            if (prev == NULL) {
+                first_ = chain->next_;
+            }
+            else {
+                prev->next_ = chain->next_;
+            }
+            recycleChain(chain, "first");
+            return true;
+        }
+        prev = chain;
+    }
+    return false;
+}
+
+GCRefChain* GCRefList::find(GCObject* item) {
+    for (GCRefChain* chain = first_; chain != NULL; chain = chain->next_) {
+        if (chain->obj_ == item) {
+            return chain;
+        }
+    }
+    return NULL;
+}
+
+GCRefChain* GCRefList::find(int node_id) {    
+    for (GCRefChain* chain = first_; chain != NULL; chain = chain->next_) {
+        if (chain->obj_->getNodeId() == node_id) {
+            return chain;
+        }
+    }
+    return NULL;
+}
+
+void GCRefList::setFirst(GCRefChain* newFirst) {
+    for (GCRefChain* chain = first_; chain != newFirst; ) {
+        GCRefChain* next = chain->next_;
+        recycleChain(chain, "setLast");
+        chain = next;
+    }
+    this->first_ = newFirst;
 }
 
 int OnewayNode::create() {
-    assert(g_memberUpdateLock != 0);
-    OnewayNode* node = g_freeOnewayNode;
+    assert(isLocked(0));
+    OnewayNode* node = RTGCGlobal::g_freeOnewayNode;
         //if (__sync_bool_compare_and_swap(pRef, ref, new_ref)) {
-    g_freeOnewayNode = (OnewayNode*)GET_NEXT_FREE(node);
+    RTGCGlobal::g_freeOnewayNode = (OnewayNode*)GET_NEXT_FREE(node);
     SET_NEXT_FREE(node, NULL);
+    RTGCGlobal::cntOneWayNodes ++;
+
     int node_id = node - g_onewayNodes;
     return node_id;
 }
 
-void CyclicNode::addCyclicTest(GCNode* node) {
-    
+CyclicNode* CyclicNode::create() {
+    assert(isLocked(0));
+    CyclicNode* node = RTGCGlobal::g_freeCyclicNode;
+        //if (__sync_bool_compare_and_swap(pRef, ref, new_ref)) {
+    RTGCGlobal::g_freeCyclicNode = (CyclicNode*)GET_NEXT_FREE(node);
+    SET_NEXT_FREE(node, NULL);
+    RTGCGlobal::cntCyclicNodes ++;
+    return node;
 }
 
-void GCNode::freeNode(GCObject* last) {
-
-}
-
-void GCNode::onDeallocObject(GCObject* obj, bool isLocked) {
-    RTGCRef ref = obj->getRTGCRef();
-    if (ref.node == 0) return;
-    if (ref.node < CYCLIC_NODE_ID_START) {
-        OnewayNode* node = (OnewayNode*)getNode(ref.node);
-        if (!isLocked) GCNode::lock(0, 0, 0);
-        for (GCRefChain* chain = node->externalReferrers.first(); chain != NULL; chain = chain->next()) {
-            recycleChain(chain, "dealloc");
-        }
-        SET_NEXT_FREE(node, g_freeOnewayNode);
-        g_freeOnewayNode = node;
-        if (!isLocked) GCNode::unlock(0);
+void GCNode::dealloc(int nodeId, bool isLocked) {
+    if (nodeId == 0) return;
+    GCNode* node = GCNode::getNode(nodeId);
+    if (!isLocked) GCNode::lock(0, 0, 0);
+    node->externalReferrers.clear();
+    if (nodeId < CYCLIC_NODE_ID_START) {
+        SET_NEXT_FREE(node, RTGCGlobal::g_freeOnewayNode);
+        RTGCGlobal::g_freeOnewayNode = (OnewayNode*)node;
+        RTGCGlobal::cntOneWayNodes --;
     }
+    else {
+        SET_NEXT_FREE(node, RTGCGlobal::g_freeCyclicNode);
+        RTGCGlobal::g_freeCyclicNode = (CyclicNode*)node;
+        RTGCGlobal::cntCyclicNodes --;
+    }
+    if (!isLocked) GCNode::unlock(0);
 }
+
+extern "C" {
+
+void Kotlin_native_internal_GC_rtgcLog(KRef __unused) {
+    printf("cntRefChain %d\n", RTGCGlobal::cntRefChain);
+    printf("cntOneWayNodes %d\n", RTGCGlobal::cntOneWayNodes);
+    printf("cntCyclicNodes %d\n", RTGCGlobal::cntCyclicNodes);
+}
+
+KInt Kotlin_native_internal_GC_refCount(KRef __unused, KRef obj) {
+    if (obj == NULL) return -1;
+    return obj->container()->refCount();
+}
+};
 
 void GCNode::initMemory() {
+    RTGCGlobal::init();
+}
+
+void RTGCGlobal::init() {
     if (g_onewayNodes != NULL) return;
     // printf("GCNode initialized");
 

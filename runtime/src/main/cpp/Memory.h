@@ -186,6 +186,9 @@ public:
     }
   }
 
+  GCNode* getNode() {
+    return GCNode::getNode(ref_.rtgc);
+  }
   bool isGCNodeAttached() {
     return ref_.rtgc.node != 0;
   }
@@ -199,6 +202,18 @@ public:
       ref_.rtgc.node = OnewayNode::create();
     }
     return ref_.rtgc;
+  }
+
+  int getNodeId() {
+    return ref_.rtgc.node;
+  }
+
+  void setNodeId(int node_id) {
+    ref_.rtgc.node = node_id;
+  }
+
+  int getRootRefCount() {
+    return ref_.rtgc.root;
   }
 
   template <bool Atomic>
@@ -720,5 +735,10 @@ class ExceptionObjHolder {
 
 class ForeignRefManager;
 typedef ForeignRefManager* ForeignRefContext;
+
+#ifdef RTGC
+void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner);
+void freeContainer(ContainerHeader* header, int garbageNodeId=-1) NO_INLINE;
+#endif
 
 #endif // RUNTIME_MEMORY_H
