@@ -23,7 +23,6 @@
 #include "TypeInfo.h"
 #include "Atomic.h"
 
-#include "RTGC.h"
 
 typedef enum {
   // Those bit masks are applied to refCount_ field.
@@ -31,21 +30,23 @@ typedef enum {
   CONTAINER_TAG_LOCAL = 0,
   // Container is frozen, could only refer to other frozen objects.
   // Refcounter update is atomics.
-  CONTAINER_TAG_FROZEN = 1 | 1,  // shareable
+  CONTAINER_TAG_FROZEN = 1 << 7,  // shareable
   // Stack container, no need to free, children cleanup still shall be there.
-  CONTAINER_TAG_STACK = 2,
+  CONTAINER_TAG_STACK = 2 << 7,
   // Atomic container, reference counter is atomically updated.
-  CONTAINER_TAG_SHARED = 3 | 1,  // shareable
+  CONTAINER_TAG_SHARED = 3 << 7,  // shareable
   // Shift to get actual counter.
-  CONTAINER_TAG_SHIFT = 2,
-  // Actual value to increment/decrement container by. Tag is in lower bits.
-  CONTAINER_TAG_INCREMENT = 1,// << CONTAINER_TAG_SHIFT,
+  // CONTAINER_TAG_SHIFT = 2 << 7,
+  // not used in RTGC Actual value to increment/decrement container by. Tag is in lower bits.
+  // CONTAINER_TAG_INCREMENT = 1,// << CONTAINER_TAG_SHIFT,
   // Mask for container type.
-  CONTAINER_TAG_MASK = (1 << CONTAINER_TAG_SHIFT) - 1,
+  CONTAINER_TAG_MASK = 3 << 7,
 
+  RTGC_DESTROYED = 4 << 7,
+  NEED_CYCLIC_TEST = 8 << 7,
 
   // Shift to get actual object count, if has it.
-  CONTAINER_TAG_GC_SHIFT     = 7,
+  CONTAINER_TAG_GC_SHIFT     = 7 + 4,
   CONTAINER_TAG_GC_MASK      = (1 << CONTAINER_TAG_GC_SHIFT) - 1,
   CONTAINER_TAG_GC_INCREMENT = 1 << CONTAINER_TAG_GC_SHIFT,
   // Color mask of a container.
@@ -85,6 +86,7 @@ typedef enum {
 } ObjectTag;
 
 typedef uint32_t container_size_t;
+#include "RTGC.h"
 
 
 // Header of all container objects. Contains reference counter.
@@ -97,39 +99,40 @@ private:
     uint64_t count;
   } ref_;
 
-  // Number of objects in the container.
-  uint32_t objectCount_;
-  uint32_t flags_;   
+  GCRefList rtNode;
+  // // Number of objects in the container.
+  // uint32_t objectCount_;
+  // uint32_t rtNode.flags_;   
 public:  
 
 
   inline bool local() const {
-      return (flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_LOCAL;
+      return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_LOCAL;
   }
 
   inline bool frozen() const {
-    return (flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_FROZEN;
+    return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_FROZEN;
   }
 
   inline void markFrozen() {
-    flags_ |= CONTAINER_TAG_FROZEN;
+    rtNode.flags_ |= CONTAINER_TAG_FROZEN;
   }
 
 
   inline void setRefCountAndFlags(uint32_t refCount, uint16_t flags) {
-    ref_.count = refCount; flags_ = flags;
+    ref_.count = refCount; rtNode.flags_ = flags;
   }
 
   inline void freeze() {
-    flags_ = (flags_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_FROZEN;
+    rtNode.flags_ = (rtNode.flags_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_FROZEN;
   }
 
   inline void makeShared() {
-      flags_ = (flags_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_SHARED;
+      rtNode.flags_ = (rtNode.flags_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_SHARED;
   }
 
   inline bool shared() const {
-    return (flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_SHARED;
+    return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_SHARED;
   }
 
   inline bool shareable() const {
@@ -137,7 +140,7 @@ public:
   }
 
   inline bool stack() const {
-    return (flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_STACK;
+    return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_STACK;
   }
 
   inline int64_t refCount() const {
@@ -187,8 +190,20 @@ public:
   }
 
   GCNode* getNode() {
-    return GCNode::getNode(ref_.rtgc);
+    assert(ref_.rtgc.node != 0);
+    if (this->isInCyclicNode()) {
+      return CyclicNode::getNode(ref_.rtgc.node);
+    }
+    else {
+      return (OnewayNode*)&rtNode;
+    }
   }
+
+
+  CyclicNode* getLocalCyclicNode() {
+    return isInCyclicNode() ? CyclicNode::getNode(ref_.rtgc.node) : NULL;
+  }
+
   bool isGCNodeAttached() {
     return ref_.rtgc.node != 0;
   }
@@ -197,11 +212,27 @@ public:
     return ref_.rtgc;
   }
 
-  RTGCRef attachNode() {
+  GCNode* attachNode() {
     if (!isGCNodeAttached()) {
-      ref_.rtgc.node = OnewayNode::create();
+      ref_.rtgc.node = 1;
     }
-    return ref_.rtgc;
+    return getNode();
+  }
+
+  void markDestroyed() {
+    this->rtNode.flags_ |= RTGC_DESTROYED;
+  }
+
+  bool isDestroyed() {
+    return (this->rtNode.flags_ & RTGC_DESTROYED) != 0;
+  }
+
+  bool isGarbage() {
+    return refCount() == 0;
+  }
+
+  bool isInCyclicNode() {
+    return ref_.rtgc.node >= CYCLIC_NODE_ID_START;
   }
 
   int getNodeId() {
@@ -217,32 +248,23 @@ public:
   }
 
   template <bool Atomic>
-  inline RTGCRef incMemberRefCount() {
+  inline void incMemberRefCount() {
 #ifdef KONAN_NO_THREADS
     ref_.count += RTGC_MEMBER_REF_INCREEMENT;
 #else
-    int64_t value = 0;
-    if (!isGCNodeAttached()) {
-      attachNode();
-      value = ref_.count += RTGC_MEMBER_REF_INCREEMENT;
-    }
-    else {
-      value = Atomic ?
+    int64_t value = Atomic ?
         __sync_add_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count += RTGC_MEMBER_REF_INCREEMENT;
-    }
 #endif
-    return *(RTGCRef*)&value;
   }
 
   template <bool Atomic>
-  inline RTGCRef decMemberRefCount() {
+  inline void decMemberRefCount() {
 #ifdef KONAN_NO_THREADS
     int64_t value = ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
 #else
     int64_t value = Atomic ?
        __sync_sub_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
 #endif
-    return *(RTGCRef*)&value;
   }
 
   template <bool Atomic>
@@ -289,96 +311,99 @@ public:
   }
 
   inline unsigned tag() const {
-    return flags_ & CONTAINER_TAG_MASK;
+    return rtNode.flags_ & CONTAINER_TAG_MASK;
   }
 
   inline unsigned objectCount() const {
-    return (objectCount_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) != 0 ?
-        (objectCount_ >> CONTAINER_TAG_GC_SHIFT) : 1;
+    return (rtNode.flags_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) != 0 ?
+        (rtNode.flags_ >> CONTAINER_TAG_GC_SHIFT) : 1;
   }
 
   inline void incObjectCount() {
-    RuntimeAssert((objectCount_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) != 0, "Must have object count");
-    objectCount_ += CONTAINER_TAG_GC_INCREMENT;
+    RuntimeAssert((rtNode.flags_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) != 0, "Must have object count");
+    rtNode.flags_ += CONTAINER_TAG_GC_INCREMENT;
   }
 
   inline void setObjectCount(int count) {
     if (count == 1) {
-      objectCount_ &= ~CONTAINER_TAG_GC_HAS_OBJECT_COUNT;
+      rtNode.flags_ &= ~CONTAINER_TAG_GC_HAS_OBJECT_COUNT;
     } else {
-      objectCount_ = (count << CONTAINER_TAG_GC_SHIFT) | CONTAINER_TAG_GC_HAS_OBJECT_COUNT;
+      rtNode.flags_ = (count << CONTAINER_TAG_GC_SHIFT) | CONTAINER_TAG_GC_HAS_OBJECT_COUNT;
     }
   }
 
   inline unsigned containerSize() const {
-    RuntimeAssert((objectCount_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) == 0, "Must be single-object");
-    return (objectCount_ >> CONTAINER_TAG_GC_SHIFT);
+    RuntimeAssert((rtNode.flags_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) == 0, "Must be single-object");
+    return (rtNode.flags_ >> CONTAINER_TAG_GC_SHIFT);
   }
 
   inline void setContainerSize(unsigned size) {
-    RuntimeAssert((objectCount_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) == 0, "Must not have object count");
-    objectCount_ = (objectCount_ & CONTAINER_TAG_GC_MASK) | (size << CONTAINER_TAG_GC_SHIFT);
+    RuntimeAssert((rtNode.flags_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) == 0, "Must not have object count");
+    rtNode.flags_ = (rtNode.flags_ & CONTAINER_TAG_GC_MASK) | (size << CONTAINER_TAG_GC_SHIFT);
   }
 
   inline bool hasContainerSize() {
-    return (objectCount_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) == 0;
+    return (rtNode.flags_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) == 0;
   }
 
   inline unsigned color() const {
-    return objectCount_ & CONTAINER_TAG_GC_COLOR_MASK;
+    return rtNode.flags_ & CONTAINER_TAG_GC_COLOR_MASK;
   }
 
   inline void setColorAssertIfGreen(unsigned color) {
+    if (RTGC) return;
     RuntimeAssert(this->color() != CONTAINER_TAG_GC_GREEN, "Must not be green");
     setColorEvenIfGreen(color);
   }
 
   inline void setColorEvenIfGreen(unsigned color) {
     // TODO: do we need atomic color update?
-    objectCount_ = (objectCount_ & ~CONTAINER_TAG_GC_COLOR_MASK) | color;
+    if (RTGC) return;
+    rtNode.flags_ = (rtNode.flags_ & ~CONTAINER_TAG_GC_COLOR_MASK) | color;
   }
 
   inline void setColorUnlessGreen(unsigned color) {
     // TODO: do we need atomic color update?
-    unsigned objectCount_ = objectCount_;
-    if ((objectCount_ & CONTAINER_TAG_GC_COLOR_MASK) != CONTAINER_TAG_GC_GREEN)
-        objectCount_ = (objectCount_ & ~CONTAINER_TAG_GC_COLOR_MASK) | color;
+    if (RTGC) return;
+    unsigned flags = rtNode.flags_;
+    if ((flags & CONTAINER_TAG_GC_COLOR_MASK) != CONTAINER_TAG_GC_GREEN)
+        rtNode.flags_ = (flags & ~CONTAINER_TAG_GC_COLOR_MASK) | color;
   }
 
   inline bool buffered() const {
-    return (objectCount_ & CONTAINER_TAG_GC_BUFFERED) != 0;
+    return (rtNode.flags_ & CONTAINER_TAG_GC_BUFFERED) != 0;
   }
 
   inline void setBuffered() {
-    objectCount_ |= CONTAINER_TAG_GC_BUFFERED;
+    rtNode.flags_ |= CONTAINER_TAG_GC_BUFFERED;
   }
 
   inline void resetBuffered() {
-    objectCount_ &= ~CONTAINER_TAG_GC_BUFFERED;
+    rtNode.flags_ &= ~CONTAINER_TAG_GC_BUFFERED;
   }
 
   inline bool marked() const {
-    return (objectCount_ & CONTAINER_TAG_GC_MARKED) != 0;
+    return (rtNode.flags_ & CONTAINER_TAG_GC_MARKED) != 0;
   }
 
   inline void mark() {
-    objectCount_ |= CONTAINER_TAG_GC_MARKED;
+    rtNode.flags_ |= CONTAINER_TAG_GC_MARKED;
   }
 
   inline void unMark() {
-    objectCount_ &= ~CONTAINER_TAG_GC_MARKED;
+    rtNode.flags_ &= ~CONTAINER_TAG_GC_MARKED;
   }
 
   inline bool seen() const {
-    return (objectCount_ & CONTAINER_TAG_GC_SEEN) != 0;
+    return (rtNode.flags_ & CONTAINER_TAG_GC_SEEN) != 0;
   }
 
   inline void setSeen() {
-    objectCount_ |= CONTAINER_TAG_GC_SEEN;
+    rtNode.flags_ |= CONTAINER_TAG_GC_SEEN;
   }
 
   inline void resetSeen() {
-    objectCount_ &= ~CONTAINER_TAG_GC_SEEN;
+    rtNode.flags_ &= ~CONTAINER_TAG_GC_SEEN;
   }
 
   // Following operations only work on freed container which is in finalization queue.

@@ -896,7 +896,9 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container, bool isLocked=false) {
 #if USE_GC
   RuntimeAssert(container != nullptr, "Cannot destroy null container");
-  GCNode::dealloc(container->getNodeId(), isLocked);
+  if (!container->isInCyclicNode()) {
+    GCNode::dealloc(container->getNodeId(), isLocked);
+  }
 
   container->setNextLink(state->finalizerQueue);
   state->finalizerQueue = container;
@@ -967,19 +969,22 @@ void runDeallocationHooks(ContainerHeader* container) {
 void freeContainer(ContainerHeader* container, int garbageNodeId) {
   RuntimeAssert(container != nullptr, "this kind of container shalln't be freed");
 
+  MEMORY_LOG("## RTGC free container %p(%d)\n", container, garbageNodeId);
+
   if (isAggregatingFrozenContainer(container)) {
     freeAggregatingFrozenContainer(container);
     return;
   }
 
   runDeallocationHooks(container);
+  container->markDestroyed();
   if (RTGC && isFreeable(container)) {
       traverseContainerObjectFields(container, [container, garbageNodeId](ObjHeader** location, ObjHeader* owner) {
-        MEMORY_LOG("--- cleaning fields %p, %p\n", owner, container + 1);
+        MEMORY_LOG("--- cleaning fields %p, %p\n", *location, container + 1);
         if (garbageNodeId >= 0) {
           ObjHeader* old = *location;
           *location = NULL;
-          if (old != NULL) {
+          if (old != NULL && !old->container()->isDestroyed()) {
             if (old->container()->getNodeId() == garbageNodeId) {
               freeContainer(old->container(), garbageNodeId);
             }
@@ -1096,7 +1101,7 @@ inline void incrementRC(ContainerHeader* container) {
   RTGCRef ref = container->incRootCount<Atomic>();
   if (ref.root != 1) return;
 
-  CyclicNode* cyclic = GCNode::getCyclicNode(ref);
+  CyclicNode* cyclic = CyclicNode::getNode(ref.node);
   if (cyclic != NULL) {
     cyclic->incRootObjectCount();
   }
@@ -1107,17 +1112,18 @@ inline void decrementRC(ContainerHeader* container) {
   RTGCRef ref = container->decRootCount<Atomic>();
   if (ref.root != 0) return;
 
-  CyclicNode* cyclic = GCNode::getCyclicNode(ref);
+  CyclicNode* cyclic = CyclicNode::getNode(ref.node);
   if (cyclic != NULL) {
-    GCNode::lock(0, 0, 0);
+    GCNode::rtgcLock(0, 0, 0);
     if (0 == cyclic->decRootObjectCount()
     &&  cyclic->externalReferrers.isEmpty()) {
       freeContainer(container, cyclic->getId());
-      GCNode::unlock(0);
+      GCNode::dealloc(cyclic->getId(), true);
+      GCNode::rtgcUnlock(0);
       //cyclic->freeNode(container);
       return;
     }
-    GCNode::unlock(0);
+    GCNode::rtgcUnlock(0);
   }
   if (ref.obj == 0) {
     freeContainer(container, -1);
@@ -1138,25 +1144,21 @@ template <bool Atomic>
 void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   // @zee rootRef 변경으로 인해 Atomic 처리 필요.
   GCNode* val_node;
-  RTGCRef ref;
-  RTGCRef owner_ref = owner->attachNode();
+  GCNode* owner_node = owner->attachNode();
 
   MEMORY_LOG("incrementMemberRC %p: rc=%d\n", container, container->refCount() + RTGC_MEMBER_REF_INCREEMENT);
 
   if (!container->isGCNodeAttached()) {
-    ref = container->incMemberRefCount<false>();
-    val_node = GCNode::getNode(ref);
+    val_node = container->attachNode();
+    container->incMemberRefCount<false>();
   }
   else {
-    ref = container->incMemberRefCount<Atomic>();
-    if (ref.node == owner_ref.node) {
+    val_node = container->getNode();
+    container->incMemberRefCount<Atomic>();
+    if (val_node == owner_node) {
       return;
     }
     
-    GCNode* owner_node;
-    val_node = GCNode::getNode(ref);
-    owner_node = GCNode::getNode(owner_ref);
-
     if (!val_node->isSuspectedCyclic() &&
       val_node->externalReferrers.isEmpty() &&
       !owner_node->externalReferrers.isEmpty()) {
@@ -1169,29 +1171,48 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
 template <bool Atomic>
 void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   // @zee rootRef 변경으로 인해 Atomic 처리 필요.
-  GCNode* val_node;
-  GCNode* owner_node;
-  RTGCRef ref;
-  RTGCRef owner_ref = owner->attachNode();
+  GCNode* owner_node = owner->getNode();
+  GCNode* val_node = container->getNode();
 
-  ref = container->decMemberRefCount<Atomic>();
+  container->decMemberRefCount<Atomic>();
   MEMORY_LOG("decrementMemberRC %p: rc=%d\n", container, container->refCount());
 
-  if (ref.node == owner_ref.node) {
-    CyclicNode* cyclic = GCNode::getCyclicNode(ref);
+  if (val_node != owner_node) {
+    val_node = container->getNode();
+    owner_node = owner->getNode();
+    if (container->isInCyclicNode()) {
+      MEMORY_LOG("## RTGC remove referrer of cyclic node %p: %p\n", container, container->getNodeId());
+    }
+    val_node->externalReferrers.remove(owner);
+  }
+  else {
+    CyclicNode* cyclic = container->getLocalCyclicNode();
     assert(cyclic != NULL);
-    cyclic->markSuspectedGarbage(container);
+    if (container->isGarbage()) {
+      cyclic->removeSuspectedGarbage(container);
+      freeContainer(container, 0);
+    }
+    else {
+      cyclic->markSuspectedGarbage(container);
+    }
     return;
   }
 
   if (container->refCount() == 0) {
-    freeContainer(container, container->getNodeId());
+    freeContainer(container, 0);
     return;
   }
   
-  val_node = GCNode::getNode(ref);
-  owner_node = GCNode::getNode(owner_ref);
-  val_node->externalReferrers.remove(owner);
+
+  if (container->isInCyclicNode()) {
+    CyclicNode* cyclic = (CyclicNode*)val_node;
+    if (cyclic->isGarbage()) {
+      printf("## RTGC garbage cyclic node free");
+      freeContainer(container, cyclic->getId());
+      GCNode::dealloc(cyclic->getId(), true);
+      return;
+    }
+  }
 
   if (!val_node->isSuspectedCyclic() &&
     !val_node->externalReferrers.isEmpty()) {
@@ -2057,14 +2078,14 @@ namespace {
 template <bool Strict>
 void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
   UPDATE_REF_EVENT(memoryState, *location, object, location, 0);
-  void* lock = GCNode::lock(NULL, NULL, NULL);
+  void* lock = GCNode::rtgcLock(NULL, NULL, NULL);
 
   ObjHeader* old = *location;
   if (old != object) {
     *location = (ObjHeader*)object;
     updateHeapRef_internal(object, old, owner);
   }
-  GCNode::unlock(lock);
+  GCNode::rtgcUnlock(lock);
 }
 
 
