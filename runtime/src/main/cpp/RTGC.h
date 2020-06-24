@@ -23,6 +23,8 @@ typedef struct ContainerHeader GCObject;
 #define RTGC_REF_COUNT_MASK        ((1L << RTGC_REF_COUNT_BITS) -1)
 static const int CYCLIC_NODE_ID_START = 2;
 
+static const int ENABLE_RTGC_LOG = 0;
+#define RTGC_LOG if (ENABLE_RTGC_LOG) printf
 
 struct RTGCRef {
   uint64_t root: RTGC_ROOT_REF_BITS;
@@ -39,7 +41,7 @@ static const int IN_TRACING = 1;
 static const int TRACE_FINISHED = 2;
 static const int OUT_OF_SCOPE = 3;
 
-static const int RTGC_TRACE_STATE_MASK = CONTAINER_TAG_GC_SEEN | CONTAINER_TAG_GC_MARKED | CONTAINER_TAG_GC_BUFFERED;
+static const int RTGC_TRACE_STATE_MASK = NOT_TRACED | IN_TRACING | TRACE_FINISHED | OUT_OF_SCOPE;
 
 struct GCRefChain {
   friend struct GCRefList;
@@ -59,10 +61,11 @@ public:
 
   static GCRefChain* g_refChains;
   GCRefList() { first_ = 0; }
-  GCRefChain* first() { return g_refChains + first_; }
+  GCRefChain* topChain() { return first_ == 0 ? NULL : g_refChains + first_; }
   GCRefChain* find(GCObject* obj);
   GCRefChain* find(int node_id);
-  void add(GCObject* obj);
+  GCObject* pop();
+  void push(GCObject* obj);
   void remove(GCObject* obj);
   void moveTo(GCObject* retiree, GCRefList* receiver);
   bool tryRemove(GCObject* obj);
@@ -107,18 +110,18 @@ public:
   }
 
   int getTraceState() {
-    return externalReferrers.flags_;
+    return externalReferrers.flags_ & RTGC_TRACE_STATE_MASK;
   }
 
   void setTraceState(int state) {
+    assert((state & ~RTGC_TRACE_STATE_MASK) == 0);
     externalReferrers.flags_ = (externalReferrers.flags_ & ~RTGC_TRACE_STATE_MASK) | state;
   }
-
-  static void dealloc(int nodeId, bool isLocked);
 
 };
 
 struct OnewayNode : GCNode {
+  void dealloc(bool isLocked);
 };
 
 struct CyclicNode : GCNode {
@@ -140,7 +143,8 @@ public:
   }
 
   static CyclicNode* getNode(int nodeId) {
-    if (nodeId < CYCLIC_NODE_ID_START) return NULL;
+    nodeId -= CYCLIC_NODE_ID_START;
+    if (nodeId < 0) return NULL;
     return g_cyclicNodes + nodeId;
   }
 
@@ -149,13 +153,13 @@ public:
   }
 
   bool isGarbage() {
-    return rootObjectCount == 0 && externalReferrers.first() == 0;
+    return rootObjectCount == 0 && externalReferrers.topChain() == 0;
   }  
 
   void markDamaged();
 
   void markSuspectedGarbage(GCObject* suspectedGarbage) {
-      garbageTestList.add(suspectedGarbage);
+      garbageTestList.push(suspectedGarbage);
       markDamaged();
   }
 
@@ -175,8 +179,12 @@ public:
     return --this->rootObjectCount;
   }
 
+  void dealloc(bool isLocked);
+
+
   static CyclicNode* create();
   static void addCyclicTest(GCObject* node);
+  static void removeCyclicTest(GCObject* node, bool isLocked);
   static void detectCycles();
 };
 

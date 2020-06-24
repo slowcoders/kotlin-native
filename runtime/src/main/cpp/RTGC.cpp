@@ -50,16 +50,16 @@ void recycleChain(GCRefChain* expired, const char* type) {
     RTGCGlobal::g_freeRefChain = expired;
 }
 
-void GCRefList::add(GCObject* item) {
+void GCRefList::push(GCObject* item) {
     GCRefChain* chain = popFreeChain();
     chain->obj_ = item;
-    chain->next_ = this->first();
+    chain->next_ = this->topChain();
     first_ = chain - g_refChains;
 }
 
 
 void GCRefList::remove(GCObject* item) {
-    GCRefChain* prev = first();
+    GCRefChain* prev = topChain();
     if (prev->obj_ == item) {
         first_ = prev->next_ - g_refChains;
         recycleChain(prev, "first");
@@ -76,11 +76,11 @@ void GCRefList::remove(GCObject* item) {
 }
 
 void GCRefList::moveTo(GCObject* item, GCRefList* receiver) {
-    GCRefChain* prev = first();
+    GCRefChain* prev = topChain();
     if (prev->obj_ == item) {
         first_ = prev->next_ - g_refChains;
         // move to receiver;
-        prev->next_ = receiver->first();
+        prev->next_ = receiver->topChain();
         receiver->first_ = prev - g_refChains;
         return;
     }
@@ -92,14 +92,24 @@ void GCRefList::moveTo(GCObject* item, GCRefList* receiver) {
     }
     prev->next_ = chain->next_;
     // move to receiver;
-    chain->next_ = receiver->first();
+    chain->next_ = receiver->topChain();
     receiver->first_ = chain - g_refChains;
 }
 
+GCObject* GCRefList::pop() { 
+    GCRefChain* chain = topChain(); 
+    if (chain == NULL) { 
+        return NULL;
+    }
+    first_ = chain->next_ - g_refChains; 
+    GCObject* obj = chain->obj();
+    recycleChain(chain, "pop");
+    return obj;
+}
 
 bool GCRefList::tryRemove(GCObject* item) {
     GCRefChain* prev = NULL;
-    for (GCRefChain* chain = first(); chain != NULL; chain = chain->next()) {
+    for (GCRefChain* chain = topChain(); chain != NULL; chain = chain->next()) {
         if (chain->obj_ == item) {
             if (prev == NULL) {
                 first_ = chain->next_ - g_refChains;;
@@ -116,7 +126,7 @@ bool GCRefList::tryRemove(GCObject* item) {
 }
 
 GCRefChain* GCRefList::find(GCObject* item) {
-    for (GCRefChain* chain = first(); chain != NULL; chain = chain->next_) {
+    for (GCRefChain* chain = topChain(); chain != NULL; chain = chain->next_) {
         if (chain->obj_ == item) {
             return chain;
         }
@@ -125,7 +135,7 @@ GCRefChain* GCRefList::find(GCObject* item) {
 }
 
 GCRefChain* GCRefList::find(int node_id) {    
-    for (GCRefChain* chain = first(); chain != NULL; chain = chain->next_) {
+    for (GCRefChain* chain = topChain(); chain != NULL; chain = chain->next_) {
         if (chain->obj_->getNodeId() == node_id) {
             return chain;
         }
@@ -134,7 +144,7 @@ GCRefChain* GCRefList::find(int node_id) {
 }
 
 void GCRefList::setFirst(GCRefChain* newFirst) {
-    for (GCRefChain* chain = first(); chain != newFirst; ) {
+    for (GCRefChain* chain = topChain(); chain != newFirst; ) {
         GCRefChain* next = chain->next_;
         recycleChain(chain, "setLast");
         chain = next;
@@ -143,27 +153,7 @@ void GCRefList::setFirst(GCRefChain* newFirst) {
 }
 
 
-CyclicNode* CyclicNode::create() {
-    assert(isLocked(0));
-    CyclicNode* node = RTGCGlobal::g_freeCyclicNode;
-        //if (__sync_bool_compare_and_swap(pRef, ref, new_ref)) {
-    RTGCGlobal::g_freeCyclicNode = (CyclicNode*)GET_NEXT_FREE(node);
-    memset(node, 0, sizeof(CyclicNode));
-    RTGCGlobal::cntCyclicNodes ++;
-    return node;
-}
 
-void GCNode::dealloc(int nodeId, bool isLocked) {
-    CyclicNode* node = CyclicNode::getNode(nodeId);
-    if (node == NULL) return;
-
-    if (!isLocked) GCNode::rtgcLock(0, 0, 0);
-    node->externalReferrers.clear();
-    SET_NEXT_FREE(node, RTGCGlobal::g_freeCyclicNode);
-    RTGCGlobal::g_freeCyclicNode = (CyclicNode*)node;
-    RTGCGlobal::cntCyclicNodes --;
-    if (!isLocked) GCNode::rtgcUnlock(0);
-}
 
 extern "C" {
 
@@ -182,13 +172,23 @@ void GCNode::initMemory() {
     RTGCGlobal::init();
 }
 
+void RTGCGlobal::validateMemPool() {
+    CyclicNode* node = g_freeCyclicNode;
+    for (; node != NULL; node ++) {
+        if (GET_NEXT_FREE(node) == NULL) break;
+        assert(GET_NEXT_FREE(node) == node +1);
+    }
+    assert(node == g_cyclicNodes + CNT_CYCLIC_NODE - 1);
+}
+
 void RTGCGlobal::init() {
     if (g_cyclicNodes != NULL) return;
     // printf("GCNode initialized");
 
     g_freeCyclicNode = new CyclicNode[CNT_CYCLIC_NODE];
-    g_cyclicNodes = g_freeCyclicNode - 1;
-    GCRefList::g_refChains = g_freeRefChain = new GCRefChain[CNT_REF_CHAIN];
+    g_cyclicNodes = g_freeCyclicNode;
+    g_freeRefChain = new GCRefChain[CNT_REF_CHAIN];
+    GCRefList::g_refChains = g_freeRefChain - 1;
 
     int i = CNT_CYCLIC_NODE-1;
     for (CyclicNode* node = g_freeCyclicNode; --i >= 0;) {
@@ -199,5 +199,7 @@ void RTGCGlobal::init() {
     for (GCRefChain* node = g_freeRefChain; --i >= 0;) {
         node = (GCRefChain*)SET_NEXT_FREE(node, node + 1);
     }
+
+    validateMemPool();
 }
 

@@ -13,8 +13,9 @@ struct RTGCGlobal : GCNode {
 
   static GCRefChain* g_freeRefChain;
 
-  static void init();
+  static void validateMemPool();
 
+  static void init();
 };
 
 inline void* GET_NEXT_FREE(void* chain) {

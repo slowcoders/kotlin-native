@@ -200,6 +200,10 @@ public:
   }
 
 
+  OnewayNode* getLocalOnewayNode() {
+    return isInCyclicNode() ? NULL : (OnewayNode*)&rtNode;
+  }
+
   CyclicNode* getLocalCyclicNode() {
     return isInCyclicNode() ? CyclicNode::getNode(ref_.rtgc.node) : NULL;
   }
@@ -217,6 +221,18 @@ public:
       ref_.rtgc.node = 1;
     }
     return getNode();
+  }
+
+  void markNeedCyclicTest() {
+    this->rtNode.flags_ |= NEED_CYCLIC_TEST;
+  }
+
+  bool isNeedCyclicTest() {
+    return (this->rtNode.flags_ & NEED_CYCLIC_TEST) != 0;
+  }
+
+  void clearNeedCyclicTest() {
+    this->rtNode.flags_ &= ~NEED_CYCLIC_TEST;
   }
 
   void markDestroyed() {

@@ -870,6 +870,61 @@ void processFinalizerQueue(MemoryState* state) {
   RuntimeAssert(state->finalizerQueueSize == 0, "Queue must be empty here");
 }
 
+
+#ifdef RTGC    
+static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* visited) {
+  GCRefChain* chain = container->getNode()->externalReferrers.topChain();
+  if (chain == NULL) return true;
+  for (; chain != NULL; chain = chain->next()) {
+    ContainerHeader* referrer = chain->obj();
+    if (referrer->seen() || !hasForeginRefs(referrer, visited)) {
+      if (!container->seen()) {
+        container->setSeen();
+        visited->push_front(container);
+      }
+    }
+    else {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool hasExternalRefs(ContainerHeader* start, ContainerHeaderDeque* visited) {
+  ContainerHeaderDeque toVisit;
+  start->mark();
+  start->setSeen();
+  toVisit.push_back(start);
+  visited->push_front(start);
+  bool hasExternalRefs = false;
+  while (!toVisit.empty()) {
+    auto* container = toVisit.front();
+    toVisit.pop_front();
+    if (!container->seen()) {
+      hasExternalRefs = hasForeginRefs(container, visited);
+      if (hasExternalRefs) {
+        break;
+      }
+    }
+    traverseContainerReferredObjects(container, [&toVisit, visited](ObjHeader* ref) {
+      auto* child = ref->container();
+      if (!isShareable(child) && (!child->marked())) {
+          child->mark();
+          toVisit.push_front(child);
+      }
+    });
+  }
+  for (auto* it: *visited) {
+    it->resetSeen();
+    it->unMark();
+  }
+  for (auto* it: toVisit) {
+    it->unMark();
+  }
+
+  return hasExternalRefs;
+}
+#else
 bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
   ContainerHeaderDeque toVisit;
   toVisit.push_back(start);
@@ -890,15 +945,19 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
   }
   return false;
 }
+#endif
+
 
 #endif  // USE_GC
 
 void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container, bool isLocked=false) {
+  OnewayNode* node = container->getLocalOnewayNode();
+  if (node != NULL) {
+    node->dealloc(isLocked);
+  }
+  CyclicNode::removeCyclicTest(container, isLocked);
 #if USE_GC
   RuntimeAssert(container != nullptr, "Cannot destroy null container");
-  if (!container->isInCyclicNode()) {
-    GCNode::dealloc(container->getNodeId(), isLocked);
-  }
 
   container->setNextLink(state->finalizerQueue);
   state->finalizerQueue = container;
@@ -969,7 +1028,7 @@ void runDeallocationHooks(ContainerHeader* container) {
 void freeContainer(ContainerHeader* container, int garbageNodeId) {
   RuntimeAssert(container != nullptr, "this kind of container shalln't be freed");
 
-  MEMORY_LOG("## RTGC free container %p(%d)\n", container, garbageNodeId);
+  RTGC_LOG("## RTGC free container %p(%d)\n", container, garbageNodeId);
 
   if (isAggregatingFrozenContainer(container)) {
     freeAggregatingFrozenContainer(container);
@@ -984,7 +1043,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
         if (garbageNodeId >= 0) {
           ObjHeader* old = *location;
           *location = NULL;
-          if (old != NULL && !old->container()->isDestroyed()) {
+          if (old != NULL && old->container() != NULL && !old->container()->isDestroyed()) {
             if (old->container()->getNodeId() == garbageNodeId) {
               freeContainer(old->container(), garbageNodeId);
             }
@@ -1118,7 +1177,7 @@ inline void decrementRC(ContainerHeader* container) {
     if (0 == cyclic->decRootObjectCount()
     &&  cyclic->externalReferrers.isEmpty()) {
       freeContainer(container, cyclic->getId());
-      GCNode::dealloc(cyclic->getId(), true);
+      cyclic->dealloc(true);
       GCNode::rtgcUnlock(0);
       //cyclic->freeNode(container);
       return;
@@ -1165,7 +1224,7 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
         CyclicNode::addCyclicTest(container);
     }
   }
-  val_node->externalReferrers.add(owner);
+  val_node->externalReferrers.push(owner);
 }
 
 template <bool Atomic>
@@ -1209,7 +1268,7 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     if (cyclic->isGarbage()) {
       printf("## RTGC garbage cyclic node free");
       freeContainer(container, cyclic->getId());
-      GCNode::dealloc(cyclic->getId(), true);
+      cyclic->dealloc(true);
       return;
     }
   }
@@ -2606,26 +2665,40 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
   auto state = memoryState;
   auto* container = root->container();
 
-  if (isShareable(container))
+  printf("clearSubgraphReferences - 0\n");
+  if (isShareable(container)) {
     // We assume, that frozen/shareable objects can be safely passed and not present
     // in the GC candidate list.
     // TODO: assert for that?
     return true;
+  }
 
-  ContainerHeaderSet visited;
+#ifdef RTGC
+  garbageCollect();
+  ContainerHeaderDeque visited;
+#else
+  ContainerHeaderSet visited;  
+#endif
   if (!checked) {
+  printf("clearSubgraphReferences - 1\n");
     hasExternalRefs(container, &visited);
   } else {
     // Now decrement RC of elements in toRelease set for reachibility analysis.
+  printf("clearSubgraphReferences - 2\n");
     for (auto it = state->toRelease->begin(); it != state->toRelease->end(); ++it) {
       auto released = *it;
+      assert(!RTGC);
       if (!isMarkedAsRemoved(released) && released->local()) {
         released->decRefCount<false>();
       }
     }
+#ifdef RTGC
+    auto bad = hasExternalRefs(container, &visited);
+#else
     container->decRefCount<false>();
     markGray<false>(container);
     auto bad = hasExternalRefs(container, &visited);
+  printf("clearSubgraphReferences - bad:%d\n", bad);
     scanBlack<false>(container);
     // Restore original RC.
     container->incRefCount<false>();
@@ -2635,6 +2708,7 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
          released->incRefCount<false>();
        }
     }
+#endif    
     if (bad) {
       return false;
     }
@@ -2644,20 +2718,28 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
   // TODO: not very efficient traversal.
   for (auto it = state->toFree->begin(); it != state->toFree->end(); ++it) {
     auto container = *it;
+    #ifdef RTGC
+      assert(!RTGC);
+    #else  
     if (visited.count(container) != 0) {
       MEMORY_LOG("removing %p from the toFree list\n", container)
       container->resetBuffered();
       container->setColorAssertIfGreen(CONTAINER_TAG_GC_BLACK);
       *it = markAsRemoved(container);
     }
+    #endif
   }
   for (auto it = state->toRelease->begin(); it != state->toRelease->end(); ++it) {
     auto container = *it;
+    #ifdef RTGC
+      assert(!RTGC);
+    #else
     if (!isMarkedAsRemoved(container) && visited.count(container) != 0) {
       MEMORY_LOG("removing %p from the toRelease list\n", container)
       container->decRefCount<false>();
       *it = markAsRemoved(container);
     }
+    #endif
   }
 
 #if TRACE_MEMORY
