@@ -1037,7 +1037,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
 
   runDeallocationHooks(container);
   container->markDestroyed();
-  if (RTGC && isFreeable(container)) {
+  if (RTGC) {
       traverseContainerObjectFields(container, [container, garbageNodeId](ObjHeader** location, ObjHeader* owner) {
         MEMORY_LOG("--- cleaning fields %p, %p\n", *location, container + 1);
         if (garbageNodeId >= 0) {
@@ -1266,7 +1266,7 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   if (container->isInCyclicNode()) {
     CyclicNode* cyclic = (CyclicNode*)val_node;
     if (cyclic->isGarbage()) {
-      printf("## RTGC garbage cyclic node free");
+      MEMORY_LOG("## RTGC garbage cyclic node free");
       freeContainer(container, cyclic->getId());
       cyclic->dealloc(true);
       return;
@@ -2665,7 +2665,6 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
   auto state = memoryState;
   auto* container = root->container();
 
-  printf("clearSubgraphReferences - 0\n");
   if (isShareable(container)) {
     // We assume, that frozen/shareable objects can be safely passed and not present
     // in the GC candidate list.
@@ -2680,11 +2679,9 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
   ContainerHeaderSet visited;  
 #endif
   if (!checked) {
-  printf("clearSubgraphReferences - 1\n");
     hasExternalRefs(container, &visited);
   } else {
     // Now decrement RC of elements in toRelease set for reachibility analysis.
-  printf("clearSubgraphReferences - 2\n");
     for (auto it = state->toRelease->begin(); it != state->toRelease->end(); ++it) {
       auto released = *it;
       assert(!RTGC);
@@ -2698,7 +2695,6 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
     container->decRefCount<false>();
     markGray<false>(container);
     auto bad = hasExternalRefs(container, &visited);
-  printf("clearSubgraphReferences - bad:%d\n", bad);
     scanBlack<false>(container);
     // Restore original RC.
     container->incRefCount<false>();

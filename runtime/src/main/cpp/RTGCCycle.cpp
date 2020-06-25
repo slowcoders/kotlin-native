@@ -222,16 +222,17 @@ void CyclicNode::detectCycles() {
         CyclicNode* cyclic = root->getLocalCyclicNode();
         if (cyclic != NULL) {
             if (cyclic->isGarbage()) {
-                printf("## RTGC Garbage Cycle detected %d rrc:%d\n", cyclic->getId(), cyclic->getRootObjectCount());
+                RTGC_LOG("## RTGC Garbage Cycle detected %d rrc:%d\n", cyclic->getId(), cyclic->getRootObjectCount());
                 ::freeContainer(root, cyclic->getId());
                 cyclic->dealloc(root);
             }
             else {
-                printf("## RTGC Cycle detected:%d rrc:%d %d\n", cyclic->getId(), cyclic->getRootObjectCount(), cyclic->externalReferrers.topChain() == 0 ? 0 : 1);
+                RTGC_LOG("## RTGC Cycle detected:%d rrc:%d %d\n", cyclic->getId(), cyclic->getRootObjectCount(), cyclic->externalReferrers.topChain() == 0 ? 0 : 1);
             }
         }
     }
     rtgcUnlock(0);
-    printf("RefChain: %d\n", RTGCGlobal::cntRefChain);
+
+    RTGC_LOG("RefChain--: %d\n", RTGCGlobal::cntRefChain);
 }
 

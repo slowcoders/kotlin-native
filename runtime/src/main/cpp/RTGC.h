@@ -91,7 +91,7 @@ protected:
 public:
 
   bool isSuspectedCyclic() {
-    return (externalReferrers.flags_ &= NEED_CYCLIC_TEST) != 0;
+    return (externalReferrers.flags_ & NEED_CYCLIC_TEST) != 0;
   }
 
   static void initMemory();
