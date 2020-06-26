@@ -1027,9 +1027,9 @@ standaloneTest("lazy2") {
     source = "runtime/workers/lazy2.kt"
 }
 
-standaloneTest("lazy3") {
-    source = "runtime/workers/lazy3.kt"
-}
+// standaloneTest("lazy3") {
+//     //source = "runtime/workers/lazy3.kt"
+// }
 
 task enumIdentity(type: KonanLocalTest) {
     enabled = (project.testTarget != 'wasm32') // Workers need pthreads.

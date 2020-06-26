@@ -58,13 +58,13 @@ static_assert(sizeof(ContainerHeader) % kObjectAlignment == 0, "sizeof(Container
 #if TRACE_MEMORY
 #undef TRACE_GC
 #define TRACE_GC 1
-#define MEMORY_LOG(...) konan::consolePrintf(__VA_ARGS__);
+#define MEMORY_LOG(...) konan::consolePrintf(__VA_ARGS__); 
 #else
 #define MEMORY_LOG(...)
 #endif
 
 #if TRACE_GC
-#define GC_LOG(...) konan::consolePrintf(__VA_ARGS__);
+#define GC_LOG(...) konan::consolePrintf(__VA_ARGS__); 
 #else
 #define GC_LOG(...)
 #endif
@@ -874,9 +874,14 @@ void processFinalizerQueue(MemoryState* state) {
 #ifdef RTGC    
 static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* visited) {
   GCRefChain* chain = container->getNode()->externalReferrers.topChain();
-  if (chain == NULL) return true;
+  if (chain == NULL) {
+    RTGC_TRAP("%p is foreign refs %x-%d\n", container, container->tag(), (int)container->refCount());
+    return !container->shared();
+  }
   for (; chain != NULL; chain = chain->next()) {
     ContainerHeader* referrer = chain->obj();
+    if (referrer->shared()) continue;
+
     if (referrer->seen() || !hasForeginRefs(referrer, visited)) {
       if (!container->seen()) {
         container->setSeen();
@@ -884,14 +889,22 @@ static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* vis
       }
     }
     else {
+      RTGC_TRAP("%p has foreign ref=%p\n", container, referrer);
       return true;
     }
   }
+  RTGC_TRAP("%p has not foreign refs\n", container);
   return false;
 }
 
 bool hasExternalRefs(ContainerHeader* start, ContainerHeaderDeque* visited) {
   ContainerHeaderDeque toVisit;
+  if (start->getNode()->externalReferrers.topChain() != NULL) {
+    RTGC_TRAP("start %p has foreign refs\n", start);
+    //return true;
+  };
+
+  RTGC_TRAP("checking foreign refs of %p\n", start);
   start->mark();
   start->setSeen();
   toVisit.push_back(start);
@@ -909,6 +922,11 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderDeque* visited) {
     traverseContainerReferredObjects(container, [&toVisit, visited](ObjHeader* ref) {
       auto* child = ref->container();
       if (!isShareable(child) && (!child->marked())) {
+          RTGC_TRAP("push %p toVisit\n", child);
+          GCRefChain* chain = child->getNode()->externalReferrers.topChain();
+          if (chain == NULL) {
+            RTGC_TRAP("empty referrer??? %p\n", child);
+          }
           child->mark();
           toVisit.push_front(child);
       }
@@ -1037,7 +1055,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
 
   runDeallocationHooks(container);
   container->markDestroyed();
-  if (RTGC) {
+  if (RTGC && isFreeable(container)) {
       traverseContainerObjectFields(container, [container, garbageNodeId](ObjHeader** location, ObjHeader* owner) {
         MEMORY_LOG("--- cleaning fields %p, %p\n", *location, container + 1);
         if (garbageNodeId >= 0) {
@@ -2137,6 +2155,9 @@ namespace {
 template <bool Strict>
 void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
   UPDATE_REF_EVENT(memoryState, *location, object, location, 0);
+    ContainerHeader* container = owner->container();
+    assert(owner->container() != nullptr && owner->container()->tag() != CONTAINER_TAG_STACK);
+
   void* lock = GCNode::rtgcLock(NULL, NULL, NULL);
 
   ObjHeader* old = *location;

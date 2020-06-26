@@ -14,6 +14,7 @@
 #include "Porting.h"
 #include "Runtime.h"
 #include "RTGCPrivate.h"
+#include "KDebug.h"
 
 int RTGCGlobal::cntRefChain = 0;
 int RTGCGlobal::cntCyclicNodes = 0;
@@ -203,3 +204,22 @@ void RTGCGlobal::init() {
     validateMemPool();
 }
 
+bool rtgc_trap() {
+    return ENABLE_RTGC_LOG;
+}
+
+void RTGC_dumpRefInfo(GCObject* obj) {
+    // const TypeInfo* typeInfo = ((ObjHeader*)(obj+1))->type_info();
+    // KString kstring = typeInfo->relativeName_->array();
+    // if (kstring == NULL) {
+    //     printf("???");
+    // }  
+    // else {
+    //     const KChar* utf16 = CharArrayAddressOfElementAt(kstring, 0);
+    //     for (int i = kstring->count_; --i >= 0; utf16++) {
+    //         printf("%c", *utf16);
+    //     }
+    // }
+    printf(" %p:%d rc=%p, tag=%d flags=%x\n", obj, obj->getNodeId(), (void*)obj->refCount(), (obj->tag() >> 7), obj->getFlags());
+    rtgc_trap();
+}

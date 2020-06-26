@@ -24,7 +24,12 @@ typedef struct ContainerHeader GCObject;
 static const int CYCLIC_NODE_ID_START = 2;
 
 static const int ENABLE_RTGC_LOG = 0;
+bool rtgc_trap() NO_INLINE;
+
 #define RTGC_LOG if (ENABLE_RTGC_LOG) printf
+#define RTGC_TRAP if (rtgc_trap()) printf
+void RTGC_dumpRefInfo(GCObject*) NO_INLINE;
+
 
 struct RTGCRef {
   uint64_t root: RTGC_ROOT_REF_BITS;

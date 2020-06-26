@@ -190,7 +190,10 @@ public:
   }
 
   GCNode* getNode() {
-    assert(ref_.rtgc.node != 0);
+    if(ref_.rtgc.node == 0) {
+      RTGC_dumpRefInfo(this);
+      assert(ref_.rtgc.node != 0);
+    }
     if (this->isInCyclicNode()) {
       return CyclicNode::getNode(ref_.rtgc.node);
     }
@@ -199,6 +202,9 @@ public:
     }
   }
 
+  int32_t getFlags() {
+    return this->rtNode.flags_;
+  }
 
   OnewayNode* getLocalOnewayNode() {
     return isInCyclicNode() ? NULL : (OnewayNode*)&rtNode;
@@ -271,10 +277,18 @@ public:
     int64_t value = Atomic ?
         __sync_add_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count += RTGC_MEMBER_REF_INCREEMENT;
 #endif
+    if (ref_.rtgc.obj == 0) {
+      RTGC_dumpRefInfo(this);
+      assert(ref_.rtgc.obj != 0);
+    }
   }
 
   template <bool Atomic>
   inline void decMemberRefCount() {
+    if (ref_.rtgc.obj == 0) {
+      RTGC_dumpRefInfo(this);
+      assert(ref_.rtgc.obj != 0);
+    }
 #ifdef KONAN_NO_THREADS
     int64_t value = ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
 #else
@@ -291,11 +305,19 @@ public:
     int64_t value = Atomic ?
        __sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #endif
+    if (ref_.rtgc.root == 0) {
+      RTGC_dumpRefInfo(this);
+      assert(ref_.rtgc.root != 0);
+    }
     return *(RTGCRef*)&value;
   }
 
   template <bool Atomic>
   inline RTGCRef decRootCount() {
+    if (ref_.rtgc.root == 0) {
+      RTGC_dumpRefInfo(this);
+      assert(ref_.rtgc.root != 0);
+    }
 #ifdef KONAN_NO_THREADS
     int64_t value = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #else
@@ -307,6 +329,10 @@ public:
 
   template <bool Atomic>
   inline int decRefCount() {
+    if (ref_.rtgc.root == 0) {
+      RTGC_dumpRefInfo(this);
+      assert(ref_.rtgc.root != 0);
+    }
 #ifdef KONAN_NO_THREADS
     int value = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #else
@@ -317,6 +343,10 @@ public:
   }
 
   inline int decRefCount() {
+    if (ref_.rtgc.root == 0) {
+      RTGC_dumpRefInfo(this);
+      assert(ref_.rtgc.root != 0);
+    }
   #ifdef KONAN_NO_THREADS
       int value = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #else
