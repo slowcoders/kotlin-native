@@ -204,8 +204,9 @@ void RTGCGlobal::init() {
     validateMemPool();
 }
 
+bool enable_rtgc_trap = ENABLE_RTGC_LOG;
 bool rtgc_trap() {
-    return ENABLE_RTGC_LOG;
+    return enable_rtgc_trap;
 }
 
 void RTGC_dumpRefInfo(GCObject* obj) {

@@ -876,11 +876,11 @@ static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* vis
   GCRefChain* chain = container->getNode()->externalReferrers.topChain();
   if (chain == NULL) {
     RTGC_TRAP("%p is foreign refs %x-%d\n", container, container->tag(), (int)container->refCount());
-    return !container->shared();
+    return !isShareable(container);
   }
   for (; chain != NULL; chain = chain->next()) {
     ContainerHeader* referrer = chain->obj();
-    if (referrer->shared()) continue;
+    if (isShareable(referrer)) continue;
 
     if (referrer->seen() || !hasForeginRefs(referrer, visited)) {
       if (!container->seen()) {

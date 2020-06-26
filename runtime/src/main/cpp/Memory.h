@@ -136,7 +136,7 @@ public:
   }
 
   inline bool shareable() const {
-      return (tag() & 1) != 0; // CONTAINER_TAG_FROZEN || CONTAINER_TAG_SHARED
+      return (rtNode.flags_ & (CONTAINER_TAG_FROZEN & CONTAINER_TAG_SHARED)) != 0;
   }
 
   inline bool stack() const {
