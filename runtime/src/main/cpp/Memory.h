@@ -192,7 +192,7 @@ public:
   GCNode* getNode() {
     if(ref_.rtgc.node == 0) {
       RTGC_dumpRefInfo(this);
-      assert(ref_.rtgc.node != 0);
+      RuntimeAssert(ref_.rtgc.node != 0, "node not initialized");
     }
     if (this->isInCyclicNode()) {
       return CyclicNode::getNode(ref_.rtgc.node);
@@ -279,7 +279,7 @@ public:
 #endif
     if (ref_.rtgc.obj == 0) {
       RTGC_dumpRefInfo(this);
-      assert(ref_.rtgc.obj != 0x00);
+      RuntimeAssert(ref_.rtgc.obj != 0, "member ref overflow");
     }
   }
 
@@ -287,7 +287,7 @@ public:
   inline void decMemberRefCount() {
     if (ref_.rtgc.obj == 0) {
       RTGC_dumpRefInfo(this);
-      assert(ref_.rtgc.obj != 0);
+      RuntimeAssert(ref_.rtgc.obj != 0, "member ref underflow");
     }
 #ifdef KONAN_NO_THREADS
     int64_t value = ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
@@ -307,7 +307,7 @@ public:
 #endif
     if (ref_.rtgc.root == 0) {
       RTGC_dumpRefInfo(this);
-      assert(ref_.rtgc.root != 0);
+      RuntimeAssert(ref_.rtgc.root != 0, "root ref overflow");
     }
     return *(RTGCRef*)&value;
   }
@@ -316,7 +316,7 @@ public:
   inline RTGCRef decRootCount() {
     if (ref_.rtgc.root == 0) {
       RTGC_dumpRefInfo(this);
-      assert(ref_.rtgc.root != 0);
+      RuntimeAssert(ref_.rtgc.root != 0, "root ref underflow");
     }
 #ifdef KONAN_NO_THREADS
     int64_t value = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
@@ -331,7 +331,7 @@ public:
   inline int decRefCount() {
     if (ref_.rtgc.root == 0) {
       RTGC_dumpRefInfo(this);
-      assert(ref_.rtgc.root != 0);
+      RuntimeAssert(ref_.rtgc.root != 0, "refCount underflow");
     }
 #ifdef KONAN_NO_THREADS
     int value = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
@@ -345,7 +345,7 @@ public:
   inline int decRefCount() {
     if (ref_.rtgc.root == 0) {
       RTGC_dumpRefInfo(this);
-      assert(ref_.rtgc.root != 0);
+      RuntimeAssert(ref_.rtgc.root != 0, "refCount underflow");
     }
   #ifdef KONAN_NO_THREADS
       int value = ref_.count -= RTGC_ROOT_REF_INCREEMENT;

@@ -1264,7 +1264,7 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   }
   else {
     CyclicNode* cyclic = container->getLocalCyclicNode();
-    assert(cyclic != NULL);
+    RuntimeAssert(cyclic != NULL, "no cylic node");
     if (container->isGarbage()) {
       cyclic->removeSuspectedGarbage(container);
       freeContainer(container, 0);
@@ -2156,7 +2156,7 @@ template <bool Strict>
 void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
   UPDATE_REF_EVENT(memoryState, *location, object, location, 0);
     ContainerHeader* container = owner->container();
-    assert(owner->container() != nullptr && owner->container()->tag() != CONTAINER_TAG_STACK);
+    RuntimeAssert(owner->container() != nullptr && owner->container()->tag() != CONTAINER_TAG_STACK, "illegal heap ref");
 
   void* lock = GCNode::rtgcLock(NULL, NULL, NULL);
 
@@ -2705,7 +2705,7 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
     // Now decrement RC of elements in toRelease set for reachibility analysis.
     for (auto it = state->toRelease->begin(); it != state->toRelease->end(); ++it) {
       auto released = *it;
-      assert(!RTGC);
+      RuntimeAssert(!RTGC, "no kotlin gc");
       if (!isMarkedAsRemoved(released) && released->local()) {
         released->decRefCount<false>();
       }
@@ -2736,7 +2736,7 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
   for (auto it = state->toFree->begin(); it != state->toFree->end(); ++it) {
     auto container = *it;
     #ifdef RTGC
-      assert(!RTGC);
+      RuntimeAssert(!RTGC, "no kotlin gc");
     #else  
     if (visited.count(container) != 0) {
       MEMORY_LOG("removing %p from the toFree list\n", container)
@@ -2749,7 +2749,7 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
   for (auto it = state->toRelease->begin(); it != state->toRelease->end(); ++it) {
     auto container = *it;
     #ifdef RTGC
-      assert(!RTGC);
+      RuntimeAssert(!RTGC, "no kotlin gc");
     #else
     if (!isMarkedAsRemoved(container) && visited.count(container) != 0) {
       MEMORY_LOG("removing %p from the toRelease list\n", container)

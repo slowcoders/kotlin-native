@@ -14,11 +14,13 @@
 #include "Porting.h"
 #include "Runtime.h"
 #include "RTGCPrivate.h"
+#include "assert.h"
 
 CyclicNode lastDummy;
 
 CyclicNode* CyclicNode::g_damagedCylicNodes = &lastDummy;
 GCRefList CyclicNode::g_cyclicTestNodes;
+
 
 CyclicNode* CyclicNode::create() {
     assert(isLocked(0));

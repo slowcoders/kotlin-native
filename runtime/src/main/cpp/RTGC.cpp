@@ -15,6 +15,7 @@
 #include "Runtime.h"
 #include "RTGCPrivate.h"
 #include "KDebug.h"
+#include "assert.h"
 
 int RTGCGlobal::cntRefChain = 0;
 int RTGCGlobal::cntCyclicNodes = 0;

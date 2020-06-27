@@ -20,7 +20,7 @@ typedef struct ContainerHeader GCObject;
 #define RTGC_ROOT_REF_INCREEMENT   1
 #define RTGC_MEMBER_REF_INCREEMENT (1 << RTGC_ROOT_REF_BITS)
 
-#define RTGC_REF_COUNT_MASK        ((1L << RTGC_REF_COUNT_BITS) -1)
+#define RTGC_REF_COUNT_MASK        ((uint64_t)((1LL << RTGC_REF_COUNT_BITS) -1))
 static const int CYCLIC_NODE_ID_START = 2;
 
 static const int ENABLE_RTGC_LOG = 0;
@@ -121,7 +121,7 @@ public:
   }
 
   void setTraceState(int state) {
-    assert((state & ~RTGC_TRACE_STATE_MASK) == 0);
+    RuntimeAssert((state & ~RTGC_TRACE_STATE_MASK) == 0, "invalid state");
     externalReferrers.flags_ = (externalReferrers.flags_ & ~RTGC_TRACE_STATE_MASK) | state;
   }
 
