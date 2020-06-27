@@ -29,6 +29,8 @@ bool rtgc_trap() NO_INLINE;
 #define RTGC_LOG if (ENABLE_RTGC_LOG) printf
 #define RTGC_TRAP if (rtgc_trap()) printf
 void RTGC_dumpRefInfo(GCObject*) NO_INLINE;
+void RTGC_Error(GCObject* obj) NO_INLINE;
+
 
 
 struct RTGCRef {

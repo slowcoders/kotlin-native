@@ -1057,20 +1057,20 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
   container->markDestroyed();
   if (RTGC && isFreeable(container)) {
       traverseContainerObjectFields(container, [container, garbageNodeId](ObjHeader** location, ObjHeader* owner) {
-        MEMORY_LOG("--- cleaning fields %p, %p\n", *location, container + 1);
-        if (garbageNodeId >= 0) {
-          ObjHeader* old = *location;
-          *location = NULL;
-          if (old != NULL && old->container() != NULL && !old->container()->isDestroyed()) {
+        ObjHeader* old = *location;
+        if (old != NULL && old->container() != NULL && !old->container()->isDestroyed()) {
+          MEMORY_LOG("--- cleaning fields %p, %p\n", old, container + 1);
+          if (garbageNodeId >= 0) {
+            *location = NULL;
             if (old->container()->getNodeId() == garbageNodeId) {
               freeContainer(old->container(), garbageNodeId);
             }
             else {
               updateHeapRef_internal(NULL, old, (ObjHeader*)(container + 1));
             }
+          } else {
+            UpdateHeapRef(location, NULL, (ObjHeader*)(container + 1));
           }
-        } else {
-          UpdateHeapRef(location, NULL, (ObjHeader*)(container + 1));
         }
       });
   }
@@ -3109,7 +3109,7 @@ void ObjectContainer::Init(MemoryState* state, const TypeInfo* typeInfo) {
   // header->refCount_ is zero initialized by allocContainer().
   SetHeader(GetPlace(), typeInfo);
   OBJECT_ALLOC_EVENT(memoryState, typeInfo->instanceSize_, GetPlace())
-  MEMORY_LOG("allocate %s\n", CreateCStringFromString(typeInfo->relativeName_));
+  RTGC_LOG("allocate %s %p\n", CreateCStringFromString(typeInfo->relativeName_), header_);
 }
 
 void ArrayContainer::Init(MemoryState* state, const TypeInfo* typeInfo, uint32_t elements) {

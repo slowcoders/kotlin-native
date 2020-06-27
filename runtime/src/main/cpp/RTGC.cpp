@@ -174,12 +174,12 @@ void GCNode::initMemory() {
 }
 
 void RTGCGlobal::validateMemPool() {
-    CyclicNode* node = g_freeCyclicNode;
-    for (; node != NULL; node ++) {
-        if (GET_NEXT_FREE(node) == NULL) break;
-        assert(GET_NEXT_FREE(node) == node +1);
-    }
-    assert(node == g_cyclicNodes + CNT_CYCLIC_NODE - 1);
+    // CyclicNode* node = g_freeCyclicNode;
+    // for (; node != NULL; node ++) {
+    //     if (GET_NEXT_FREE(node) == NULL) break;
+    //     assert(GET_NEXT_FREE(node) == node +1);
+    // }
+    // assert(node == g_cyclicNodes + CNT_CYCLIC_NODE - 1);
 }
 
 void RTGCGlobal::init() {
@@ -207,6 +207,13 @@ void RTGCGlobal::init() {
 bool enable_rtgc_trap = ENABLE_RTGC_LOG;
 bool rtgc_trap() {
     return enable_rtgc_trap;
+}
+
+void RTGC_Error(GCObject* obj) {
+    if (obj != NULL) {
+        RTGC_dumpRefInfo(obj);
+    }
+    ThrowOutOfMemoryError();
 }
 
 void RTGC_dumpRefInfo(GCObject* obj) {

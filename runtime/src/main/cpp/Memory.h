@@ -279,7 +279,7 @@ public:
 #endif
     if (ref_.rtgc.obj == 0) {
       RTGC_dumpRefInfo(this);
-      assert(ref_.rtgc.obj != 0);
+      assert(ref_.rtgc.obj != 0x00);
     }
   }
 
