@@ -300,7 +300,7 @@ public:
   template <bool Atomic>
   inline RTGCRef incRootCount() {
 #ifdef KONAN_NO_THREADS
-    ref_.count += RTGC_ROOT_REF_INCREEMENT;
+    int64_t value = ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #else
     int64_t value = Atomic ?
        __sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count += RTGC_ROOT_REF_INCREEMENT;

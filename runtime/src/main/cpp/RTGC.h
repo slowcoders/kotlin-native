@@ -31,8 +31,6 @@ bool rtgc_trap() NO_INLINE;
 void RTGC_dumpRefInfo(GCObject*) NO_INLINE;
 void RTGC_Error(GCObject* obj) NO_INLINE;
 
-
-
 struct RTGCRef {
   uint64_t root: RTGC_ROOT_REF_BITS;
   uint64_t obj:  RTGC_MEMBER_REF_BITS;  

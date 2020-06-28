@@ -936,7 +936,7 @@ internal class CAdapterGenerator(val context: Context) : DeclarationDescriptorVi
         |  }
         |  explicit KObjHolder(const KObjHeader* obj) : obj_(nullptr) {
         |    EnterFrame(frame(), 0, sizeof(*this)/sizeof(void*));
-        |    UpdateStackRef(&obj_, obj);
+        |    ::UpdateStackRef(&obj_, obj);
         |  }
         |  ~KObjHolder() {
         |    LeaveFrame(frame(), 0, sizeof(*this)/sizeof(void*));
@@ -953,10 +953,10 @@ internal class CAdapterGenerator(val context: Context) : DeclarationDescriptorVi
         |class ExceptionObjHolder {
         | public:
         |  explicit ExceptionObjHolder(const KObjHeader* obj): obj_(nullptr) {
-        |    ::UpdateHeapRef(&obj_, obj);
+        |    ::UpdateStackRef(&obj_, obj);
         |  }
         |  ~ExceptionObjHolder() {
-        |    UpdateHeapRef(&obj_, nullptr);
+        |    ::UpdateStackRef(&obj_, nullptr);
         |  }
         |  KObjHeader* obj() { return obj_; }
         | private:

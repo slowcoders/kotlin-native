@@ -1059,7 +1059,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
       traverseContainerObjectFields(container, [container, garbageNodeId](ObjHeader** location, ObjHeader* owner) {
         ObjHeader* old = *location;
         if (old != NULL && old->container() != NULL && !old->container()->isDestroyed()) {
-          MEMORY_LOG("--- cleaning fields %p, %p\n", old, container + 1);
+          RTGC_LOG("--- cleaning fields %p IN %p\n", old, container + 1);
           if (garbageNodeId >= 0) {
             *location = NULL;
             if (old->container()->getNodeId() == garbageNodeId) {
@@ -1920,12 +1920,17 @@ void deinitInstanceBody(const TypeInfo* typeInfo, void* body) {
   for (int index = 0; index < typeInfo->objOffsetsCount_; index++) {
     ObjHeader** location = reinterpret_cast<ObjHeader**>(
         reinterpret_cast<uintptr_t>(body) + typeInfo->objOffsets_[index]);
-    // @zee maybe member field iteration
-    ZeroHeapRef(location);
+    if (RTGC) {
+      UpdateHeapRef(location, NULL, (ObjHeader*)body);// @zee maybe member field iteration
+    }
+    else {
+      ZeroHeapRef(location);
+    }
   }
 }
 
 ForeignRefManager* initLocalForeignRef(ObjHeader* object) {
+  RTGC_LOG("initLocalForeignRef %p\n", object->container());
   if (!IsStrictMemoryModel) return nullptr;
 
   return memoryState->foreignRefManager;
@@ -1933,6 +1938,7 @@ ForeignRefManager* initLocalForeignRef(ObjHeader* object) {
 
 ForeignRefManager* initForeignRef(ObjHeader* object) {
   addHeapRef(object);
+  RTGC_LOG("initForeignRef %p\n", object->container());
 
   if (!IsStrictMemoryModel) return nullptr;
 
@@ -1959,6 +1965,8 @@ bool isForeignRefAccessible(ObjHeader* object, ForeignRefManager* manager) {
 }
 
 void deinitForeignRef(ObjHeader* object, ForeignRefManager* manager) {
+  RTGC_LOG("deinitForeignRef %p\n", object->container());
+
   if (IsStrictMemoryModel) {
     if (memoryState != nullptr && isForeignRefAccessible(object, manager)) {
       releaseHeapRef<true>(object);
