@@ -68,6 +68,7 @@ RUNTIME_NOTHROW const TypeInfo* GetObjCKotlinTypeInfo(ObjHeader* obj) {
 }
 
 id objc_msgSendSuper2(struct objc_super *super, SEL op, ...);
+extern "C" OBJ_GETTER(Kotlin_ObjCExport_refFromObjC, id obj);
 
 static void DeallocImp(id self, SEL _cmd) {
   // TODO: doesn't support overriding Kotlin classes.
@@ -78,8 +79,13 @@ static void DeallocImp(id self, SEL _cmd) {
   void* body = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(self) + classData->bodyOffset);
 
   const TypeInfo* typeInfo = classData->typeInfo;
-  DeinitInstanceBody(typeInfo, body);
-
+// #ifdef RTGC  
+//   ObjHeader* konanObj;
+//   Kotlin_ObjCExport_refFromObjC(self, &konanObj);
+//   DeinitInstanceBody(typeInfo, body, konanObj);
+// #else  
+  DeinitInstanceBody(typeInfo, body, NULL);
+// #endif
   // Call super.dealloc:
   struct objc_super s = {self, clazz};
   auto messenger = reinterpret_cast<void (*) (struct objc_super*, SEL _cmd)>(objc_msgSendSuper2);

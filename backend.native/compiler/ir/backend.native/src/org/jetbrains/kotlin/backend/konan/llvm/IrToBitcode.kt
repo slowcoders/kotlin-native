@@ -1624,7 +1624,9 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                         listOf(functionGenerationContext.bitcast(codegen.kObjHeaderPtr, thisPtr)),
                         Lifetime.IRRELEVANT, ExceptionHandler.Caller)
             }
-            if (functionGenerationContext.RTGC) {
+            val isObjC = value.symbol.owner.parentAsClass.isObjCClass();
+            if (functionGenerationContext.RTGC && !isObjC) {
+                /* @zeedh Can't circular test into ObjC object until to implement custom memory allocation feature. */
                 functionGenerationContext.storeMember(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), thisPtr)
             }
             else {

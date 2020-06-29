@@ -220,8 +220,11 @@ void RTGC_Error(GCObject* obj) {
 void RTGC_dumpRefInfo(GCObject* obj) {
     static const char* UNKNOWN = "???";
     const TypeInfo* typeInfo = ((ObjHeader*)(obj+1))->type_info();
-    const char* classname = typeInfo->relativeName_ != NULL ? CreateCStringFromString(typeInfo->relativeName_) : UNKNOWN;
-    printf("%s %p:%d rc=%p, tag=%d flags=%x\n", classname, obj, obj->getNodeId(), (void*)obj->refCount(), (obj->tag() >> 7), obj->getFlags());
+    const char* classname = (typeInfo != NULL && typeInfo->relativeName_ != NULL)
+        ? CreateCStringFromString(typeInfo->relativeName_) : UNKNOWN;
+    printf("%s %p:%d rc=%p, tag=%d flags=%x\n", 
+        classname, obj, obj->getNodeId(), 
+        (void*)obj->refCount(), (obj->tag() >> 7), obj->getFlags());
     if (classname != UNKNOWN) konan::free((void*)classname);
     rtgc_trap();
 }

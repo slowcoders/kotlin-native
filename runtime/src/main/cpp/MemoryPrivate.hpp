@@ -25,7 +25,7 @@ bool TryAddHeapRef(const ObjHeader* object);
 
 MODEL_VARIANTS(void, ReleaseHeapRef, const ObjHeader* object);
 
-void DeinitInstanceBody(const TypeInfo* typeInfo, void* body);
+void DeinitInstanceBody(const TypeInfo* typeInfo, void* body, ObjHeader* koObj);
 
 void Kotlin_ObjCExport_releaseAssociatedObject(void* associatedObject);
 

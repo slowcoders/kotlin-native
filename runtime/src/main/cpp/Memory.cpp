@@ -503,8 +503,8 @@ namespace {
   MEMORY_LOG("Container destroy %p\n", container)
 #define OBJECT_ALLOC_TRACE(state, size, object) \
   MEMORY_LOG("Object alloc %d at %p\n", size, object)
-#define UPDATE_REF_TRACE(state, oldRef, newRef, slot, stack) \
-  MEMORY_LOG("UpdateRef %s*%p: %p -> %p\n", stack ? "stack " : "heap ", slot, oldRef, newRef)
+#define UPDATE_REF_TRACE(state, oldRef, newRef, slot, owner) \
+  MEMORY_LOG("UpdateRef %p->%p: %p -> %p\n", (void*)owner, slot, oldRef, newRef)
 
 // Events macro definitions.
 // Called on worker's memory init.
@@ -1916,12 +1916,17 @@ void garbageCollect() {
 
 #endif  // USE_GC
 
-void deinitInstanceBody(const TypeInfo* typeInfo, void* body) {
+void deinitInstanceBody(const TypeInfo* typeInfo, void* body, ObjHeader* koObj) {
+  RTGC_LOG("deinitInstanceBody %p, type=%p %d\n", body, typeInfo, typeInfo->objOffsetsCount_);
   for (int index = 0; index < typeInfo->objOffsetsCount_; index++) {
     ObjHeader** location = reinterpret_cast<ObjHeader**>(
         reinterpret_cast<uintptr_t>(body) + typeInfo->objOffsets_[index]);
-    if (RTGC) {
-      UpdateHeapRef(location, NULL, (ObjHeader*)body);// @zee maybe member field iteration
+    if (false && RTGC) {
+      /* @zeedh see ItToBitcode.kt:1627
+       * @problem interop_objc_smoke -> smoke.kt -> testTypes() -> MutablePairImpl(1,2).asAny()
+       * two different TypdeInfo created for Init and Destory.
+       */
+      UpdateHeapRef(location, NULL, koObj);
     }
     else {
       ZeroHeapRef(location);
@@ -2162,7 +2167,7 @@ namespace {
 
 template <bool Strict>
 void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
-  UPDATE_REF_EVENT(memoryState, *location, object, location, 0);
+  UPDATE_REF_EVENT(memoryState, *location, object, location, owner);
     ContainerHeader* container = owner->container();
     RuntimeAssert(owner->container() != nullptr && owner->container()->tag() != CONTAINER_TAG_STACK, "illegal heap ref");
 
@@ -2534,7 +2539,6 @@ const ObjHeader* leaveFrameAndReturnRef(ObjHeader** start, int param_count, ObjH
     currentFrame = frame->previous;
   } else {
     ObjHeader** current = start + parameters + kFrameOverlaySlots;
-    MEMORY_LOG("LeaveFrame start:%p: start-1:%p current:%p, current-1:%p start[0]:%p: start[-1]%p current[0]%p, current[-1]%p\n", start[0], start-1, current, current-1, start[0], start[-1], start[parameters], start[parameters-1]);
     count -= parameters;
     while (count-- > kFrameOverlaySlots) {
       ObjHeader* object = *current;
@@ -3247,8 +3251,8 @@ void ReleaseHeapRefRelaxed(const ObjHeader* object) {
   releaseHeapRef<false>(const_cast<ObjHeader*>(object));
 }
 
-void DeinitInstanceBody(const TypeInfo* typeInfo, void* body) {
-  deinitInstanceBody(typeInfo, body);
+void DeinitInstanceBody(const TypeInfo* typeInfo, void* body, ObjHeader* koObj) {
+  deinitInstanceBody(typeInfo, body, koObj);
 }
 
 ForeignRefContext InitLocalForeignRef(ObjHeader* object) {
