@@ -1239,7 +1239,7 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     if (!val_node->isSuspectedCyclic() &&
       val_node->externalReferrers.isEmpty() &&
       !owner_node->externalReferrers.isEmpty()) {
-        CyclicNode::addCyclicTest(container);
+        CyclicNode::addCyclicTest(container, true);
     }
   }
   val_node->externalReferrers.push(owner);
@@ -1293,7 +1293,7 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
 
   if (!val_node->isSuspectedCyclic() &&
     !val_node->externalReferrers.isEmpty()) {
-      CyclicNode::addCyclicTest(container);
+      CyclicNode::addCyclicTest(container, false);
   }
 }
 
@@ -1844,6 +1844,7 @@ void garbageCollect(MemoryState* state, bool force) {
 
   if (!IsStrictMemoryModel) {
     CyclicNode::detectCycles();
+    // GCNode::dumpGCLog();    
     // In relaxed model we just process finalizer queue and be done with it.
     processFinalizerQueue(state);
     return;

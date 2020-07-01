@@ -123,6 +123,7 @@ public:
     externalReferrers.flags_ = (externalReferrers.flags_ & ~RTGC_TRACE_STATE_MASK) | state;
   }
 
+  static void dumpGCLog();
 };
 
 struct OnewayNode : GCNode {
@@ -188,7 +189,7 @@ public:
 
 
   static CyclicNode* create();
-  static void addCyclicTest(GCObject* node);
+  static void addCyclicTest(GCObject* node, bool isLocalTest);
   static void removeCyclicTest(GCObject* node, bool isLocked);
   static void detectCycles();
 };
@@ -196,8 +197,5 @@ public:
 using RTGC_FIELD_TRAVERSE_CALLBACK = std::function<void(GCObject*)>;
 
 void RTGC_traverseObjectFields(GCObject* obj, RTGC_FIELD_TRAVERSE_CALLBACK process);
-
-
-
 
 #endif // RTGC_H

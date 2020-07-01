@@ -59,10 +59,17 @@ void CyclicNode::markDamaged() {
     }
 }
 
-void CyclicNode::addCyclicTest(GCObject* obj) {
+void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
     assert(isLocked(0));
     obj->markNeedCyclicTest();
     obj->getNode()->markSuspectedCyclic();
+    if (isLocalTest) {
+        RTGCGlobal::g_cntLocalCyclicTest ++;
+    }
+    else {
+        RTGCGlobal::g_cntMemberCyclicTest ++;
+    }
+
     g_cyclicTestNodes.push(obj);
 }
 

@@ -28,6 +28,8 @@ GCRefChain* RTGCGlobal::g_freeRefChain;
 
 CyclicNode* GCNode::g_cyclicNodes = NULL;
 int64_t GCNode::g_memberUpdateLock = 0;
+int RTGCGlobal::g_cntLocalCyclicTest = 0;
+int RTGCGlobal::g_cntMemberCyclicTest = 0;
 
 
 GCRefChain* popFreeChain() {
@@ -155,13 +157,17 @@ void GCRefList::setFirst(GCRefChain* newFirst) {
 }
 
 
-
+void GCNode::dumpGCLog() {
+    printf("** cntRefChain %d\n", RTGCGlobal::cntRefChain);
+    printf("** cntCyclicNodes %d\n", RTGCGlobal::cntCyclicNodes);
+    printf("** cntLocalCyclicTest %d\n", RTGCGlobal::g_cntLocalCyclicTest);
+    printf("** cntMemberCyclicTest %d\n", RTGCGlobal::g_cntMemberCyclicTest);
+}
 
 extern "C" {
 
 void Kotlin_native_internal_GC_rtgcLog(KRef __unused) {
-    printf("cntRefChain %d\n", RTGCGlobal::cntRefChain);
-    printf("cntCyclicNodes %d\n", RTGCGlobal::cntCyclicNodes);
+    GCNode::dumpGCLog();
 }
 
 KInt Kotlin_native_internal_GC_refCount(KRef __unused, KRef obj) {
