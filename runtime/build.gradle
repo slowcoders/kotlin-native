@@ -9,7 +9,8 @@ import org.jetbrains.kotlin.CompileCppToBitcode
 void includeRuntime(CompileCppToBitcode task) {
     task.compilerArgs '-I' + project.file('../common/src/hash/headers')
     task.compilerArgs '-I' + project.file('src/main/cpp')
-    // task.compilerArgs '-gdwarf-2'
+//    task.compilerArgs '-O0'
+//    task.compilerArgs '-gdwarf-2'
 }
 
 targetList.each { targetName ->

@@ -2130,36 +2130,45 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
 
   if (object != nullptr && object != owner) {
     ContainerHeader* container = object->container();
-    if (container == nullptr) {
-    }
-    else switch(container->tag()) {
-      case CONTAINER_TAG_STACK:
-        break;
-      case CONTAINER_TAG_LOCAL:
-        incrementMemberRC</* Atomic = */ false>(container, owner->container());
-        break;
-      /* case CONTAINER_TAG_FROZEN: case CONTAINER_TAG_SHARED: */
-      default:
-        incrementMemberRC</* Atomic = */ true>(container, owner->container());
-        break;      
+
+    if (container != nullptr) {
+      int flags = object->type_info()->flags_;
+      if ((flags & TF_IMMUTABLE) != 0 || (flags & TF_ACYCLIC) == 0) {
+        addHeapRef(object);
+      }
+      else switch(container->tag()) {
+        case CONTAINER_TAG_STACK:
+          break;
+        case CONTAINER_TAG_LOCAL:
+          incrementMemberRC</* Atomic = */ false>(container, owner->container());
+          break;
+        /* case CONTAINER_TAG_FROZEN: case CONTAINER_TAG_SHARED: */
+        default:
+          incrementMemberRC</* Atomic = */ true>(container, owner->container());
+          break;      
+      }
     }
     //addHeapRef(object);
   }
 
   if (reinterpret_cast<uintptr_t>(old) > 1 && old != owner) {
     ContainerHeader* container = old->container();
-    if (container == nullptr) {
-    }
-    else switch(container->tag()) {
-      case CONTAINER_TAG_STACK:
-        break;
-      case CONTAINER_TAG_LOCAL:
-        decrementMemberRC</* Atomic = */ false>(container, owner->container());
-        break;
-      /* case CONTAINER_TAG_FROZEN: case CONTAINER_TAG_SHARED: */
-      default:
-        decrementMemberRC</* Atomic = */ true>(container, owner->container());
-        break;      
+    if (container != nullptr) {
+      int flags = object->type_info()->flags_;
+      if ((flags & TF_IMMUTABLE) != 0 || (flags & TF_ACYCLIC) == 0) {
+        releaseHeapRef(object);
+      }
+      else switch(container->tag()) {
+        case CONTAINER_TAG_STACK:
+          break;
+        case CONTAINER_TAG_LOCAL:
+          decrementMemberRC</* Atomic = */ false>(container, owner->container());
+          break;
+        /* case CONTAINER_TAG_FROZEN: case CONTAINER_TAG_SHARED: */
+        default:
+          decrementMemberRC</* Atomic = */ true>(container, owner->container());
+          break;      
+      }
     }
     //releaseHeapRef<Strict>(old);
   }
