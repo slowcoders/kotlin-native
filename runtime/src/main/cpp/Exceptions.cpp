@@ -154,7 +154,7 @@ OBJ_GETTER(GetStackTraceStrings, KConstRef stackTrace) {
   ObjHeader* result = AllocArrayInstance(theArrayTypeInfo, 1, OBJ_RESULT);
   ObjHolder holder;
   CreateStringFromCString("<UNIMPLEMENTED>", holder.slot());
-  UpdateHeapRef(ArrayAddressOfElementAt(result->array(), 0), holder.obj());
+  UpdateHeapRef(ArrayAddressOfElementAt(result->array(), 0), holder.obj(), result);
   return result;
 #else
   uint32_t size = stackTrace->array()->count_;
@@ -172,7 +172,7 @@ OBJ_GETTER(GetStackTraceStrings, KConstRef stackTrace) {
     konan::snprintf(line, sizeof(line) - 1, "%s (%p)", symbol, (void*)(intptr_t)address);
     ObjHolder holder;
     CreateStringFromCString(line, holder.slot());
-    UpdateHeapRef(ArrayAddressOfElementAt(strings->array(), index), holder.obj());
+    UpdateHeapRef(ArrayAddressOfElementAt(strings->array(), index), holder.obj(), strings);
   }
 #else
   if (size > 0) {
@@ -197,7 +197,7 @@ OBJ_GETTER(GetStackTraceStrings, KConstRef stackTrace) {
       }
       ObjHolder holder;
       CreateStringFromCString(result, holder.slot());
-      UpdateHeapRef(ArrayAddressOfElementAt(strings->array(), index), holder.obj());
+      UpdateHeapRef(ArrayAddressOfElementAt(strings->array(), index), holder.obj(), strings);
     }
     // Not konan::free. Used to free memory allocated in backtrace_symbols where malloc is used.
     free(symbols);
@@ -221,13 +221,13 @@ void ThrowException(KRef exception) {
 OBJ_GETTER(Kotlin_setUnhandledExceptionHook, KRef hook) {
   RETURN_RESULT_OF(SwapHeapRefLocked,
     &currentUnhandledExceptionHook, currentUnhandledExceptionHook, hook, &currentUnhandledExceptionHookLock,
-    &currentUnhandledExceptionHookCookie);
+    NULL, &currentUnhandledExceptionHookCookie);
 }
 
 void OnUnhandledException(KRef throwable) {
   ObjHolder handlerHolder;
   auto* handler = SwapHeapRefLocked(&currentUnhandledExceptionHook, currentUnhandledExceptionHook, nullptr,
-     &currentUnhandledExceptionHookLock,  &currentUnhandledExceptionHookCookie, handlerHolder.slot());
+     &currentUnhandledExceptionHookLock, NULL, &currentUnhandledExceptionHookCookie, handlerHolder.slot());
   if (handler == nullptr) {
     ReportUnhandledException(throwable);
   } else {

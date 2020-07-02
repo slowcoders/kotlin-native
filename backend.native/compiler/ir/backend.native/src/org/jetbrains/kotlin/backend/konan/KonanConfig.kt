@@ -42,7 +42,8 @@ class KonanConfig(val project: Project, val configuration: CompilerConfiguration
     val lightDebug: Boolean = configuration.get(KonanConfigKeys.LIGHT_DEBUG)
             ?: target.family.isAppleFamily // Default is true for Apple targets.
 
-    val memoryModel: MemoryModel get() = configuration.get(KonanConfigKeys.MEMORY_MODEL)!!
+    val memoryModel: MemoryModel get() = MemoryModel.RELAXED
+    // configuration.get(KonanConfigKeys.MEMORY_MODEL)!!
 
     val needCompilerVerification: Boolean
         get() = configuration.get(KonanConfigKeys.VERIFY_COMPILER) ?:
@@ -114,6 +115,7 @@ class KonanConfig(val project: Project, val configuration: CompilerConfiguration
     val shouldCoverLibraries = !configuration.getList(KonanConfigKeys.LIBRARIES_TO_COVER).isNullOrEmpty()
 
     internal val runtimeNativeLibraries: List<String> = mutableListOf<String>().apply {
+        println("##################### " + memoryModel)
         add(if (debug) "debug.bc" else "release.bc")
         add(if (memoryModel == MemoryModel.STRICT) "strict.bc" else "relaxed.bc")
         if (shouldCoverLibraries || shouldCoverSources) add("profileRuntime.bc")

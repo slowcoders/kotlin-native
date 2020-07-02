@@ -45,8 +45,12 @@ void ZeroStackRef(ObjHeader** location) {
   ZeroStackRefStrict(location);
 }
 
-void UpdateHeapRef(ObjHeader** location, const ObjHeader* object) {
-  UpdateHeapRefStrict(location, object);
+void UpdateStackRef(ObjHeader** location, const ObjHeader* object) {
+  UpdateStackRefStrict(location, object);
+}
+
+void UpdateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
+  UpdateHeapRefStrict(location, object, owner);
 }
 
 void UpdateReturnRef(ObjHeader** returnSlot, const ObjHeader* object) {
@@ -60,5 +64,10 @@ void EnterFrame(ObjHeader** start, int parameters, int count) {
 void LeaveFrame(ObjHeader** start, int parameters, int count) {
   LeaveFrameStrict(start, parameters, count);
 }
+
+const ObjHeader* LeaveFrameAndReturnRef(ObjHeader** start, int param_count, ObjHeader** resultSlot, const ObjHeader* returnRef) {
+  return LeaveFrameAndReturnRefStrict(start, param_count, resultSlot, returnRef);
+}
+
 
 }  // extern "C"

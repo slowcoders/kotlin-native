@@ -918,7 +918,7 @@ internal class CAdapterGenerator(val context: Context) : DeclarationDescriptorVi
         |#define RUNTIME_NORETURN __attribute__((noreturn))
         |
         |extern "C" {
-        |void UpdateHeapRef(KObjHeader**, const KObjHeader*) RUNTIME_NOTHROW;
+        |void UpdateHeapRef(KObjHeader**, const KObjHeader*, const KObjHeader*) RUNTIME_NOTHROW;
         |void UpdateStackRef(KObjHeader**, const KObjHeader*) RUNTIME_NOTHROW;
         |KObjHeader* AllocInstance(const KTypeInfo*, KObjHeader**) RUNTIME_NOTHROW;
         |KObjHeader* DerefStablePointer(void*, KObjHeader**) RUNTIME_NOTHROW;
@@ -949,7 +949,7 @@ internal class CAdapterGenerator(val context: Context) : DeclarationDescriptorVi
         |  }
         |  explicit KObjHolder(const KObjHeader* obj) : obj_(nullptr) {
         |    EnterFrame(frame(), 0, sizeof(*this)/sizeof(void*));
-        |    UpdateStackRef(&obj_, obj);
+        |    ::UpdateStackRef(&obj_, obj);
         |  }
         |  ~KObjHolder() {
         |    LeaveFrame(frame(), 0, sizeof(*this)/sizeof(void*));
@@ -966,10 +966,10 @@ internal class CAdapterGenerator(val context: Context) : DeclarationDescriptorVi
         |class ExceptionObjHolder {
         | public:
         |  explicit ExceptionObjHolder(const KObjHeader* obj): obj_(nullptr) {
-        |    ::UpdateHeapRef(&obj_, obj);
+        |    ::UpdateStackRef(&obj_, obj);
         |  }
         |  ~ExceptionObjHolder() {
-        |    UpdateHeapRef(&obj_, nullptr);
+        |    ::UpdateStackRef(&obj_, nullptr);
         |  }
         |  KObjHeader* obj() { return obj_; }
         | private:

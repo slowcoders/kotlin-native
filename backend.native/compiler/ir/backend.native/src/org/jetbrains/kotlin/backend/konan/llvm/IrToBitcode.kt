@@ -452,11 +452,11 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                                     val address = context.llvmDeclarations.forStaticField(irField).storageAddressAccess.getAddress(
                                             functionGenerationContext
                                     )
-                                    storeHeapRef(codegen.kNullObjHeaderPtr, address)
+                                    storeGlobalRef(codegen.kNullObjHeaderPtr, address)
                                 }
                             }
                     context.llvm.globalSharedObjects.forEach { address ->
-                        storeHeapRef(codegen.kNullObjHeaderPtr, address)
+                        storeGlobalRef(codegen.kNullObjHeaderPtr, address)
                     }
                     ret(null)
                 }
@@ -1307,6 +1307,21 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
 
     private fun generateVariable(variable: IrVariable) {
         context.log{"generateVariable               : ${ir2string(variable)}"}
+
+        var idxVar = -1;
+        val oldAnonymousVar = functionGenerationContext.anonymousRetValue;
+        functionGenerationContext.anonymousRetValue = -1;
+        if (functionGenerationContext.RTGC) {
+
+            val type = functionGenerationContext.getLLVMType(variable.type)
+            if (functionGenerationContext.isObjectType(type)) {
+                idxVar = currentCodeContext.genDeclareVariable(
+                    variable, null, debugInfoIfNeeded(
+                    (currentCodeContext.functionScope() as FunctionScope).declaration, variable))
+                functionGenerationContext.anonymousRetValue = idxVar;
+            }
+        }
+
         val value = variable.initializer?.let {
             val callSiteOrigin = (it as? IrBlock)?.origin as? InlinerExpressionLocationHint
             val inlineAtFunctionSymbol = callSiteOrigin?.inlineAtSymbol as? IrFunctionSymbol
@@ -1316,9 +1331,21 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 }
             } ?: evaluateExpression(it)
         }
-        currentCodeContext.genDeclareVariable(
+
+        if (idxVar < 0) {
+            currentCodeContext.genDeclareVariable(
                 variable, value, debugInfoIfNeeded(
                 (currentCodeContext.functionScope() as FunctionScope).declaration, variable))
+        }
+        else if (value != null) {
+            if (functionGenerationContext.anonymousRetValue < 0 && value == functionGenerationContext.vars.getAttachedReturnValue(idxVar)) {
+                // returnSlot consumed
+            }
+            else {
+                functionGenerationContext.vars.store(value, idxVar)
+            }
+        }
+        functionGenerationContext.anonymousRetValue = oldAnonymousVar;
     }
 
     //-------------------------------------------------------------------------//
@@ -1589,7 +1616,14 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                         listOf(functionGenerationContext.bitcast(codegen.kObjHeaderPtr, thisPtr)),
                         Lifetime.IRRELEVANT, ExceptionHandler.Caller)
             }
-            functionGenerationContext.storeAny(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), false)
+            val isObjC = value.symbol.owner.parentAsClass.isObjCClass();
+            if (functionGenerationContext.RTGC && !isObjC) {
+                /* @zeedh Can't circular test into ObjC object until to implement custom memory allocation feature. */
+                functionGenerationContext.storeMember(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), thisPtr)
+            }
+            else {
+                functionGenerationContext.storeAny(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), false)
+            }
         } else {
             assert(value.receiver == null)
             val globalAddress = context.llvmDeclarations.forStaticField(value.symbol.owner).storageAddressAccess.getAddress(
