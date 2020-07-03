@@ -585,7 +585,7 @@ extern "C" {
 #define OBJ_GETTER0(name) ObjHeader* name(ObjHeader** OBJ_RESULT)
 #define OBJ_GETTER(name, ...) ObjHeader* name(__VA_ARGS__, ObjHeader** OBJ_RESULT)
 #define MODEL_VARIANTS(returnType, name, ...)            \
-   returnType name(__VA_ARGS__) RUNTIME_NOTHROW;         \
+   returnType name(__VA_ARGS__) RUNTIME_NOTHROW RTGC_NO_INLINE;         \
    returnType name##Strict(__VA_ARGS__) RUNTIME_NOTHROW; \
    returnType name##Relaxed(__VA_ARGS__) RUNTIME_NOTHROW;
 #define RETURN_OBJ(value) { ObjHeader* __obj = value; \
@@ -802,8 +802,8 @@ class ForeignRefManager;
 typedef ForeignRefManager* ForeignRefContext;
 
 #ifdef RTGC
-void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner);
-void freeContainer(ContainerHeader* header, int garbageNodeId=-1) NO_INLINE;
+void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner) RTGC_NO_INLINE;
+void freeContainer(ContainerHeader* header, int garbageNodeId=-1) RTGC_NO_INLINE;
 #endif
 
 #endif // RUNTIME_MEMORY_H

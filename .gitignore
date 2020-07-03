@@ -68,3 +68,7 @@ compile_commands.json
 
 # clangd caches
 .clangd/
+_local
+.project
+.settings/org.eclipse.buildship.core.prefs
+.vscode/settings.json

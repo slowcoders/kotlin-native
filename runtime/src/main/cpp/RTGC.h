@@ -31,6 +31,8 @@ bool rtgc_trap() NO_INLINE;
 void RTGC_dumpRefInfo(GCObject*) NO_INLINE;
 void RTGC_Error(GCObject* obj) NO_INLINE;
 
+#define RTGC_NO_INLINE NO_INLINE
+
 struct RTGCRef {
   uint64_t root: RTGC_ROOT_REF_BITS;
   uint64_t obj:  RTGC_MEMBER_REF_BITS;  
@@ -70,12 +72,12 @@ public:
   GCRefChain* find(GCObject* obj);
   GCRefChain* find(int node_id);
   GCObject* pop();
-  void push(GCObject* obj);
-  void remove(GCObject* obj);
-  void moveTo(GCObject* retiree, GCRefList* receiver);
-  bool tryRemove(GCObject* obj);
+  void push(GCObject* obj)  RTGC_NO_INLINE;
+  void remove(GCObject* obj)  RTGC_NO_INLINE;
+  void moveTo(GCObject* retiree, GCRefList* receiver)  RTGC_NO_INLINE;
+  bool tryRemove(GCObject* obj)  RTGC_NO_INLINE;
   bool isEmpty() { return first_ == 0; }
-  void setFirst(GCRefChain* last);
+  void setFirst(GCRefChain* last)  RTGC_NO_INLINE;
   void clear() { setFirst(NULL); }
 };
 
@@ -139,9 +141,9 @@ private:
   static CyclicNode* g_damagedCylicNodes;
   static GCRefList g_cyclicTestNodes;
 
-  void addCyclicObject(GCObject* obj);
-  void mergeCyclicNode(GCObject* obj, int expiredNodeId);
-  static void detectCyclicNodes(GCObject* tracingObj, GCRefList* traceList, GCRefList* finishedList);
+  void addCyclicObject(GCObject* obj)  RTGC_NO_INLINE;
+  void mergeCyclicNode(GCObject* obj, int expiredNodeId)  RTGC_NO_INLINE;
+  static void detectCyclicNodes(GCObject* tracingObj, GCRefList* traceList, GCRefList* finishedList)  RTGC_NO_INLINE;
 public:
 
   int getId() {
@@ -188,14 +190,14 @@ public:
   void dealloc(bool isLocked);
 
 
-  static CyclicNode* create();
-  static void addCyclicTest(GCObject* node, bool isLocalTest);
-  static void removeCyclicTest(GCObject* node, bool isLocked);
-  static void detectCycles();
+  static CyclicNode* create()  RTGC_NO_INLINE;
+  static void addCyclicTest(GCObject* node, bool isLocalTest)  RTGC_NO_INLINE;
+  static void removeCyclicTest(GCObject* node, bool isLocked)  RTGC_NO_INLINE;
+  static void detectCycles()  RTGC_NO_INLINE;
 };
 
 using RTGC_FIELD_TRAVERSE_CALLBACK = std::function<void(GCObject*)>;
 
-void RTGC_traverseObjectFields(GCObject* obj, RTGC_FIELD_TRAVERSE_CALLBACK process);
+void RTGC_traverseObjectFields(GCObject* obj, RTGC_FIELD_TRAVERSE_CALLBACK process) RTGC_NO_INLINE;
 
 #endif // RTGC_H

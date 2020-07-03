@@ -130,6 +130,7 @@ KBoolean g_hasCyclicCollector = true;
 // TODO: can we pass this variable as an explicit argument?
 THREAD_LOCAL_VARIABLE MemoryState* memoryState = nullptr;
 THREAD_LOCAL_VARIABLE FrameOverlay* currentFrame = nullptr;
+THREAD_LOCAL_VARIABLE int32_t isHeapLocked = 0;
 
 #if COLLECT_STATISTIC
 class MemoryStatistic {
@@ -559,7 +560,7 @@ namespace {
 
 // Forward declarations.
 #ifndef RTGC
-void freeContainer(ContainerHeader* header, int garbageNodeId=-1) NO_INLINE;
+void freeContainer(ContainerHeader* header, int garbageNodeId=0) NO_INLINE;
 #endif
 #if USE_GC
 void garbageCollect(MemoryState* state, bool force) NO_INLINE;
@@ -942,6 +943,7 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderDeque* visited) {
     traverseContainerReferredObjects(container, [&toVisit, visited](ObjHeader* ref) {
       auto* child = ref->container();
       if (!isShareable(child) && (!child->marked())) {
+        /// Zee TF_ACYCLIC makes ERRR
           RTGC_TRAP("push %p toVisit\n", child);
           GCRefChain* chain = child->getNode()->externalReferrers.topChain();
           if (chain == NULL) {
@@ -1073,7 +1075,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
         ObjHeader* old = *location;
         if (old != NULL && old->container() != NULL && !old->container()->isDestroyed()) {
           RTGC_LOG("--- cleaning fields %p IN %p\n", old, container + 1);
-          if (garbageNodeId >= 0) {
+          if (garbageNodeId != 0) {
             *location = NULL;
             if (old->container()->getNodeId() == garbageNodeId) {
               freeContainer(old->container(), garbageNodeId);
@@ -1097,7 +1099,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
   if (isFreeable(container)) {
     container->setColorEvenIfGreen(CONTAINER_TAG_GC_BLACK);
     if (!container->buffered())
-      scheduleDestroyContainer(memoryState, container, garbageNodeId >= 0);
+      scheduleDestroyContainer(memoryState, container, garbageNodeId != 0);
   }
 }
 
@@ -1204,7 +1206,7 @@ inline void decrementRC(ContainerHeader* container) {
 
   CyclicNode* cyclic = CyclicNode::getNode(ref.node);
   if (cyclic != NULL) {
-    GCNode::rtgcLock(0, 0, 0);
+    if (!isHeapLocked) GCNode::rtgcLock(0, 0, 0);
     if (0 == cyclic->decRootObjectCount()
     &&  cyclic->externalReferrers.isEmpty()) {
       freeContainer(container, cyclic->getId());
@@ -1213,10 +1215,12 @@ inline void decrementRC(ContainerHeader* container) {
       //cyclic->freeNode(container);
       return;
     }
-    GCNode::rtgcUnlock(0);
+    if (!isHeapLocked) GCNode::rtgcUnlock(0);
   }
   if (ref.obj == 0) {
+    if (!isHeapLocked) GCNode::rtgcLock(0, 0, 0);
     freeContainer(container, -1);
+    if (!isHeapLocked) GCNode::rtgcUnlock(0);
   }
 }
 
@@ -1228,6 +1232,8 @@ inline void decrementRC(ContainerHeader* container) {
 }
 
 
+template <bool Atomic>
+void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner);
 
 
 template <bool Atomic>
@@ -1259,6 +1265,9 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
 }
 
 template <bool Atomic>
+void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) RTGC_NO_INLINE;
+
+template <bool Atomic>
 void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   // @zee rootRef 변경으로 인해 Atomic 처리 필요.
   GCNode* owner_node = owner->getNode();
@@ -1280,7 +1289,7 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     RuntimeAssert(cyclic != NULL, "no cylic node");
     if (container->isGarbage()) {
       cyclic->removeSuspectedGarbage(container);
-      freeContainer(container, 0);
+      freeContainer(container, -1);
     }
     else {
       cyclic->markSuspectedGarbage(container);
@@ -1288,8 +1297,8 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     return;
   }
 
-  if (container->refCount() == 0) {
-    freeContainer(container, 0);
+  if (container->isGarbage()) {
+    freeContainer(container, -1);
     return;
   }
   
@@ -2182,12 +2191,15 @@ void zeroStackRef(ObjHeader** location) {
 } // namespace
 void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner) {
 
+  isHeapLocked ++;
+
   if (object != nullptr && object != owner) {
     ContainerHeader* container = object->container();
 
     if (container != nullptr) {
+      if (object->type_info() == NULL) RTGC_TRAP("no type info %p\n", object);
       int flags = object->type_info()->flags_;
-      if ((flags & TF_IMMUTABLE) != 0 || (flags & TF_ACYCLIC) == 0) {
+      if ((flags & (TF_ACYCLIC)) != 0) {
         addHeapRef(object);
       }
       else switch(container->tag()) {
@@ -2208,9 +2220,10 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
   if (reinterpret_cast<uintptr_t>(old) > 1 && old != owner) {
     ContainerHeader* container = old->container();
     if (container != nullptr) {
-      int flags = object->type_info()->flags_;
-      if ((flags & TF_IMMUTABLE) != 0 || (flags & TF_ACYCLIC) == 0) {
-        releaseHeapRef<false/*???*/>(object);
+      if (old->type_info() == NULL) RTGC_TRAP("no type info %p\n", old);
+      int flags = old->type_info()->flags_;
+      if ((flags & (TF_ACYCLIC)) != 0) {
+        releaseHeapRef<false/*???*/>(old);
       }
       else switch(container->tag()) {
         case CONTAINER_TAG_STACK:
@@ -2226,6 +2239,9 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
     }
     //releaseHeapRef<Strict>(old);
   }
+
+  isHeapLocked --;
+
 }
 namespace {
 
@@ -2236,7 +2252,6 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeade
     RuntimeAssert(owner->container() != nullptr && owner->container()->tag() != CONTAINER_TAG_STACK, "illegal heap ref");
 
   void* lock = GCNode::rtgcLock(NULL, NULL, NULL);
-
   ObjHeader* old = *location;
   if (old != object) {
     *location = (ObjHeader*)object;
@@ -2489,6 +2504,7 @@ inline int32_t computeCookie() {
 
 OBJ_GETTER(swapHeapRefLocked,
     ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner, int32_t* cookie) {
+  MEMORY_LOG("swapHeapRefLocked: %p, v=%p, o=%p\n", location, newValue, owner);
   lock(spinlock);
   ObjHeader* oldValue = *location;
   bool shallRemember = false;
@@ -2497,6 +2513,7 @@ OBJ_GETTER(swapHeapRefLocked,
     shallRemember = *cookie != realCookie;
     if (shallRemember) *cookie = realCookie;
   }
+
   if (oldValue == expectedValue) {
 #if USE_CYCLIC_GC
     if (g_hasCyclicCollector)
@@ -2504,45 +2521,46 @@ OBJ_GETTER(swapHeapRefLocked,
 #endif  // USE_CYCLIC_GC
     if (owner == NULL) {
       SetHeapRef(location, newValue);
+      // @zee oldValue will-keep sameRefCount;
     }
     else {
-      *location = NULL;
+      // @zee protect deleting oldValue;
+      UpdateReturnRef(OBJ_RESULT, oldValue);
       UpdateHeapRef(location, newValue, owner);
     }
   }
-  UpdateReturnRef(OBJ_RESULT, oldValue);
+  else {
+    UpdateReturnRef(OBJ_RESULT, oldValue);
+  }
 
   if (IsStrictMemoryModel && shallRemember && oldValue != nullptr && oldValue != expectedValue) {
     // Only remember container if it is not known to this thread (i.e. != expectedValue).
     rememberNewContainer(oldValue->container());
   }
-  if (!RTGC || true) unlock(spinlock);
+  unlock(spinlock);
 
-  if (oldValue != nullptr && oldValue == expectedValue) {
-    ReleaseHeapRef(oldValue);
-  }
   return oldValue;
 }
 
 void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner, int32_t* cookie) {
+  MEMORY_LOG("setHeapRefLocked: %p, v=%p, o=%p\n", location, newValue, owner);
   lock(spinlock);
-  ObjHeader* oldValue = *location;
 #if USE_CYCLIC_GC
   if (g_hasCyclicCollector)
     cyclicMutateAtomicRoot(newValue);
 #endif  // USE_CYCLIC_GC
   // We do not use UpdateRef() here to avoid having ReleaseRef() on old value under the lock.
   if (owner == NULL) {
+    ObjHeader* oldValue = *location;
     SetHeapRef(location, newValue);
+    if (oldValue != nullptr)
+      ReleaseHeapRef(oldValue);
   }
   else {
-    *location = NULL;
     UpdateHeapRef(location, newValue, owner);
   }
   *cookie = computeCookie();
   unlock(spinlock);
-  if (oldValue != nullptr)
-    ReleaseHeapRef(oldValue);
 }
 
 OBJ_GETTER(readHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* cookie) {
@@ -2562,6 +2580,8 @@ OBJ_GETTER(readHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* 
   unlock(spinlock);
   return value;
 }
+
+static const bool __DEBUG = true;
 
 OBJ_GETTER(readHeapRefNoLock, ObjHeader* object, KInt index) {
   MEMORY_LOG("ReadHeapRefNoLock: %p index %d\n", object, index)
@@ -2595,7 +2615,7 @@ template <bool Strict>
 const ObjHeader* leaveFrameAndReturnRef(ObjHeader** start, int param_count, ObjHeader** resultSlot, const ObjHeader* returnRef) {
   int parameters = param_count >> 16;
   int count = (int16_t)param_count;
-  MEMORY_LOG("LeaveFrame %p: %d parameters %d locals\n", start, parameters, count)
+  MEMORY_LOG("leaveFrameAndReturnRef %p: %d parameters %d locals. returns %p \n", start, parameters, count, returnRef)
   const ObjHeader* res = *resultSlot;
   if (res != returnRef) {
     *resultSlot = (ObjHeader*)returnRef;
@@ -2621,7 +2641,12 @@ const ObjHeader* leaveFrameAndReturnRef(ObjHeader** start, int param_count, ObjH
           returnRef = NULL;
         }
         else {
-          releaseHeapRef<false>(object);
+          if (__DEBUG) {
+            zeroStackRef<Strict>(current);
+          }
+          else {
+            releaseHeapRef<false>(object);
+          }
         }
       }
       current++;
@@ -2647,7 +2672,13 @@ void leaveFrame(ObjHeader** start, int parameters, int count) {
     while (count-- > kFrameOverlaySlots) {
       ObjHeader* object = *current;
       if (object != nullptr) {
-        releaseHeapRef<false>(object);
+          if (__DEBUG) {
+            zeroStackRef<Strict>(current);
+          }
+          else {
+            releaseHeapRef<false>(object);
+          }
+        //releaseHeapRef<false>(object);
       }
       current++;
     }
@@ -2758,12 +2789,14 @@ KNativePtr createStablePointer(KRef any) {
 
 void disposeStablePointer(KNativePtr pointer) {
   if (pointer == nullptr) return;
-  KRef ref = reinterpret_cast<KRef>(pointer);
-  ReleaseHeapRef(ref);
+  KRef any = reinterpret_cast<KRef>(pointer);
+  MEMORY_LOG("disposeStablePointer for %p rc=%d\n", any, any->container() ? any->container()->refCount() : 0)
+  ReleaseHeapRef(any);
 }
 
 OBJ_GETTER(derefStablePointer, KNativePtr pointer) {
   KRef ref = reinterpret_cast<KRef>(pointer);
+  MEMORY_LOG("disposeStablePointer for %p rc=%d\n", ref, ref->container() ? ref->container()->refCount() : 0)
   AdoptReferenceFromSharedVariable(ref);
   RETURN_OBJ(ref);
 }
@@ -2779,8 +2812,8 @@ OBJ_GETTER(adoptStablePointer, KNativePtr pointer) {
 }
 
 bool clearSubgraphReferences(ObjHeader* root, bool checked) {
-#if USE_GC
   MEMORY_LOG("ClearSubgraphReferences %p\n", root)
+#if USE_GC
   if (root == nullptr) return true;
   auto state = memoryState;
   auto* container = root->container();
