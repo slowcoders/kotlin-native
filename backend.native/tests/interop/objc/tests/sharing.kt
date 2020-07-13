@@ -14,8 +14,10 @@ private class NSObjectImpl : NSObject() {
     assertFalse(obj.isFrozen)
 
     runInWorker {
-        assertFailsWith<IncorrectDereferenceException> {
-            array.objectAtIndex(0)
+        if (Platform.memoryModel == MemoryModel.STRICT) { // @zee ++
+            assertFailsWith<IncorrectDereferenceException> {
+                array.objectAtIndex(0)
+            }
         }
     }
 
