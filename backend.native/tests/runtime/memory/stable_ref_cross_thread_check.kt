@@ -18,9 +18,11 @@ fun runTest1() {
         StableRef.create(Any())
     }
     val ref = future.result
-    assertFailsWith<IncorrectDereferenceException> {
-        val value = ref.get()
-        println(value.toString())
+    if (Platform.memoryModel == MemoryModel.STRICT) { // @zee ++
+        assertFailsWith<IncorrectDereferenceException> {
+            val value = ref.get()
+            println(value.toString())
+        }
     }
 
     worker.requestTermination().result
@@ -35,10 +37,12 @@ fun runTest2() {
     val pointerValue: Long = mainThreadRef.asCPointer().toLong()
     val future = worker.execute(TransferMode.SAFE, { pointerValue }) {
         val pointer: COpaquePointer = it.toCPointer()!!
-        assertFailsWith<IncorrectDereferenceException> {
-            // Even attempting to convert a pointer to StableRef should fail.
-            val otherThreadRef: StableRef<Any> = pointer.asStableRef()
-            println(otherThreadRef.toString())
+        if (Platform.memoryModel == MemoryModel.STRICT) { // @zee ++
+            assertFailsWith<IncorrectDereferenceException> {
+                // Even attempting to convert a pointer to StableRef should fail.
+                val otherThreadRef: StableRef<Any> = pointer.asStableRef()
+                println(otherThreadRef.toString())
+            }
         }
         Unit
     }

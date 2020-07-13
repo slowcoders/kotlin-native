@@ -28,8 +28,10 @@ val int2 = 77
     int1++
     withWorker {
         executeAfter(0, {
-            assertFailsWith<IncorrectDereferenceException> {
-                int1++
+            if (Platform.memoryModel == MemoryModel.STRICT) { // @zee ++
+                assertFailsWith<IncorrectDereferenceException> {
+                    int1++
+                }
             }
             assertEquals(2, int1)
             assertEquals(77, int2)

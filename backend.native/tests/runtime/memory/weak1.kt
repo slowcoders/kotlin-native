@@ -23,10 +23,10 @@ class Node(var next: Node?)
     val string = "Hello"
     val refString = WeakReference(string)
     assertEquals(string, refString.value)
-    val zero = 0
+    val zero:Any = 0
     val refZero = WeakReference(zero)
     assertEquals(0, refZero.value)
-    val long = Long.MAX_VALUE
+    val long:Any = Long.MAX_VALUE
     val refLong = WeakReference(long)
     assertEquals(Long.MAX_VALUE, refLong.value)
 }
