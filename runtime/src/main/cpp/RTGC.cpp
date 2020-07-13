@@ -16,6 +16,7 @@
 #include "RTGCPrivate.h"
 #include "KDebug.h"
 #include "assert.h"
+#include <pthread.h>
 
 int RTGCGlobal::cntRefChain = 0;
 int RTGCGlobal::cntCyclicNodes = 0;
@@ -27,14 +28,51 @@ GCRefChain* GCRefList::g_refChains;
 GCRefChain* RTGCGlobal::g_freeRefChain;
 
 CyclicNode* GCNode::g_cyclicNodes = NULL;
-int64_t GCNode::g_memberUpdateLock = 0;
 int RTGCGlobal::g_cntLocalCyclicTest = 0;
 int RTGCGlobal::g_cntMemberCyclicTest = 0;
 
+static pthread_t g_lockThread = NULL;
+static int g_cntLock = 0;
+THREAD_LOCAL_VARIABLE int32_t isHeapLocked = 0;
 
+
+void GCNode::rtgcLock() {
+    pthread_t curr_thread = pthread_self();
+    if (curr_thread != g_lockThread) {
+        while (!__sync_bool_compare_and_swap(&g_lockThread, NULL, curr_thread)) {}
+    }
+    g_cntLock ++;
+}
+
+void GCNode::rtgcUnlock() {
+    RuntimeAssert(pthread_self() == g_lockThread, "unlock in wrong thread");
+    if (--g_cntLock == 0) {
+        g_lockThread = NULL;
+    }
+}
+
+bool GCNode::isLocked() {
+    pthread_t curr_thread = pthread_self();
+    return curr_thread == g_lockThread;
+}
+
+static bool dump_recyle_log = false;
 GCRefChain* popFreeChain() {
+    assert(GCNode::isLocked());
     GCRefChain* freeChain = RTGCGlobal::g_freeRefChain;
-    assert(GCNode::isLocked(0));
+    if (freeChain == NULL) {
+        printf("Insufficient RefChains!");
+        GCNode::dumpGCLog();
+        dump_recyle_log = true;
+        CyclicNode::detectCycles();
+        freeChain = RTGCGlobal::g_freeRefChain;
+        GCNode::dumpGCLog();
+        dump_recyle_log = false;
+        if (freeChain == NULL) {
+            printf("Out of RefChains!");
+            ThrowOutOfMemoryError();
+        }
+    }
     RTGCGlobal::g_freeRefChain = (GCRefChain*)GET_NEXT_FREE(freeChain);
     RTGCGlobal::cntRefChain ++;
     int node_id = freeChain - GCRefList::g_refChains;
@@ -47,9 +85,8 @@ GCRefChain* popFreeChain() {
 void recycleChain(GCRefChain* expired, const char* type) {
     SET_NEXT_FREE(expired, RTGCGlobal::g_freeRefChain);
     RTGCGlobal::cntRefChain --;
-    int node_id = expired - GCRefList::g_refChains;
-    if (true || node_id % 1000 == 0) {
-       // printf("RTGC Recycle chain: %s %d, %p\n", type, node_id, expired);
+    if (dump_recyle_log) {//} || node_id % 1000 == 0) {
+        printf("RTGC Recycle chain: %d\n", RTGCGlobal::cntRefChain);
     }
     RTGCGlobal::g_freeRefChain = expired;
 }
@@ -148,12 +185,28 @@ GCRefChain* GCRefList::find(int node_id) {
 }
 
 void GCRefList::setFirst(GCRefChain* newFirst) {
+    if (dump_recyle_log) {//} || node_id % 1000 == 0) {
+         printf("RTGC setFirst %p, top %p\n", newFirst, topChain());
+    }
     for (GCRefChain* chain = topChain(); chain != newFirst; ) {
         GCRefChain* next = chain->next_;
         recycleChain(chain, "setLast");
         chain = next;
     }
-    this->first_ = newFirst - g_refChains;
+    if (newFirst == NULL) {
+        this->first_ = 0;
+    }
+    else {
+        this->first_ = newFirst - g_refChains;
+    }
+}
+
+void OnewayNode::dealloc() {
+    RuntimeAssert(isLocked(), "GCNode is not locked")
+    if (dump_recyle_log) {//} || node_id % 1000 == 0) {
+         printf("OnewayNode::dealloc, top %p\n", externalReferrers.topChain());
+    }
+    externalReferrers.clear();
 }
 
 

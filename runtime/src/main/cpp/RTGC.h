@@ -23,7 +23,7 @@ typedef struct ContainerHeader GCObject;
 #define RTGC_REF_COUNT_MASK        ((uint64_t)((1LL << RTGC_REF_COUNT_BITS) -1))
 static const int CYCLIC_NODE_ID_START = 2;
 
-static const int ENABLE_RTGC_LOG = 0;
+static const int ENABLE_RTGC_LOG = 1;
 bool rtgc_trap() NO_INLINE;
 
 #define RTGC_LOG if (ENABLE_RTGC_LOG) printf
@@ -90,7 +90,6 @@ struct GCNode {
 protected:  
 
   static CyclicNode* g_cyclicNodes;
-  static int64_t g_memberUpdateLock;
 
   void clearSuspectedCyclic() { externalReferrers.flags_ &= ~NEED_CYCLIC_TEST; } 
   void markSuspectedCyclic() { externalReferrers.flags_ |= NEED_CYCLIC_TEST; } 
@@ -104,17 +103,11 @@ public:
   static void initMemory();
 
 
-  static void* rtgcLock(GCObject* owner, GCObject* assigned, GCObject* erased) {
-    while (!__sync_bool_compare_and_swap(&g_memberUpdateLock, 0, 1)) {}
-    return 0;
-  }
-  static void rtgcUnlock(void* lock) {
-    g_memberUpdateLock = 0;
-  }
+  static void rtgcLock() RTGC_NO_INLINE;
 
-  static bool isLocked(void* lock) {
-    return g_memberUpdateLock != 0;
-  }
+  static void rtgcUnlock() RTGC_NO_INLINE;
+
+  static bool isLocked() RTGC_NO_INLINE;
 
   int getTraceState() {
     return externalReferrers.flags_ & RTGC_TRACE_STATE_MASK;
@@ -129,7 +122,7 @@ public:
 };
 
 struct OnewayNode : GCNode {
-  void dealloc(bool isLocked);
+  void dealloc();
 };
 
 struct CyclicNode : GCNode {
@@ -151,9 +144,10 @@ public:
   }
 
   static CyclicNode* getNode(int nodeId) {
-    nodeId -= CYCLIC_NODE_ID_START;
-    if (nodeId < 0) return NULL;
-    return g_cyclicNodes + nodeId;
+    if (nodeId < CYCLIC_NODE_ID_START) {
+      return NULL;
+    }
+    return g_cyclicNodes + nodeId - CYCLIC_NODE_ID_START;
   }
 
   bool isDamaged() {
@@ -187,12 +181,12 @@ public:
     return --this->rootObjectCount;
   }
 
-  void dealloc(bool isLocked);
+  void dealloc();
 
 
   static CyclicNode* create()  RTGC_NO_INLINE;
   static void addCyclicTest(GCObject* node, bool isLocalTest)  RTGC_NO_INLINE;
-  static void removeCyclicTest(GCObject* node, bool isLocked)  RTGC_NO_INLINE;
+  static void removeCyclicTest(GCObject* node)  RTGC_NO_INLINE;
   static void detectCycles()  RTGC_NO_INLINE;
 };
 

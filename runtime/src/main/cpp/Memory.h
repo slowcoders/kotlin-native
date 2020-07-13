@@ -190,10 +190,12 @@ public:
   }
 
   GCNode* getNode() {
+#if KONAN_ENABLE_ASSERT
     if(ref_.rtgc.node == 0) {
       RTGC_dumpRefInfo(this);
       RuntimeAssert(ref_.rtgc.node != 0, "node not initialized");
     }
+#endif    
     if (this->isInCyclicNode()) {
       return CyclicNode::getNode(ref_.rtgc.node);
     }
@@ -211,7 +213,7 @@ public:
   }
 
   CyclicNode* getLocalCyclicNode() {
-    return isInCyclicNode() ? CyclicNode::getNode(ref_.rtgc.node) : NULL;
+    return CyclicNode::getNode(getNodeId());
   }
 
   bool isGCNodeAttached() {
@@ -254,11 +256,11 @@ public:
   }
 
   bool isInCyclicNode() {
-    return ref_.rtgc.node >= CYCLIC_NODE_ID_START;
+    return getNodeId() >= CYCLIC_NODE_ID_START;
   }
 
   int getNodeId() {
-    return ref_.rtgc.node;
+    return (int)ref_.rtgc.node;
   }
 
   void setNodeId(int node_id) {
@@ -277,18 +279,24 @@ public:
     int64_t value = Atomic ?
         __sync_add_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count += RTGC_MEMBER_REF_INCREEMENT;
 #endif
+#if KONAN_ENABLE_ASSERT
+    RuntimeAssert(!isAcyclic(), "Acyclic objct does not have member refCount");
     if (ref_.rtgc.obj == 0) {
       RTGC_dumpRefInfo(this);
       RuntimeAssert(ref_.rtgc.obj != 0, "member ref overflow");
     }
+#endif    
   }
 
   template <bool Atomic>
   inline void decMemberRefCount() {
+#if KONAN_ENABLE_ASSERT
+    RuntimeAssert(!isAcyclic(), "Acyclic objct does not have member refCount");
     if (ref_.rtgc.obj == 0) {
       RTGC_dumpRefInfo(this);
       RuntimeAssert(ref_.rtgc.obj != 0, "member ref underflow");
     }
+#endif    
 #ifdef KONAN_NO_THREADS
     int64_t value = ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
 #else
@@ -305,19 +313,29 @@ public:
     int64_t value = Atomic ?
        __sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #endif
-    if (ref_.rtgc.root == 0) {
+#if KONAN_ENABLE_ASSERT
+    if (ref_.rtgc.root == 0 && !isAcyclic()) {
       RTGC_dumpRefInfo(this);
       RuntimeAssert(ref_.rtgc.root != 0, "root ref overflow");
     }
+#endif    
     return *(RTGCRef*)&value;
+  }
+
+  bool isAcyclic();
+
+  inline ObjHeader* asObjHeader() {
+    return (ObjHeader*)(this + 1);
   }
 
   template <bool Atomic>
   inline RTGCRef decRootCount() {
-    if (ref_.rtgc.root == 0) {
+#if KONAN_ENABLE_ASSERT
+    if (ref_.rtgc.root == 0 && !isAcyclic()) {
       RTGC_dumpRefInfo(this);
       RuntimeAssert(ref_.rtgc.root != 0, "root ref underflow");
     }
+#endif
 #ifdef KONAN_NO_THREADS
     int64_t value = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #else
@@ -329,10 +347,12 @@ public:
 
   template <bool Atomic>
   inline int decRefCount() {
-    if (ref_.rtgc.root == 0) {
+#if KONAN_ENABLE_ASSERT
+    if (ref_.rtgc.root == 0 && !isAcyclic()) {
       RTGC_dumpRefInfo(this);
       RuntimeAssert(ref_.rtgc.root != 0, "refCount underflow");
     }
+#endif    
 #ifdef KONAN_NO_THREADS
     int value = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #else
@@ -343,10 +363,12 @@ public:
   }
 
   inline int decRefCount() {
-    if (ref_.rtgc.root == 0) {
+#if KONAN_ENABLE_ASSERT
+    if (ref_.rtgc.root == 0 && !isAcyclic()) {
       RTGC_dumpRefInfo(this);
       RuntimeAssert(ref_.rtgc.root != 0, "refCount underflow");
     }
+#endif    
   #ifdef KONAN_NO_THREADS
       int value = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #else
@@ -512,6 +534,10 @@ struct ObjHeader {
 
   const TypeInfo* type_info() const {
     return clearPointerBits(typeInfoOrMeta_, OBJECT_TAG_MASK)->typeInfo_;
+  }
+
+  bool isAcyclic() const {
+    return (type_info()->flags_ & (TF_IMMUTABLE | TF_ACYCLIC)) != 0;
   }
 
   bool has_meta_object() const {
@@ -801,7 +827,13 @@ class ExceptionObjHolder {
 class ForeignRefManager;
 typedef ForeignRefManager* ForeignRefContext;
 
+inline bool ContainerHeader::isAcyclic() {
+  return asObjHeader()->isAcyclic();
+}
+
+
 #ifdef RTGC
+
 void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner) RTGC_NO_INLINE;
 void freeContainer(ContainerHeader* header, int garbageNodeId=-1) RTGC_NO_INLINE;
 #endif
