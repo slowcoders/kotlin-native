@@ -1,0 +1,63 @@
+/*
+ * Copyright 2010-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
+ * that can be found in the LICENSE file.
+ */
+
+import shadow.org.jetbrains.kotlin.gradle.plugin.tasks.KonanCompileNativeBinary
+import org.jetbrains.kotlin.*
+import org.jetbrains.kotlin.konan.target.Family
+import org.jetbrains.kotlin.konan.target.KonanTarget
+
+import java.nio.file.Paths
+
+import static org.jetbrains.kotlin.konan.target.Architecture.*
+
+buildscript {
+    repositories {
+        maven {
+            url 'https://cache-redirector.jetbrains.com/maven-central'
+        }
+        maven {
+            url buildKotlinCompilerRepo
+        }
+	    maven {
+            url kotlinCompilerRepo
+        }
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-native-gradle-plugin:$gradlePluginVersion"
+    }
+    ext.useCustomDist = project.hasProperty("konan.home")
+    if (!useCustomDist) {
+        ext.setProperty("konan.home", distDir.absolutePath)
+    }
+}
+
+apply plugin: 'konan'
+apply plugin: 'kotlin'
+
+/*
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform' version '1.3.21'
+}
+
+repositories {
+    mavenCentral()
+}
+*/
+
+kotlin {
+  macosX64("native") {
+    binaries {
+      framework {
+        baseName = "Demo"
+      }
+    }
+  }
+}
+
+wrapper {
+  gradleVersion = "5.3.1"
+  distributionType = "ALL"
+}

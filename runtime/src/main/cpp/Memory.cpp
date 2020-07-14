@@ -42,7 +42,7 @@
 // http://researcher.watson.ibm.com/researcher/files/us-bacon/Bacon03Pure.pdf.
 #define USE_GC 1
 // Define to 1 to print all memory operations.
-#define TRACE_MEMORY 1
+#define TRACE_MEMORY 0
 // Define to 1 to print major GC events.
 #define TRACE_GC 0
 // Collect memory manager events statistics.

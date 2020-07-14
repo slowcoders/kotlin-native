@@ -1,0 +1,631 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		7809CDDA248A326000270BFB /* Test2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7809CDD9248A326000270BFB /* Test2.framework */; };
+		7869EE6C2484D42C00DDE5CC /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 7869EE6B2484D42C00DDE5CC /* AppDelegate.m */; };
+		7869EE6E2484D42D00DDE5CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7869EE6D2484D42D00DDE5CC /* Assets.xcassets */; };
+		7869EE712484D42D00DDE5CC /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 7869EE6F2484D42D00DDE5CC /* MainMenu.xib */; };
+		7869EE742484D42D00DDE5CC /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 7869EE732484D42D00DDE5CC /* main.m */; };
+		7869EE7F2484D42D00DDE5CC /* kobjcTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 7869EE7E2484D42D00DDE5CC /* kobjcTests.m */; };
+		7869EE8A2484D42D00DDE5CC /* kobjcUITests.m in Sources */ = {isa = PBXBuildFile; fileRef = 7869EE892484D42D00DDE5CC /* kobjcUITests.m */; };
+		7869EEAD2484EBF000DDE5CC /* kotlin in Resources */ = {isa = PBXBuildFile; fileRef = 7869EEAC2484EBF000DDE5CC /* kotlin */; };
+		789B11E3249C609700505D14 /* cpu_test.m in Sources */ = {isa = PBXBuildFile; fileRef = 789B11E2249C609700505D14 /* cpu_test.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7869EE7B2484D42D00DDE5CC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7869EE5F2484D42C00DDE5CC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7869EE662484D42C00DDE5CC;
+			remoteInfo = kobjc;
+		};
+		7869EE862484D42D00DDE5CC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7869EE5F2484D42C00DDE5CC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7869EE662484D42C00DDE5CC;
+			remoteInfo = kobjc;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7869EEA12484DD4C00DDE5CC /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		7809CDD9248A326000270BFB /* Test2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Test2.framework; path = libs/zee/build/objs/Test2.framework; sourceTree = "<group>"; };
+		7869EE672484D42C00DDE5CC /* kobjc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = kobjc.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7869EE6A2484D42C00DDE5CC /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		7869EE6B2484D42C00DDE5CC /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		7869EE6D2484D42D00DDE5CC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		7869EE702484D42D00DDE5CC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
+		7869EE722484D42D00DDE5CC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7869EE732484D42D00DDE5CC /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		7869EE752484D42D00DDE5CC /* kobjc.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = kobjc.entitlements; sourceTree = "<group>"; };
+		7869EE7A2484D42D00DDE5CC /* kobjcTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = kobjcTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7869EE7E2484D42D00DDE5CC /* kobjcTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = kobjcTests.m; sourceTree = "<group>"; };
+		7869EE802484D42D00DDE5CC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7869EE852484D42D00DDE5CC /* kobjcUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = kobjcUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7869EE892484D42D00DDE5CC /* kobjcUITests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = kobjcUITests.m; sourceTree = "<group>"; };
+		7869EE8B2484D42D00DDE5CC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7869EEAC2484EBF000DDE5CC /* kotlin */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = kotlin; path = libs/zee/src/nativeMain/kotlin; sourceTree = SOURCE_ROOT; };
+		789B11E2249C609700505D14 /* cpu_test.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = cpu_test.m; sourceTree = "<group>"; };
+		78A5518A24A8DE5900CD0405 /* libobjcsmoke.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libobjcsmoke.dylib; path = libs/zee/libobjcsmoke.dylib; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		7869EE642484D42C00DDE5CC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7809CDDA248A326000270BFB /* Test2.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7869EE772484D42D00DDE5CC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7869EE822484D42D00DDE5CC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		7869EE5E2484D42C00DDE5CC = {
+			isa = PBXGroup;
+			children = (
+				7869EEAB2484EBB400DDE5CC /* kotlin */,
+				7869EE692484D42C00DDE5CC /* kobjc */,
+				7869EE7D2484D42D00DDE5CC /* kobjcTests */,
+				7869EE882484D42D00DDE5CC /* kobjcUITests */,
+				7869EE682484D42C00DDE5CC /* Products */,
+				7869EE972484D44F00DDE5CC /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		7869EE682484D42C00DDE5CC /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7869EE672484D42C00DDE5CC /* kobjc.app */,
+				7869EE7A2484D42D00DDE5CC /* kobjcTests.xctest */,
+				7869EE852484D42D00DDE5CC /* kobjcUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		7869EE692484D42C00DDE5CC /* kobjc */ = {
+			isa = PBXGroup;
+			children = (
+				7869EE6A2484D42C00DDE5CC /* AppDelegate.h */,
+				7869EE6B2484D42C00DDE5CC /* AppDelegate.m */,
+				7869EE6D2484D42D00DDE5CC /* Assets.xcassets */,
+				7869EE6F2484D42D00DDE5CC /* MainMenu.xib */,
+				7869EE722484D42D00DDE5CC /* Info.plist */,
+				7869EE732484D42D00DDE5CC /* main.m */,
+				7869EE752484D42D00DDE5CC /* kobjc.entitlements */,
+				789B11E2249C609700505D14 /* cpu_test.m */,
+			);
+			path = kobjc;
+			sourceTree = "<group>";
+		};
+		7869EE7D2484D42D00DDE5CC /* kobjcTests */ = {
+			isa = PBXGroup;
+			children = (
+				7869EE7E2484D42D00DDE5CC /* kobjcTests.m */,
+				7869EE802484D42D00DDE5CC /* Info.plist */,
+			);
+			path = kobjcTests;
+			sourceTree = "<group>";
+		};
+		7869EE882484D42D00DDE5CC /* kobjcUITests */ = {
+			isa = PBXGroup;
+			children = (
+				7869EE892484D42D00DDE5CC /* kobjcUITests.m */,
+				7869EE8B2484D42D00DDE5CC /* Info.plist */,
+			);
+			path = kobjcUITests;
+			sourceTree = "<group>";
+		};
+		7869EE972484D44F00DDE5CC /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				78A5518A24A8DE5900CD0405 /* libobjcsmoke.dylib */,
+				7809CDD9248A326000270BFB /* Test2.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		7869EEAB2484EBB400DDE5CC /* kotlin */ = {
+			isa = PBXGroup;
+			children = (
+				7869EEAC2484EBF000DDE5CC /* kotlin */,
+			);
+			path = kotlin;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7869EE662484D42C00DDE5CC /* kobjc */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7869EE8E2484D42D00DDE5CC /* Build configuration list for PBXNativeTarget "kobjc" */;
+			buildPhases = (
+				7869EE632484D42C00DDE5CC /* Sources */,
+				7869EE642484D42C00DDE5CC /* Frameworks */,
+				7869EE652484D42C00DDE5CC /* Resources */,
+				7869EEA12484DD4C00DDE5CC /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = kobjc;
+			productName = kobjc;
+			productReference = 7869EE672484D42C00DDE5CC /* kobjc.app */;
+			productType = "com.apple.product-type.application";
+		};
+		7869EE792484D42D00DDE5CC /* kobjcTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7869EE912484D42D00DDE5CC /* Build configuration list for PBXNativeTarget "kobjcTests" */;
+			buildPhases = (
+				7869EE762484D42D00DDE5CC /* Sources */,
+				7869EE772484D42D00DDE5CC /* Frameworks */,
+				7869EE782484D42D00DDE5CC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7869EE7C2484D42D00DDE5CC /* PBXTargetDependency */,
+			);
+			name = kobjcTests;
+			productName = kobjcTests;
+			productReference = 7869EE7A2484D42D00DDE5CC /* kobjcTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		7869EE842484D42D00DDE5CC /* kobjcUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7869EE942484D42D00DDE5CC /* Build configuration list for PBXNativeTarget "kobjcUITests" */;
+			buildPhases = (
+				7869EE812484D42D00DDE5CC /* Sources */,
+				7869EE822484D42D00DDE5CC /* Frameworks */,
+				7869EE832484D42D00DDE5CC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7869EE872484D42D00DDE5CC /* PBXTargetDependency */,
+			);
+			name = kobjcUITests;
+			productName = kobjcUITests;
+			productReference = 7869EE852484D42D00DDE5CC /* kobjcUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7869EE5F2484D42C00DDE5CC /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1150;
+				ORGANIZATIONNAME = "DaeHoon Zee";
+				TargetAttributes = {
+					7869EE662484D42C00DDE5CC = {
+						CreatedOnToolsVersion = 11.5;
+					};
+					7869EE792484D42D00DDE5CC = {
+						CreatedOnToolsVersion = 11.5;
+						TestTargetID = 7869EE662484D42C00DDE5CC;
+					};
+					7869EE842484D42D00DDE5CC = {
+						CreatedOnToolsVersion = 11.5;
+						TestTargetID = 7869EE662484D42C00DDE5CC;
+					};
+				};
+			};
+			buildConfigurationList = 7869EE622484D42C00DDE5CC /* Build configuration list for PBXProject "kobjc" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 7869EE5E2484D42C00DDE5CC;
+			productRefGroup = 7869EE682484D42C00DDE5CC /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7869EE662484D42C00DDE5CC /* kobjc */,
+				7869EE792484D42D00DDE5CC /* kobjcTests */,
+				7869EE842484D42D00DDE5CC /* kobjcUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7869EE652484D42C00DDE5CC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7869EE6E2484D42D00DDE5CC /* Assets.xcassets in Resources */,
+				7869EE712484D42D00DDE5CC /* MainMenu.xib in Resources */,
+				7869EEAD2484EBF000DDE5CC /* kotlin in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7869EE782484D42D00DDE5CC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7869EE832484D42D00DDE5CC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7869EE632484D42C00DDE5CC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				789B11E3249C609700505D14 /* cpu_test.m in Sources */,
+				7869EE742484D42D00DDE5CC /* main.m in Sources */,
+				7869EE6C2484D42C00DDE5CC /* AppDelegate.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7869EE762484D42D00DDE5CC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7869EE7F2484D42D00DDE5CC /* kobjcTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7869EE812484D42D00DDE5CC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7869EE8A2484D42D00DDE5CC /* kobjcUITests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7869EE7C2484D42D00DDE5CC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7869EE662484D42C00DDE5CC /* kobjc */;
+			targetProxy = 7869EE7B2484D42D00DDE5CC /* PBXContainerItemProxy */;
+		};
+		7869EE872484D42D00DDE5CC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7869EE662484D42C00DDE5CC /* kobjc */;
+			targetProxy = 7869EE862484D42D00DDE5CC /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		7869EE6F2484D42D00DDE5CC /* MainMenu.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				7869EE702484D42D00DDE5CC /* Base */,
+			);
+			name = MainMenu.xib;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		7869EE8C2484D42D00DDE5CC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		7869EE8D2484D42D00DDE5CC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		7869EE8F2484D42D00DDE5CC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = kobjc/kobjc.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/libs/debugFramework",
+					"$(PROJECT_DIR)/libs/zee/build/bin/native/debugFramework",
+					"$(PROJECT_DIR)/libs/zee/build/objs",
+				);
+				HEADER_SEARCH_PATHS = "";
+				INFOPLIST_FILE = kobjc/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"$(PROJECT_DIR)/libs/zee/build/objs",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/libs/zee",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.slowcoders.kobjc;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		7869EE902484D42D00DDE5CC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = kobjc/kobjc.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/libs/debugFramework",
+					"$(PROJECT_DIR)/libs/zee/build/bin/native/debugFramework",
+					"$(PROJECT_DIR)/libs/zee/build/objs",
+				);
+				HEADER_SEARCH_PATHS = "";
+				INFOPLIST_FILE = kobjc/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"$(PROJECT_DIR)/libs/zee/build/objs",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/libs/zee",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.slowcoders.kobjc;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		7869EE922484D42D00DDE5CC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = kobjcTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				PRODUCT_BUNDLE_IDENTIFIER = org.slowcoders.kobjcTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/kobjc.app/Contents/MacOS/kobjc";
+			};
+			name = Debug;
+		};
+		7869EE932484D42D00DDE5CC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = kobjcTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				PRODUCT_BUNDLE_IDENTIFIER = org.slowcoders.kobjcTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/kobjc.app/Contents/MacOS/kobjc";
+			};
+			name = Release;
+		};
+		7869EE952484D42D00DDE5CC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = kobjcUITests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.slowcoders.kobjcUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = kobjc;
+			};
+			name = Debug;
+		};
+		7869EE962484D42D00DDE5CC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = kobjcUITests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.slowcoders.kobjcUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = kobjc;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		7869EE622484D42C00DDE5CC /* Build configuration list for PBXProject "kobjc" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7869EE8C2484D42D00DDE5CC /* Debug */,
+				7869EE8D2484D42D00DDE5CC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7869EE8E2484D42D00DDE5CC /* Build configuration list for PBXNativeTarget "kobjc" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7869EE8F2484D42D00DDE5CC /* Debug */,
+				7869EE902484D42D00DDE5CC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7869EE912484D42D00DDE5CC /* Build configuration list for PBXNativeTarget "kobjcTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7869EE922484D42D00DDE5CC /* Debug */,
+				7869EE932484D42D00DDE5CC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7869EE942484D42D00DDE5CC /* Build configuration list for PBXNativeTarget "kobjcUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7869EE952484D42D00DDE5CC /* Debug */,
+				7869EE962484D42D00DDE5CC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 7869EE5F2484D42C00DDE5CC /* Project object */;
+}
