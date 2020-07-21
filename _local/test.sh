@@ -1,0 +1,1 @@
+./gradlew backend.native:tests:$1

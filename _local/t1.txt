@@ -1,0 +1,121 @@
+Test2`kfun:runtime.memory.var1#runTest1(){}:
+    0x10042f5e0 <+0>:   pushq  %rbp
+    0x10042f5e1 <+1>:   movq   %rsp, %rbp
+    0x10042f5e4 <+4>:   subq   $0xd0, %rsp
+    0x10042f5eb <+11>:  leaq   -0x58(%rbp), %rax
+    0x10042f5ef <+15>:  movq   %rax, %rcx
+    0x10042f5f2 <+18>:  movq   $0x0, 0x40(%rcx)
+    0x10042f5fa <+26>:  movq   $0x0, 0x38(%rcx)
+    0x10042f602 <+34>:  movq   $0x0, 0x30(%rcx)
+    0x10042f60a <+42>:  movq   $0x0, 0x28(%rcx)
+    0x10042f612 <+50>:  movq   $0x0, 0x20(%rcx)
+    0x10042f61a <+58>:  movq   $0x0, 0x18(%rcx)
+    0x10042f622 <+66>:  movq   $0x0, 0x10(%rcx)
+    0x10042f62a <+74>:  movq   $0x0, 0x8(%rcx)
+    0x10042f632 <+82>:  movq   $0x0, (%rcx)
+    0x10042f639 <+89>:  movq   %rax, -0x60(%rbp)
+    0x10042f63d <+93>:  movq   -0x60(%rbp), %rax
+    0x10042f641 <+97>:  movq   %rax, %rcx
+    0x10042f644 <+100>: addq   $0x18, %rcx
+    0x10042f64b <+107>: movq   %rax, %rdx
+    0x10042f64e <+110>: addq   $0x20, %rdx
+    0x10042f655 <+117>: movq   %rax, %rsi
+    0x10042f658 <+120>: addq   $0x28, %rsi
+    0x10042f65f <+127>: movq   %rax, %rdi
+    0x10042f662 <+130>: addq   $0x30, %rdi
+    0x10042f669 <+137>: movq   %rax, %r8
+    0x10042f66c <+140>: addq   $0x38, %r8
+    0x10042f673 <+147>: movq   %rax, %r9
+    0x10042f676 <+150>: addq   $0x40, %r9
+    0x10042f67d <+157>: movq   %rax, -0x68(%rbp)
+    0x10042f681 <+161>: movq   %rcx, -0x70(%rbp)
+    0x10042f685 <+165>: movq   %rdx, -0x78(%rbp)
+    0x10042f689 <+169>: movq   %rsi, -0x80(%rbp)
+    0x10042f68d <+173>: movq   %rdi, -0x88(%rbp)
+    0x10042f694 <+180>: movq   %r8, -0x90(%rbp)
+    0x10042f69b <+187>: movq   %r9, -0x98(%rbp)
+    0x10042f6a2 <+194>: leaq   0xed0b7(%rip), %rdi       ; kclass:runtime.memory.var1.Integer
+    0x10042f6a9 <+201>: movq   -0x70(%rbp), %rsi
+    0x10042f6ad <+205>: callq  0x1004a5880               ; AllocInstanceRelaxed
+    0x10042f6b2 <+210>: xorl   %esi, %esi
+    0x10042f6b4 <+212>: movq   %rax, %rdi
+    0x10042f6b7 <+215>: callq  0x10042f390               ; kfun:runtime.memory.var1.Integer#<init>(kotlin.Int){} at var1.kt
+    0x10042f6bc <+220>: jmp    0x10042f6be               ; <+222> at var1.kt:18:15
+    0x10042f6be <+222>: movl   $0x0, -0x4(%rbp)
+    0x10042f6c5 <+229>: movl   $0x1, -0x8(%rbp)
+    0x10042f6cc <+236>: movl   -0x4(%rbp), %eax
+    0x10042f6cf <+239>: cmpl   -0x8(%rbp), %eax
+    0x10042f6d2 <+242>: jle    0x10042f76f               ; <+399> at var1.kt:18:5
+    0x10042f6d8 <+248>: movq   -0x70(%rbp), %rax
+->  0x10042f6dc <+252>: movq   (%rax), %rcx
+    0x10042f6df <+255>: movq   -0x80(%rbp), %rdi
+    0x10042f6e3 <+259>: movq   %rcx, %rsi
+    0x10042f6e6 <+262>: movq   %rcx, -0xa0(%rbp)
+    0x10042f6ed <+269>: callq  0x1004a8960               ; UpdateStackRefRelaxed
+    0x10042f6f2 <+274>: movq   -0x70(%rbp), %rax
+    0x10042f6f6 <+278>: movq   (%rax), %rcx
+    0x10042f6f9 <+281>: movq   -0x88(%rbp), %rdi
+    0x10042f700 <+288>: movq   %rcx, %rsi
+    0x10042f703 <+291>: movq   %rcx, -0xa8(%rbp)
+    0x10042f70a <+298>: callq  0x1004a8960               ; UpdateStackRefRelaxed
+    0x10042f70f <+303>: movq   -0xa8(%rbp), %rdi
+    0x10042f716 <+310>: movq   -0x90(%rbp), %rsi
+    0x10042f71d <+317>: callq  0x10042f440               ; kfun:runtime.memory.var1.Integer#inc(){}runtime.memory.var1.Integer at var1.kt
+    0x10042f722 <+322>: movq   %rax, -0xb0(%rbp)
+    0x10042f729 <+329>: jmp    0x10042f72b               ; <+331> at var1.kt
+    0x10042f72b <+331>: movq   -0x70(%rbp), %rdi
+    0x10042f72f <+335>: movq   -0xb0(%rbp), %rsi
+    0x10042f736 <+342>: callq  0x1004a8960               ; UpdateStackRefRelaxed
+    0x10042f73b <+347>: movq   -0x70(%rbp), %rax
+    0x10042f73f <+351>: movq   (%rax), %rcx
+    0x10042f742 <+354>: movq   -0x98(%rbp), %rdi
+    0x10042f749 <+361>: movq   %rcx, %rsi
+    0x10042f74c <+364>: movq   %rcx, -0xb8(%rbp)
+    0x10042f753 <+371>: callq  0x1004a8960               ; UpdateStackRefRelaxed
+    0x10042f758 <+376>: movq   -0xa0(%rbp), %rdi
+    0x10042f75f <+383>: movq   -0xb8(%rbp), %rsi
+    0x10042f766 <+390>: callq  0x10042f560               ; kfun:runtime.memory.var1#foo(kotlin.Any;kotlin.Any){} at var1.kt
+    0x10042f76b <+395>: jmp    0x10042f76d               ; <+397> at var1.kt:26:2
+    0x10042f76d <+397>: jmp    0x10042f7c2               ; <+482> at var1.kt
+    0x10042f76f <+399>: jmp    0x10042f771               ; <+401> at var1.kt:18:15
+    0x10042f771 <+401>: movl   -0x4(%rbp), %eax
+    0x10042f774 <+404>: movl   %eax, -0xc(%rbp)
+    0x10042f777 <+407>: movl   -0x4(%rbp), %eax
+    0x10042f77a <+410>: incl   %eax
+    0x10042f77c <+412>: movl   %eax, -0x4(%rbp)
+    0x10042f77f <+415>: leaq   0xecfda(%rip), %rdi       ; kclass:runtime.memory.var1.Integer
+    0x10042f786 <+422>: movq   -0x78(%rbp), %rsi
+    0x10042f78a <+426>: callq  0x1004a5880               ; AllocInstanceRelaxed
+    0x10042f78f <+431>: xorl   %esi, %esi
+    0x10042f791 <+433>: movq   %rax, %rdi
+    0x10042f794 <+436>: callq  0x10042f390               ; kfun:runtime.memory.var1.Integer#<init>(kotlin.Int){} at var1.kt
+    0x10042f799 <+441>: jmp    0x10042f79b               ; <+443> at var1.kt:20:13
+    0x10042f79b <+443>: cmpl   $0x0, -0xc(%rbp)
+    0x10042f79f <+447>: je     0x10042f7a3               ; <+451> at var1.kt
+    0x10042f7a1 <+449>: jmp    0x10042f7b5               ; <+469> at var1.kt:18:5
+    0x10042f7a3 <+451>: movq   -0x78(%rbp), %rax
+    0x10042f7a7 <+455>: movq   (%rax), %rsi
+    0x10042f7aa <+458>: movq   -0x70(%rbp), %rdi
+    0x10042f7ae <+462>: callq  0x1004a8960               ; UpdateStackRefRelaxed
+    0x10042f7b3 <+467>: jmp    0x10042f7a1               ; <+449> at var1.kt:20:26
+    0x10042f7b5 <+469>: movl   -0x4(%rbp), %eax
+    0x10042f7b8 <+472>: cmpl   -0x8(%rbp), %eax
+    0x10042f7bb <+475>: jle    0x10042f771               ; <+401> at var1.kt:18:15
+    0x10042f7bd <+477>: jmp    0x10042f6d8               ; <+248> at var1.kt
+    0x10042f7c2 <+482>: xorl   %esi, %esi
+    0x10042f7c4 <+484>: movq   -0x68(%rbp), %rdi
+    0x10042f7c8 <+488>: movl   $0x9, %edx
+    0x10042f7cd <+493>: callq  0x1004a9030               ; LeaveFrameRelaxed
+    0x10042f7d2 <+498>: addq   $0xd0, %rsp
+    0x10042f7d9 <+505>: popq   %rbp
+    0x10042f7da <+506>: retq   
+    0x10042f7db <+507>: xorl   %esi, %esi
+    0x10042f7dd <+509>: movl   $0x9, %ecx
+    0x10042f7e2 <+514>: movq   -0x68(%rbp), %rdi
+    0x10042f7e6 <+518>: movq   %rdx, -0xc0(%rbp)
+    0x10042f7ed <+525>: movl   %ecx, %edx
+    0x10042f7ef <+527>: movq   %rax, -0xc8(%rbp)
+    0x10042f7f6 <+534>: callq  0x1004a9030               ; LeaveFrameRelaxed
+    0x10042f7fb <+539>: movq   -0xc8(%rbp), %rdi
+    0x10042f802 <+546>: callq  0x1004c2b46               ; symbol stub for: _Unwind_Resume
+    0x10042f807 <+551>: ud2    
