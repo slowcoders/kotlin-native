@@ -82,7 +82,7 @@ runWeakTest1()
 runWeakTest2()
 printTime("runWeakTest1,2")
 
-val test_ref_count_bug_in_param_side_effect = false;
+val test_ref_count_bug_in_param_side_effect = true;
 if (test_ref_count_bug_in_param_side_effect) {
     runVar1Test()
     printTime("runVar1Test")

@@ -71,3 +71,5 @@ compile_commands.json
 .project
 .settings/org.eclipse.buildship.core.prefs
 .vscode/settings.json
+_local/kobjc/libs/zee/framework.framework
+_local/kobjc/libs/zee/framework.framework.dSYM

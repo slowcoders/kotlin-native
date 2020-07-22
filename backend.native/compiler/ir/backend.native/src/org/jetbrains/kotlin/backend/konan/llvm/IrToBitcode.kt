@@ -498,6 +498,13 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         context.llvm.fileUsesThreadLocalObjects = false
         context.llvm.globalSharedObjects.clear()
 
+        if (declaration.fileEntry.name.contains("/_local/")) {
+            var name = declaration.fileEntry.name;
+            if (name == null) {
+                println("wrong name")
+            }
+        }
+
         @Suppress("UNCHECKED_CAST")
         using(FileScope(declaration)) {
             declaration.acceptChildrenVoid(this)
@@ -1340,6 +1347,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         else if (value != null) {
             if (functionGenerationContext.anonymousRetValue < 0 && value == functionGenerationContext.vars.getAttachedReturnValue(idxVar)) {
                 // returnSlot consumed
+                // println("*** return consumed " + value);
             }
             else {
                 functionGenerationContext.vars.store(value, idxVar)
@@ -2023,15 +2031,25 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
 
     private fun IrFunction.returnsUnit() = returnType.isUnit() && !isSuspend
 
+    private fun evaluateArgExpression(expr: IrExpression) : LLVMValueRef {
+        val arg = evaluateExpression(expr);
+        // println("=== arg " + arg);
+        return arg;
+    }
+
     /**
      * Evaluates all arguments of [expression] that are explicitly represented in the IR.
      * Returns results in the same order as LLVM function expects, assuming that all explicit arguments
      * exactly correspond to a tail of LLVM parameters.
      */
     private fun evaluateExplicitArgs(expression: IrFunctionAccessExpression): List<LLVMValueRef> {
-        val evaluatedArgs = expression.getArgumentsWithIr().map { (param, argExpr) ->
-            param to evaluateExpression(argExpr)
-        }.toMap()
+        var argList = mutableListOf<Pair<IrValueParameter, LLVMValueRef>>();
+        functionGenerationContext.vars.pushArgList(argList);
+        expression.getArgumentsWithIr().map { (param, argExpr) ->
+            argList.add(param to evaluateArgExpression(argExpr))
+        }
+        val evaluatedArgs = argList.toMap();
+        functionGenerationContext.vars.popArgList(argList);
 
         val allValueParameters = expression.symbol.owner.allParameters
 

@@ -290,6 +290,14 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         return value
     }
 
+    fun alterSlot(address: LLVMValueRef, name: String = ""): LLVMValueRef {
+        val value = LLVMBuildLoad(builder, address, name)!!
+        val slot = alloca(LLVMTypeOf(value), variableLocation = null)
+        storeStackRef(value, slot)
+        val v2 = LLVMBuildLoad(builder, slot, name)!!
+        return v2;
+    }
+
     fun store(value: LLVMValueRef, ptr: LLVMValueRef) {
         LLVMBuildStore(builder, value, ptr)
     }

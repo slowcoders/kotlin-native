@@ -11,6 +11,8 @@ import org.jetbrains.kotlin.backend.konan.Context
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrValueDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrVariable
+import org.jetbrains.kotlin.ir.declarations.IrValueParameter
+import org.jetbrains.kotlin.ir.declarations.impl.IrValueParameterImpl
 import org.jetbrains.kotlin.name.Name
 
 internal fun IrElement.needDebugInfo(context: Context) = context.shouldContainDebugInfo() || (this is IrVariable && this.isVar)
@@ -25,9 +27,19 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
     }
 
     inner class SlotRecord(val address: LLVMValueRef, val refSlot: Boolean, val isVar: Boolean) : Record {
+        var loadedValues = mutableListOf<Pair<Int, LLVMValueRef>>();
         var attachedRetValue: LLVMValueRef? = null
-        override fun load() : LLVMValueRef = functionGenerationContext.loadSlot(address, !functionGenerationContext.RTGC && isVar)
+        override fun load() : LLVMValueRef {
+            val layer = functionGenerationContext.vars.argLists.size;
+            val value = functionGenerationContext.loadSlot(address, !functionGenerationContext.RTGC && isVar);
+            if (layer > 0) {
+                loadedValues.add(layer to value);
+            }
+            // println("*** load " + address + " -> " + value);
+            return value;
+        }
         override fun store(value: LLVMValueRef) {
+            if (functionGenerationContext.RTGC && loadedValues.size > 0) alterPushedVariable(loadedValues);
             functionGenerationContext.storeAny(value, address, true)
         }
         override fun address() : LLVMValueRef = this.address
@@ -52,6 +64,50 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
 
     val variables: ArrayList<Record> = arrayListOf()
     val contextVariablesToIndex: HashMap<IrValueDeclaration, Int> = hashMapOf()
+    val argLists: ArrayList<MutableList<Pair<IrValueParameter, LLVMValueRef>>> = arrayListOf()
+
+    fun pushArgList(argList: MutableList<Pair<IrValueParameter, LLVMValueRef>>) {
+        argLists.add(argList)
+    }
+
+    fun popArgList(argList: MutableList<Pair<IrValueParameter, LLVMValueRef>>) {
+        val layer = argLists.size;
+        for (v in variables) {
+            if (!(v is SlotRecord)) continue;
+
+            val sv = v as SlotRecord;
+            if (sv != null) {
+                val values = sv.loadedValues;
+                var i = values.size;
+                while ( --i >= 0 ) {
+                    val vr = values.get(i);
+                    if (vr.first == layer) {
+                        values.removeAt(i);
+                    }
+                }
+            }
+        }
+        argLists.remove(argList)
+    }
+    
+    fun alterPushedVariable(values : List<Pair<Int, LLVMValueRef>>) {
+        var alterVariable: LLVMValueRef? = null;
+        for (argList in argLists) {
+            for (i in 0 until argList.size) {
+                val arg = argList[i];
+                for (v in values) {
+                    if (arg.second == v.second) {
+                        if (alterVariable == null) {
+                            val slot_addr = createAnonymousSlot(v.second);
+                            alterVariable = functionGenerationContext.loadSlot(slot_addr, false);
+                            println("****************** " + alterVariable);
+                        }
+                        argList[i] = (arg.first to alterVariable)
+                    }
+                }
+            }
+        }
+    }
 
     // Clears inner state of variable manager.
     fun clear() {

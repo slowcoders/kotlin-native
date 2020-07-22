@@ -22,7 +22,7 @@ fun foo(x: Any, y: Any) {
     }
 
     // x refcount is 1.
-
+print(x.toString())
     foo(x, ++x)
 }
 
@@ -63,3 +63,4 @@ fun runVar1Test() {
     runTest1()
     runTest2()
 }
+
