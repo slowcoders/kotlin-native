@@ -2043,13 +2043,22 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
      * exactly correspond to a tail of LLVM parameters.
      */
     private fun evaluateExplicitArgs(expression: IrFunctionAccessExpression): List<LLVMValueRef> {
-        var argList = mutableListOf<Pair<IrValueParameter, LLVMValueRef>>();
-        functionGenerationContext.vars.pushArgList(argList);
-        expression.getArgumentsWithIr().map { (param, argExpr) ->
-            argList.add(param to evaluateArgExpression(argExpr))
+        var evaluatedArgs: Map<IrValueParameter, LLVMValueRef>;
+        if (!functionGenerationContext.ENABLE_ALTER_ARGS) {
+            evaluatedArgs = expression.getArgumentsWithIr().map { (param, argExpr) ->
+                param to evaluateExpression(argExpr)
+            }.toMap()
+
         }
-        val evaluatedArgs = argList.toMap();
-        functionGenerationContext.vars.popArgList(argList);
+        else {
+            var argList = mutableListOf<Pair<IrValueParameter, LLVMValueRef>>();
+            functionGenerationContext.vars.pushArgList(argList);
+            expression.getArgumentsWithIr().map { (param, argExpr) ->
+                argList.add(param to evaluateArgExpression(argExpr))
+            }
+            evaluatedArgs = argList.toMap();
+            functionGenerationContext.vars.popArgList(argList);
+        }
 
         val allValueParameters = expression.symbol.owner.allParameters
 

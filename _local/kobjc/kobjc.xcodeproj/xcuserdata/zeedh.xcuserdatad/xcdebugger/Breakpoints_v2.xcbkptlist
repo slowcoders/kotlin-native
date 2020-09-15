@@ -199,7 +199,7 @@
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
             uuid = "B60D9039-1EF3-42DA-880C-02EA842ED30E"
-            shouldBeEnabled = "Yes"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "libs/zee/src/nativeMain/kotlin/var1.kt"
@@ -215,7 +215,7 @@
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
             uuid = "06CF8B04-B4D8-46AE-A763-5F7FD023B0EC"
-            shouldBeEnabled = "Yes"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "libs/zee/src/nativeMain/kotlin/var1.kt"
@@ -237,10 +237,103 @@
             filePath = "libs/zee/src/nativeMain/kotlin/hello.kt"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "86"
-            endingLineNumber = "86"
+            startingLineNumber = "116"
+            endingLineNumber = "116"
             landmarkName = "unknown"
             landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "82F90072-C7C5-4912-8327-F76CA523F18A"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/var1.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "30"
+            endingLineNumber = "30"
+            landmarkName = "unknown"
+            landmarkType = "0">
+            <Locations>
+               <Location
+                  uuid = "82F90072-C7C5-4912-8327-F76CA523F18A - 76ad6ec72a7faa25"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.memory.var1#runTest1(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/var1.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "30"
+                  endingLineNumber = "30"
+                  offsetFromSymbolStart = "259">
+               </Location>
+               <Location
+                  uuid = "82F90072-C7C5-4912-8327-F76CA523F18A - 76ad6ec72a7faa25"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.memory.var1#runTest1(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/var1.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "30"
+                  endingLineNumber = "30"
+                  offsetFromSymbolStart = "313">
+               </Location>
+               <Location
+                  uuid = "82F90072-C7C5-4912-8327-F76CA523F18A - bb7251067c396c00"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "objc2kotlin.618"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/var1.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "30"
+                  endingLineNumber = "30"
+                  offsetFromSymbolStart = "162">
+               </Location>
+               <Location
+                  uuid = "82F90072-C7C5-4912-8327-F76CA523F18A - bb7251067c396c00"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "objc2kotlin.618"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/var1.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "30"
+                  endingLineNumber = "30"
+                  offsetFromSymbolStart = "219">
+               </Location>
+               <Location
+                  uuid = "82F90072-C7C5-4912-8327-F76CA523F18A - bb7251067db5ed0b"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "objc2kotlin.620"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/var1.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "30"
+                  endingLineNumber = "30"
+                  offsetFromSymbolStart = "108">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

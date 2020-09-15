@@ -30,6 +30,9 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         var loadedValues = mutableListOf<Pair<Int, LLVMValueRef>>();
         var attachedRetValue: LLVMValueRef? = null
         override fun load() : LLVMValueRef {
+            if (!functionGenerationContext.ENABLE_ALTER_ARGS) {
+                return functionGenerationContext.loadSlot(address, !functionGenerationContext.RTGC && isVar)
+            }
             val layer = functionGenerationContext.vars.argLists.size;
             val value = functionGenerationContext.loadSlot(address, !functionGenerationContext.RTGC && isVar);
             if (layer > 0) {
@@ -39,7 +42,7 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
             return value;
         }
         override fun store(value: LLVMValueRef) {
-            if (functionGenerationContext.RTGC && loadedValues.size > 0) alterPushedVariable(loadedValues);
+            if (functionGenerationContext.ENABLE_ALTER_ARGS && loadedValues.size > 0) alterPushedVariable(loadedValues);
             functionGenerationContext.storeAny(value, address, true)
         }
         override fun address() : LLVMValueRef = this.address

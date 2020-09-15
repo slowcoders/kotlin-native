@@ -59,6 +59,36 @@ class MutablePairImpl(first: Int, second: Int) : NSObject(), MutablePairProtocol
 }
 
 
+fun runArray0Test() {
+    // Create instances of all array types.
+    val byteArray = ByteArray(5)
+    println(byteArray.size.toString())
+
+    val charArray = CharArray(6)
+    println(charArray.size.toString())
+
+    val shortArray = ShortArray(7)
+    println(shortArray.size.toString())
+
+    val intArray = IntArray(8)
+    println(intArray.size.toString())
+
+    val longArray = LongArray(9)
+    println(longArray.size.toString())
+
+    val floatArray = FloatArray(10)
+    println(floatArray.size.toString())
+
+    val doubleArray = FloatArray(11)
+    println(doubleArray.size.toString())
+
+    val booleanArray = BooleanArray(12)
+    println(booleanArray.size.toString())
+
+    val stringArray = Array<String>(13, { i -> ""})
+    println(stringArray.size.toString())
+}
+
 fun testTypes() : MutablePairProtocol {
 val v = MutablePairImpl(1, 2).asAny();
 val v2 = v  as MutablePairProtocol;
@@ -77,7 +107,7 @@ fun test(str: String) {
     try {
 printTime("start")
 
-
+runArray0Test()
 runWeakTest1()
 runWeakTest2()
 printTime("runWeakTest1,2")

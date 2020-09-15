@@ -169,6 +169,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
     override val context = codegen.context
     val RTGC:Boolean = context.memoryModel == MemoryModel.RELAXED;
+    var ENABLE_ALTER_ARGS:Boolean = true;
     val vars = VariableManager(this)
     private val basicBlockToLastLocation = mutableMapOf<LLVMBasicBlockRef, LocationInfoRange>()
 
