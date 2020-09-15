@@ -154,14 +154,14 @@ OBJ_GETTER(GetStackTraceStrings, KConstRef stackTrace) {
   ObjHeader* result = AllocArrayInstance(theArrayTypeInfo, 1, OBJ_RESULT);
   ObjHolder holder;
   CreateStringFromCString("<UNIMPLEMENTED>", holder.slot());
-  UpdateHeapRef(ArrayAddressOfElementAt(result->array(), 0), holder.obj(), result);
+  UpdateHeapRef(ArrayAddressOfElementAt(result->array(), 0), holder.obj());
   return result;
 #else
   uint32_t size = stackTrace->array()->count_;
   ObjHolder resultHolder;
   ObjHeader* strings = AllocArrayInstance(theArrayTypeInfo, size, resultHolder.slot());
 #if USE_GCC_UNWIND
-  for (int index = 0; index < size; ++index) {
+  for (uint32_t index = 0; index < size; ++index) {
     KNativePtr address = Kotlin_NativePtrArray_get(stackTrace, index);
     char symbol[512];
     if (!AddressToSymbol((const void*) address, symbol, sizeof(symbol))) {
@@ -172,14 +172,14 @@ OBJ_GETTER(GetStackTraceStrings, KConstRef stackTrace) {
     konan::snprintf(line, sizeof(line) - 1, "%s (%p)", symbol, (void*)(intptr_t)address);
     ObjHolder holder;
     CreateStringFromCString(line, holder.slot());
-    UpdateHeapRef(ArrayAddressOfElementAt(strings->array(), index), holder.obj(), strings);
+    UpdateHeapRef(ArrayAddressOfElementAt(strings->array(), index), holder.obj());
   }
 #else
   if (size > 0) {
     char **symbols = backtrace_symbols(PrimitiveArrayAddressOfElementAt<KNativePtr>(stackTrace->array(), 0), size);
     RuntimeCheck(symbols != nullptr, "Not enough memory to retrieve the stacktrace");
 
-    for (int index = 0; index < size; ++index) {
+    for (uint32_t index = 0; index < size; ++index) {
       auto sourceInfo = getSourceInfo(stackTrace, index);
       const char* symbol = symbols[index];
       const char* result;
@@ -197,7 +197,7 @@ OBJ_GETTER(GetStackTraceStrings, KConstRef stackTrace) {
       }
       ObjHolder holder;
       CreateStringFromCString(result, holder.slot());
-      UpdateHeapRef(ArrayAddressOfElementAt(strings->array(), index), holder.obj(), strings);
+      UpdateHeapRef(ArrayAddressOfElementAt(strings->array(), index), holder.obj());
     }
     // Not konan::free. Used to free memory allocated in backtrace_symbols where malloc is used.
     free(symbols);
@@ -221,13 +221,13 @@ void ThrowException(KRef exception) {
 OBJ_GETTER(Kotlin_setUnhandledExceptionHook, KRef hook) {
   RETURN_RESULT_OF(SwapHeapRefLocked,
     &currentUnhandledExceptionHook, currentUnhandledExceptionHook, hook, &currentUnhandledExceptionHookLock,
-    NULL, &currentUnhandledExceptionHookCookie);
+    &currentUnhandledExceptionHookCookie);
 }
 
 void OnUnhandledException(KRef throwable) {
   ObjHolder handlerHolder;
   auto* handler = SwapHeapRefLocked(&currentUnhandledExceptionHook, currentUnhandledExceptionHook, nullptr,
-     &currentUnhandledExceptionHookLock, NULL, &currentUnhandledExceptionHookCookie, handlerHolder.slot());
+     &currentUnhandledExceptionHookLock,  &currentUnhandledExceptionHookCookie, handlerHolder.slot());
   if (handler == nullptr) {
     ReportUnhandledException(throwable);
   } else {

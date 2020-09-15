@@ -56,7 +56,8 @@ private String findAnalyzerBinary() {
 
 // Produce and send slack report.
 task slackReport(type: RegressionsReporter) {
-    def analyzerBinary = findAnalyzerBinary()
+    def analyzerBinary = MPPTools.findFile("${analyzerTool}${MPPTools.getNativeProgramExtension()}",
+            "${rootBuildDirectory}/${analyzerToolDirectory}")
     def teamcityConfig = System.getenv("TEAMCITY_BUILD_PROPERTIES_FILE")
     if (teamcityConfig && analyzerBinary != null) {
         // Create folder for report (root Kotlin project settings make create report in separate folder).
@@ -80,16 +81,27 @@ task slackSummary(type: RegressionsSummaryReporter) {
                           'Windows': "${rootBuildDirectory}/targetsResults/Windows 10.txt".toString()]
 }
 
-private def uploadBenchmarkResultToArtifactory(String fileName) {
+private String getUploadedFile(String fileName) {
     def teamcityConfig = System.getenv("TEAMCITY_BUILD_PROPERTIES_FILE")
     if (teamcityConfig) {
         def buildProperties = new Properties()
         buildProperties.load(new FileInputStream(teamcityConfig))
-        def password = buildProperties.getProperty("artifactory.apikey")
         def buildNumber = buildProperties.getProperty("build.number")
         def target = System.getProperty("os.name").replaceAll("\\s", "")
+        return "${target}/${buildNumber}/${fileName}"
+    }
+    return null
+}
+
+private def uploadBenchmarkResultToArtifactory(String fileName) {
+    def teamcityConfig = System.getenv("TEAMCITY_BUILD_PROPERTIES_FILE")
+    if (teamcityConfig) {
+        def uploadedFile = getUploadedFile(fileName)
+        def buildProperties = new Properties()
+        buildProperties.load(new FileInputStream(teamcityConfig))
+        def password = buildProperties.getProperty("artifactory.apikey")
         MPPTools.uploadFileToArtifactory("${artifactoryUrl}", "${artifactoryRepo}",
-                "${target}/${buildNumber}/${fileName}", "${buildDir.absolutePath}/${fileName}", password)
+                uploadedFile, "${buildDir.absolutePath}/${fileName}", password)
     }
 }
 
@@ -159,20 +171,34 @@ task registerExternalBenchmarks {
 }
 
 task registerBuild(type: BuildRegister) {
-    def analyzerBinary = findAnalyzerBinary()
-    if (analyzerBinary != null) {
-        onlyBranch = project.findProperty('kotlin.register.branch')
-        // Get bundle size.
-        bundleSize = null
-        if (project.findProperty('kotlin.bundleBuild') != null) {
-            def dist = findProperty('kotlin.native.home') ?: 'dist'
-            dist = (new File(dist)).isAbsolute() ? dist : "${project.getProjectDir()}/$dist"
-            bundleSize = (new File(dist)).directorySize()
-        }
-        currentBenchmarksReportFile = "${buildDir.absolutePath}/${nativeJson}"
-        analyzer = analyzerBinary
+    onlyBranch = project.findProperty('kotlin.register.branch')
+    def uploadedFile = getUploadedFile(nativeJson)
+    if (uploadedFile != null) {
+        println("Use file from Artifacrory $uploadedFile")
+        fileWithResult = uploadedFile
+    }
+    // Get bundle size.
+    bundleSize = null
+    if (project.findProperty('kotlin.bundleBuild') != null) {
+        def dist = findProperty('kotlin.native.home') ?: 'dist'
+        dist = (new File(dist)).isAbsolute() ? dist : "${project.getProjectDir()}/$dist"
+        bundleSize = (new File(dist)).directorySize()
     }
 }
+
+task registerExternalBuild(type: BuildRegister) {
+    onlyBranch = project.findProperty('kotlin.register.branch')
+    def uploadedFile = getUploadedFile(externalBenchmarksReport)
+    if (uploadedFile != null) {
+        println("Use file from Artifacrory $uploadedFile")
+        fileWithResult = uploadedFile
+    } else {
+        fileWithResult = externalBenchmarksReport
+    }
+
+}
+
+registerExternalBenchmarks.finalizedBy registerExternalBuild
 
 def mergeReports(String fileName) {
     def reports = []

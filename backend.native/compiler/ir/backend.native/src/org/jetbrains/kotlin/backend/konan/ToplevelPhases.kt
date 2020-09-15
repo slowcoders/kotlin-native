@@ -1,8 +1,11 @@
 package org.jetbrains.kotlin.backend.konan
 
-import org.jetbrains.kotlin.backend.common.*
-import org.jetbrains.kotlin.backend.common.extensions.IrPluginContextImpl
+import org.jetbrains.kotlin.backend.common.CheckDeclarationParentsVisitor
+import org.jetbrains.kotlin.backend.common.IrValidator
+import org.jetbrains.kotlin.backend.common.IrValidatorConfig
+import org.jetbrains.kotlin.backend.common.LoggingContext
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
+import org.jetbrains.kotlin.backend.common.extensions.IrPluginContextImpl
 import org.jetbrains.kotlin.backend.common.overrides.FakeOverrideChecker
 import org.jetbrains.kotlin.backend.common.phaser.*
 import org.jetbrains.kotlin.backend.common.serialization.mangle.ManglerChecker
@@ -28,6 +31,8 @@ import org.jetbrains.kotlin.descriptors.konan.isNativeStdlib
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
+import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
@@ -109,7 +114,7 @@ private var Context.symbolTable: SymbolTable? by Context.nullValue()
 
 internal val createSymbolTablePhase = konanUnitPhase(
         op = {
-            this.symbolTable = SymbolTable(KonanIdSignaturer(KonanManglerDesc))
+            this.symbolTable = SymbolTable(KonanIdSignaturer(KonanManglerDesc), IrFactoryImpl)
         },
         name = "CreateSymbolTable",
         description = "Create SymbolTable"
@@ -144,9 +149,8 @@ internal val psiToIrPhase = konanUnitPhase(
 
             val symbolTable = symbolTable!!
 
-            val translator = Psi2IrTranslator(config.configuration.languageVersionSettings,
-                    Psi2IrConfiguration(false), KonanIdSignaturer(KonanManglerDesc))
-            val generatorContext = translator.createGeneratorContext(moduleDescriptor, bindingContext, symbolTable = symbolTable)
+            val translator = Psi2IrTranslator(config.configuration.languageVersionSettings, Psi2IrConfiguration(false))
+            val generatorContext = translator.createGeneratorContext(moduleDescriptor, bindingContext, symbolTable)
 
             val pluginExtensions = IrGenerationExtension.getInstances(config.project)
 
@@ -169,6 +173,9 @@ internal val psiToIrPhase = konanUnitPhase(
 
             val irProviderForCEnumsAndCStructs =
                     IrProviderForCEnumAndCStructStubs(generatorContext, interopBuiltIns, symbols)
+
+            val deserializeFakeOverrides = config.configuration.getBoolean(CommonConfigurationKeys.DESERIALIZE_FAKE_OVERRIDES)
+
             val linker =
                 KonanIrLinker(
                     moduleDescriptor,
@@ -179,7 +186,8 @@ internal val psiToIrPhase = konanUnitPhase(
                     forwardDeclarationsModuleDescriptor,
                     stubGenerator,
                     irProviderForCEnumsAndCStructs,
-                    exportedDependencies
+                    exportedDependencies,
+                    deserializeFakeOverrides
             )
 
             translator.addPostprocessingStep { module ->
@@ -227,7 +235,6 @@ internal val psiToIrPhase = konanUnitPhase(
                     .forEach(irProviderForCEnumsAndCStructs::referenceAllEnumsAndStructsFrom)
 
             val irProviders = listOf(linker)
-            stubGenerator.setIrProviders(irProviders)
 
             expectDescriptorToSymbol = mutableMapOf<DeclarationDescriptor, IrSymbol>()
             val module = translator.generateModuleFragment(
@@ -254,8 +261,10 @@ internal val psiToIrPhase = konanUnitPhase(
             symbolTable.noUnboundLeft("Unbound symbols left after linker")
 
             module.acceptVoid(ManglerChecker(KonanManglerIr, Ir2DescriptorManglerAdapter(KonanManglerDesc)))
-            val fakeOverrideChecker = FakeOverrideChecker(KonanManglerIr, KonanManglerDesc)
-            linker.modules.values.forEach{ fakeOverrideChecker.check(it) }
+            if (!config.configuration.getBoolean(KonanConfigKeys.DISABLE_FAKE_OVERRIDE_VALIDATOR)) {
+                val fakeOverrideChecker = FakeOverrideChecker(KonanManglerIr, KonanManglerDesc)
+                linker.modules.values.forEach { fakeOverrideChecker.check(it) }
+            }
 
             irModule = module
 
@@ -330,7 +339,7 @@ internal val linkerPhase = konanUnitPhase(
         description = "Linker"
 )
 
-internal val allLoweringsPhase = namedIrModulePhase(
+internal val allLoweringsPhase = NamedCompilerPhase(
         name = "IrLowering",
         description = "IR Lowering",
         // TODO: The lowerings before inlinePhase should be aligned with [NativeInlineFunctionResolver.kt]
@@ -347,37 +356,42 @@ internal val allLoweringsPhase = namedIrModulePhase(
                 performByIrFile(
                         name = "IrLowerByFile",
                         description = "IR Lowering by file",
-                        lower = forLoopsPhase then
-                                stringConcatenationPhase then
-                                enumConstructorsPhase then
-                                initializersPhase then
-                                localFunctionsPhase then
-                                tailrecPhase then
-                                defaultParameterExtentPhase then
-                                innerClassPhase then
-                                dataClassesPhase then
-                                singleAbstractMethodPhase then
-                                ifNullExpressionsFusionPhase then
-                                builtinOperatorPhase then
-                                finallyBlocksPhase then
-                                testProcessorPhase then
-                                enumClassPhase then
-                                delegationPhase then
-                                callableReferencePhase then
-                                interopPhase then
-                                varargPhase then
-                                compileTimeEvaluatePhase then
-                                kotlinNothingValueExceptionPhase then
-                                coroutinesPhase then
-                                typeOperatorPhase then
-                                bridgesPhase then
-                                autoboxPhase then
-                                returnsInsertionPhase
+                        lower = listOf(
+                            rangeContainsLoweringPhase,
+                            forLoopsPhase,
+                            flattenStringConcatenationPhase,
+                            foldConstantLoweringPhase,
+                            stringConcatenationPhase,
+                            enumConstructorsPhase,
+                            initializersPhase,
+                            localFunctionsPhase,
+                            tailrecPhase,
+                            defaultParameterExtentPhase,
+                            innerClassPhase,
+                            dataClassesPhase,
+                            ifNullExpressionsFusionPhase,
+                            testProcessorPhase,
+                            delegationPhase,
+                            functionReferencePhase,
+                            singleAbstractMethodPhase,
+                            builtinOperatorPhase,
+                            finallyBlocksPhase,
+                            enumClassPhase,
+                            interopPhase,
+                            varargPhase,
+                            compileTimeEvaluatePhase,
+                            kotlinNothingValueExceptionPhase,
+                            coroutinesPhase,
+                            typeOperatorPhase,
+                            bridgesPhase,
+                            autoboxPhase,
+                            returnsInsertionPhase,
+                        )
                 ),
         actions = setOf(defaultDumper, ::moduleValidationCallback)
 )
 
-internal val dependenciesLowerPhase = SameTypeNamedPhaseWrapper(
+internal val dependenciesLowerPhase = NamedCompilerPhase(
         name = "LowerLibIR",
         description = "Lower library's IR",
         prerequisite = emptySet(),
@@ -415,41 +429,35 @@ internal val dependenciesLowerPhase = SameTypeNamedPhaseWrapper(
             }
         })
 
-internal val entryPointPhase = SameTypeNamedPhaseWrapper(
+internal val entryPointPhase = makeCustomPhase<Context, IrModuleFragment>(
         name = "addEntryPoint",
         description = "Add entry point for program",
         prerequisite = emptySet(),
-        lower = object : CompilerPhase<Context, IrModuleFragment, IrModuleFragment> {
-            override fun invoke(phaseConfig: PhaseConfig, phaserState: PhaserState<IrModuleFragment>,
-                                context: Context, input: IrModuleFragment): IrModuleFragment {
-                assert(context.config.produce == CompilerOutputKind.PROGRAM)
+        op = { context, _ ->
+            assert(context.config.produce == CompilerOutputKind.PROGRAM)
 
-                val originalFile = context.ir.symbols.entryPoint!!.owner.file
-                val originalModule = originalFile.packageFragmentDescriptor.containingDeclaration
-                val file = if (context.llvmModuleSpecification.containsModule(originalModule)) {
-                    originalFile
-                } else {
-                    // `main` function is compiled to other LLVM module.
-                    // For example, test running support uses `main` defined in stdlib.
-                    context.irModule!!.addFile(originalFile.fileEntry, originalFile.fqName)
-                }
-
-                require(context.llvmModuleSpecification.containsModule(
-                        file.packageFragmentDescriptor.containingDeclaration))
-
-                file.addChild(makeEntryPoint(context))
-                return input
+            val originalFile = context.ir.symbols.entryPoint!!.owner.file
+            val originalModule = originalFile.packageFragmentDescriptor.containingDeclaration
+            val file = if (context.llvmModuleSpecification.containsModule(originalModule)) {
+                originalFile
+            } else {
+                // `main` function is compiled to other LLVM module.
+                // For example, test running support uses `main` defined in stdlib.
+                context.irModule!!.addFile(originalFile.fileEntry, originalFile.fqName)
             }
+
+            require(context.llvmModuleSpecification.containsModule(
+                    file.packageFragmentDescriptor.containingDeclaration))
+
+            file.addChild(makeEntryPoint(context))
         }
 )
 
-internal val bitcodePhase = namedIrModulePhase(
+internal val bitcodePhase = NamedCompilerPhase(
         name = "Bitcode",
         description = "LLVM Bitcode generation",
         lower = contextLLVMSetupPhase then
                 buildDFGPhase then
-                serializeDFGPhase then
-                deserializeDFGPhase then
                 devirtualizationPhase then
                 dcePhase then
                 createLLVMDeclarationsPhase then
@@ -514,9 +522,7 @@ internal fun PhaseConfig.disableUnless(phase: AnyNamedPhase, condition: Boolean)
 internal fun PhaseConfig.konanPhasesConfig(config: KonanConfig) {
     with(config.configuration) {
         disable(compileTimeEvaluatePhase)
-        disable(deserializeDFGPhase)
-        disable(escapeAnalysisPhase)
-        disable(serializeDFGPhase)
+        disable(localEscapeAnalysisPhase)
 
         // Don't serialize anything to a final executable.
         disableUnless(serializerPhase, config.produce == CompilerOutputKind.LIBRARY)
@@ -530,7 +536,7 @@ internal fun PhaseConfig.konanPhasesConfig(config: KonanConfig) {
         disableIf(testProcessorPhase, getNotNull(KonanConfigKeys.GENERATE_TEST_RUNNER) == TestRunnerKind.NONE)
         disableUnless(buildDFGPhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
         disableUnless(devirtualizationPhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
-        disableUnless(localEscapeAnalysisPhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
+        disableUnless(escapeAnalysisPhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
         disableUnless(dcePhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
         disableUnless(ghaPhase, getBoolean(KonanConfigKeys.OPTIMIZATION))
         disableUnless(verifyBitcodePhase, config.needCompilerVerification || getBoolean(KonanConfigKeys.VERIFY_BITCODE))

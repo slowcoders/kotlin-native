@@ -50,10 +50,6 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
     implementation("com.ullink.slack:simpleslackapi:1.2.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.20.0-1.4.0-dev-5730") {
-        exclude("org.jetbrains.kotlin", "kotlin-stdlib")
-        exclude("org.jetbrains.kotlin", "kotlin-stdlib-common")
-    }
 
     implementation("io.ktor:ktor-client-auth:1.2.1")
     implementation("io.ktor:ktor-client-core:1.2.1")
@@ -65,11 +61,11 @@ dependencies {
     api("org.jetbrains.kotlin:kotlin-native-shared:$konanVersion")
     implementation("com.github.jengelman.gradle.plugins:shadow:5.1.0")
 
-    implementation("org.jetbrains.kotlinx:kotlinx-metadata-klib:0.0.1-dev-5")
+    implementation("org.jetbrains.kotlinx:kotlinx-metadata-klib:0.0.1-dev-7")
 }
 
 sourceSets["main"].withConvention(KotlinSourceSet::class) {
-    kotlin.srcDir("$projectDir/../tools/benchmarks/shared/src")
+    kotlin.srcDir("$projectDir/../tools/benchmarks/shared/src/main/kotlin/report")
 }
 
 gradlePlugin {
@@ -94,19 +90,11 @@ val compileGroovy: GroovyCompile by tasks
 
 // https://youtrack.jetbrains.com/issue/KT-37435
 compileKotlin.apply {
-    kotlinOptions.freeCompilerArgs += "-Xno-optimized-callable-references"
+    kotlinOptions.freeCompilerArgs += listOf("-Xno-optimized-callable-references", "-Xskip-prerelease-check")
 }
 
 // Add Kotlin classes to a classpath for the Groovy compiler
 compileGroovy.apply {
     classpath += project.files(compileKotlin.destinationDir)
     dependsOn(compileKotlin)
-}
-
-val kotlinCompilerPluginClasspath by configurations.getting
-
-kotlinCompilerPluginClasspath.resolutionStrategy.eachDependency {
-    if (requested.group == "org.jetbrains.kotlin" && requested.name == "kotlin-serialization") {
-        useVersion(buildKotlinVersion)
-    }
 }

@@ -15,7 +15,7 @@ import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.builtins.UnsignedType
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
@@ -42,7 +42,8 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.util.OperatorNameConventions
 import org.jetbrains.kotlin.backend.konan.getObjCMethodInfo
-import org.jetbrains.kotlin.backend.konan.lower.CallableReferenceLowering
+import org.jetbrains.kotlin.backend.konan.lower.FunctionReferenceLowering
+import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.ir.descriptors.*
 
 internal interface KotlinStubs {
@@ -101,7 +102,7 @@ private fun KotlinToCCallBuilder.addArgument(
     if (!variadic) cFunctionBuilder.addParameter(cArgument.type)
 }
 
-private fun KotlinToCCallBuilder.buildKotlinBridgeCall(transformCall: (IrMemberAccessExpression) -> IrExpression = { it }): IrExpression =
+private fun KotlinToCCallBuilder.buildKotlinBridgeCall(transformCall: (IrMemberAccessExpression<*>) -> IrExpression = { it }): IrExpression =
         bridgeCallBuilder.build(
                 bridgeBuilder.buildKotlinBridge().also {
                     this.stubs.addKotlin(it)
@@ -114,7 +115,7 @@ internal fun KotlinStubs.generateCCall(expression: IrCall, builder: IrBuilderWit
 
     val callBuilder = KotlinToCCallBuilder(builder, this, isObjCMethod = false)
 
-    val callee = expression.symbol.owner as IrSimpleFunction
+    val callee = expression.symbol.owner
 
     // TODO: consider computing all arguments before converting.
 
@@ -262,7 +263,7 @@ private fun <R> KotlinToCCallBuilder.handleArgumentForVarargParameter(
             } else {
                 stubs.throwCompilerError(initializer, "unexpected initializer")
             }
-        } else if (variable is IrValueParameter && CallableReferenceLowering.isLoweredCallableReference(variable)) {
+        } else if (variable is IrValueParameter && FunctionReferenceLowering.isLoweredFunctionReference(variable)) {
             val location = variable.parent // Parameter itself has incorrect location.
             val kind = if (this.isObjCMethod) "Objective-C methods" else "C functions"
             stubs.reportError(location, "callable references to variadic $kind are not supported")
@@ -386,7 +387,7 @@ internal fun KotlinStubs.generateObjCCall(
     +result
 }
 
-private fun IrBuilderWithScope.getObjCClass(symbols: KonanSymbols, symbol: IrClassSymbol): IrExpression {
+internal fun IrBuilderWithScope.getObjCClass(symbols: KonanSymbols, symbol: IrClassSymbol): IrExpression {
     val classDescriptor = symbol.descriptor
     assert(!classDescriptor.isObjCMetaClass())
     return irCall(symbols.interopGetObjCClass, symbols.nativePtrType, listOf(symbol.typeWithStarProjections))
@@ -567,7 +568,7 @@ private fun KotlinStubs.createFakeKotlinExternalFunction(
             IrDeclarationOrigin.DEFINED,
             IrSimpleFunctionSymbolImpl(bridgeDescriptor),
             Name.identifier(cFunctionName),
-            Visibilities.PRIVATE,
+            DescriptorVisibilities.PRIVATE,
             Modality.FINAL,
             signature.returnType,
             isInline = false,
@@ -576,7 +577,8 @@ private fun KotlinStubs.createFakeKotlinExternalFunction(
             isSuspend = false,
             isExpect = false,
             isFakeOverride = false,
-            isOperator = false
+            isOperator = false,
+            isInfix = false
     )
     bridgeDescriptor.bind(bridge)
 
@@ -761,7 +763,7 @@ private fun KotlinStubs.mapType(type: IrType, retained: Boolean, variadic: Boole
         mapType(type, retained, variadic, location, { reportUnsupportedType(it, type, location) })
 
 private fun IrType.isTypeOfNullLiteral(): Boolean = this is IrSimpleType && hasQuestionMark
-        && classifier.isClassWithFqName(KotlinBuiltIns.FQ_NAMES.nothing)
+        && classifier.isClassWithFqName(StandardNames.FqNames.nothing)
 
 internal fun IrType.isVector(): Boolean {
     if (this is IrSimpleType && !this.hasQuestionMark) {
@@ -1207,7 +1209,7 @@ private class ObjCBlockPointerValuePassing(
         }
     }
 
-    private fun IrBuilderWithScope.generateKotlinFunctionClass(): IrConstructorImpl {
+    private fun IrBuilderWithScope.generateKotlinFunctionClass(): IrConstructor {
         val symbols = stubs.symbols
 
         val classDescriptor = WrappedClassDescriptor()
@@ -1215,7 +1217,7 @@ private class ObjCBlockPointerValuePassing(
                 startOffset, endOffset,
                 OBJC_BLOCK_FUNCTION_IMPL, IrClassSymbolImpl(classDescriptor),
                 Name.identifier(stubs.getUniqueKotlinFunctionReferenceClassName("BlockFunctionImpl")),
-                ClassKind.CLASS, Visibilities.PRIVATE, Modality.FINAL,
+                ClassKind.CLASS, DescriptorVisibilities.PRIVATE, Modality.FINAL,
                 isCompanion = false, isInner = false, isData = false, isExternal = false,
                 isInline = false, isExpect = false, isFun = false
         )
@@ -1239,7 +1241,7 @@ private class ObjCBlockPointerValuePassing(
                 OBJC_BLOCK_FUNCTION_IMPL,
                 IrConstructorSymbolImpl(constructorDescriptor),
                 Name.special("<init>"),
-                Visibilities.PUBLIC,
+                DescriptorVisibilities.PUBLIC,
                 irClass.defaultType,
                 isInline = false, isExternal = false, isPrimary = true, isExpect = false
         )
@@ -1280,10 +1282,10 @@ private class ObjCBlockPointerValuePassing(
                 OBJC_BLOCK_FUNCTION_IMPL,
                 IrSimpleFunctionSymbolImpl(invokeMethodDescriptor),
                 overriddenInvokeMethod.name,
-                Visibilities.PUBLIC, Modality.FINAL,
+                DescriptorVisibilities.PUBLIC, Modality.FINAL,
                 returnType = functionType.arguments.last().typeOrNull!!,
                 isInline = false, isExternal = false, isTailrec = false, isSuspend = false, isExpect = false,
-                isFakeOverride = false, isOperator = false
+                isFakeOverride = false, isOperator = false, isInfix = false
         )
         invokeMethodDescriptor.bind(invokeMethod)
         invokeMethod.overriddenSymbols += overriddenInvokeMethod.symbol

@@ -9,7 +9,6 @@ import org.jetbrains.kotlin.backend.konan.llvm.Lifetime
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.backend.konan.Context
 import org.jetbrains.kotlin.backend.konan.descriptors.isArrayWithFixedSizeItems
-import org.jetbrains.kotlin.backend.konan.descriptors.isBuiltInOperator
 
 internal object LocalEscapeAnalysis {
     private val DEBUG = 0
@@ -139,6 +138,9 @@ internal object LocalEscapeAnalysis {
                         connectObjects(node, node.array.node)
                     }
                 }
+                is DataFlowIR.Node.Parameter -> {
+                    node.escapeState = EscapeState.ARG_ESCAPE
+                }
             }
         }
 
@@ -165,7 +167,7 @@ internal object LocalEscapeAnalysis {
         }
 
         fun analyze(lifetimes: MutableMap<IrElement, Lifetime>) {
-            function.body.nodes.forEach { node ->
+            function.body.forEachNonScopeNode { node ->
                 evaluateEscapeState(node)
             }
             function.body.returns.escapeState = EscapeState.ARG_ESCAPE
@@ -184,7 +186,7 @@ internal object LocalEscapeAnalysis {
                     else -> null
                 }
                 ir?.let {
-                    lifetimes.put(it, Lifetime.LOCAL)
+                    lifetimes.put(it, Lifetime.STACK)
                     DEBUG_OUTPUT(3) { println("${ir} does not escape") }
                 }
             }

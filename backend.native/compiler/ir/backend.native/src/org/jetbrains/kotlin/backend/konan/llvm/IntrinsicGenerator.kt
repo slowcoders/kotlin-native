@@ -103,6 +103,8 @@ internal interface IntrinsicGeneratorEnvironment {
 
     val exceptionHandler: ExceptionHandler
 
+    val stackLocalsManager: StackLocalsManager
+
     fun calculateLifetime(element: IrElement): Lifetime
 
     fun evaluateCall(function: IrFunction, args: List<LLVMValueRef>, resultLifetime: Lifetime, superClass: IrClass? = null): LLVMValueRef
@@ -144,21 +146,11 @@ internal class IntrinsicGenerator(private val environment: IntrinsicGeneratorEnv
         if (!function.isTypedIntrinsic) {
             return null
         }
-        val intrinsicType = getIntrinsicType(callSite)
-        return when (intrinsicType) {
+        return when (getIntrinsicType(callSite)) {
             IntrinsicType.IMMUTABLE_BLOB -> {
                 @Suppress("UNCHECKED_CAST")
                 val arg = callSite.getValueArgument(0) as IrConst<String>
                 context.llvm.staticData.createImmutableBlob(arg)
-            }
-            IntrinsicType.OBJC_INIT_BY -> {
-                val receiver = environment.evaluateExpression(callSite.extensionReceiver!!)
-                val irConstructorCall = callSite.getValueArgument(0) as IrConstructorCall
-                val constructorDescriptor = irConstructorCall.symbol.owner
-                val constructorArgs = environment.evaluateExplicitArgs(irConstructorCall)
-                val args = listOf(receiver) + constructorArgs
-                environment.evaluateCall(constructorDescriptor, args, Lifetime.IRRELEVANT)
-                receiver
             }
             IntrinsicType.OBJC_GET_SELECTOR -> {
                 val selector = (callSite.getValueArgument(0) as IrConst<*>).value as String
@@ -313,7 +305,7 @@ internal class IntrinsicGenerator(private val environment: IntrinsicGeneratorEnv
         val typeParameterT = context.ir.symbols.createUninitializedInstance.descriptor.typeParameters[0]
         val enumClass = callSite.getTypeArgument(typeParameterT)!!
         val enumIrClass = enumClass.getClass()!!
-        return allocInstance(enumIrClass, environment.calculateLifetime(callSite))
+        return allocInstance(enumIrClass, environment.calculateLifetime(callSite), environment.stackLocalsManager)
     }
 
     private fun FunctionGenerationContext.emitGetPointerSize(): LLVMValueRef =
@@ -699,10 +691,10 @@ internal class IntrinsicGenerator(private val environment: IntrinsicGeneratorEnv
     private fun FunctionGenerationContext.emitUnaryMinus(args: List<LLVMValueRef>): LLVMValueRef {
         val first = args[0]
         val destTy = first.type
-        val const0 = makeConstOfType(destTy, 0)
         return if (destTy.isFloatingPoint()) {
-            fsub(const0, first)
+            fneg(first)
         } else {
+            val const0 = makeConstOfType(destTy, 0)
             sub(const0, first)
         }
     }

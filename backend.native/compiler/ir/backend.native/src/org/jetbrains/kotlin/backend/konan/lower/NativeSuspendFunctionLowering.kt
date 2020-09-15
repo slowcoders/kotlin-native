@@ -6,7 +6,7 @@ import org.jetbrains.kotlin.backend.common.ir.simpleFunctions
 import org.jetbrains.kotlin.backend.common.lower.*
 import org.jetbrains.kotlin.backend.konan.Context
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.*
@@ -48,12 +48,8 @@ internal class NativeSuspendFunctionsLowering(ctx: Context): AbstractSuspendFunc
             "${function.name}COROUTINE\$${context.coroutineCount++}".synthesizedName
 
     override fun initializeStateMachine(coroutineConstructors: List<IrConstructor>, coroutineClassThis: IrValueDeclaration) {
-        for (constructor in coroutineConstructors) {
-            val labelField = constructor.parentAsClass.declarations.single { it is IrField && it.name.asString() == "label" } as IrField
-            (constructor.body as IrBlockBody).statements += with(context.createIrBuilder(constructor.symbol, constructor.startOffset, constructor.endOffset)) {
-                irSetField(irGet(coroutineClassThis), labelField, irCall(symbols.getNativeNullPtr.owner))
-            }
-        }
+        // Nothing to do: it's redundant to initialize the "label" field with null
+        // since all freshly allocated objects are zeroed out.
     }
 
     override fun IrBlockBodyBuilder.generateCoroutineStart(invokeSuspendFunction: IrFunction, receiver: IrExpression) {
@@ -270,7 +266,7 @@ internal class NativeSuspendFunctionsLowering(ctx: Context): AbstractSuspendFunc
             return sliceExpression(expression)
         }
 
-        override fun visitMemberAccess(expression: IrMemberAccessExpression): IrExpression {
+        override fun visitMemberAccess(expression: IrMemberAccessExpression<*>): IrExpression {
             expression.transformChildrenVoid(this)
 
             return sliceExpression(expression)
@@ -281,7 +277,7 @@ internal class NativeSuspendFunctionsLowering(ctx: Context): AbstractSuspendFunc
             irBuilder.run {
                 val children = when (expression) {
                     is IrSetField -> listOf(expression.receiver, expression.value)
-                    is IrMemberAccessExpression -> (
+                    is IrMemberAccessExpression<*> -> (
                             listOf(expression.dispatchReceiver, expression.extensionReceiver)
                                     + (0 until expression.valueArgumentsCount).map { expression.getValueArgument(it) }
                             )
@@ -365,7 +361,7 @@ internal class NativeSuspendFunctionsLowering(ctx: Context): AbstractSuspendFunc
                         expression.receiver = newChildren[0]
                         expression.value = newChildren[1]!!
                     }
-                    is IrMemberAccessExpression -> {
+                    is IrMemberAccessExpression<*> -> {
                         expression.dispatchReceiver = newChildren[0]
                         expression.extensionReceiver = newChildren[1]
                         newChildren.drop(2).forEachIndexed { index, newChild ->
@@ -481,7 +477,7 @@ internal class NativeSuspendFunctionsLowering(ctx: Context): AbstractSuspendFunc
                 IrDeclarationOrigin.DEFINED,
                 IrSimpleFunctionSymbolImpl(it),
                 "saveState".synthesizedName,
-                Visibilities.PRIVATE,
+                DescriptorVisibilities.PRIVATE,
                 Modality.ABSTRACT,
                 context.irBuiltIns.unitType,
                 isInline = false,
@@ -490,7 +486,8 @@ internal class NativeSuspendFunctionsLowering(ctx: Context): AbstractSuspendFunc
                 isSuspend = false,
                 isExpect = false,
                 isFakeOverride = false,
-                isOperator = false
+                isOperator = false,
+                isInfix = false
         ).apply {
             it.bind(this)
         }
@@ -502,7 +499,7 @@ internal class NativeSuspendFunctionsLowering(ctx: Context): AbstractSuspendFunc
                 IrDeclarationOrigin.DEFINED,
                 IrSimpleFunctionSymbolImpl(it),
                 "restoreState".synthesizedName,
-                Visibilities.PRIVATE,
+                DescriptorVisibilities.PRIVATE,
                 Modality.ABSTRACT,
                 context.irBuiltIns.unitType,
                 isInline = false,
@@ -511,7 +508,8 @@ internal class NativeSuspendFunctionsLowering(ctx: Context): AbstractSuspendFunc
                 isSuspend = false,
                 isExpect = false,
                 isFakeOverride = false,
-                isOperator = false
+                isOperator = false,
+                isInfix = false
         ).apply {
             it.bind(this)
         }
@@ -549,7 +547,7 @@ internal class NativeSuspendFunctionsLowering(ctx: Context): AbstractSuspendFunc
         }
     }
 
-    fun IrBlockBodyBuilder.irSuccess(value: IrExpression): IrMemberAccessExpression {
+    fun IrBlockBodyBuilder.irSuccess(value: IrExpression): IrMemberAccessExpression<*> {
         val createResult = symbols.kotlinResult.owner.constructors.single { it.isPrimary }
         return irCall(createResult).apply {
             putValueArgument(0, value)

@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.*
 import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.IrReturnableBlockSymbolImpl
+import org.jetbrains.kotlin.ir.symbols.impl.IrVariableSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classifierOrFail
 import org.jetbrains.kotlin.ir.types.impl.originalKotlinType
@@ -131,24 +132,6 @@ internal object Devirtualization {
         private val entryPoint = context.ir.symbols.entryPoint?.owner
 
         private val symbolTable = moduleDFG.symbolTable
-
-        // TODO: Make custom hashtable.
-        class IntHashSet : Iterable<Int> {
-            private val hashSet = HashSet<Int>()
-            val size get() = hashSet.size
-            fun isEmpty() = size == 0
-            fun add(x: Int) = hashSet.add(x)
-
-            override operator fun iterator(): Iterator<Int> = Itr()
-
-            private inner class Itr : Iterator<Int> {
-                private val itr = hashSet.iterator()
-                override fun hasNext() = itr.hasNext()
-
-                override fun next() = itr.next()
-
-            }
-        }
 
         sealed class Node(val id: Int) {
             var directCastEdges: MutableList<CastEdge>? = null
@@ -336,11 +319,15 @@ internal object Devirtualization {
                         }
                 }
             }
-            var cur: Node = source
-            do {
-                println("    #${cur.id}")
-                cur = prev[cur]!!
-            } while (cur != node)
+            try {
+                var cur: Node = source
+                do {
+                    println("    #${cur.id}")
+                    cur = prev[cur]!!
+                } while (cur != node)
+            } catch (t: Throwable) {
+                println("Unable to print path")
+            }
         }
 
         private inner class Condensation(val multiNodes: IntArray, val topologicalOrder: IntArray) {
@@ -617,8 +604,8 @@ internal object Devirtualization {
             val nothing = symbolTable.classMap[context.ir.symbols.nothing.owner]
             for (function in functions.values) {
                 if (!constraintGraph.functions.containsKey(function.symbol)) continue
-                for (node in function.body.nodes) {
-                    val virtualCall = node as? DataFlowIR.Node.VirtualCall ?: continue
+                function.body.forEachNonScopeNode { node ->
+                    val virtualCall = node as? DataFlowIR.Node.VirtualCall ?: return@forEachNonScopeNode
                     assert(nodesMap[virtualCall] != null) { "Node for virtual call $virtualCall has not been built" }
                     val receiverNode = constraintGraph.virtualCallSiteReceivers[virtualCall]
                             ?: error("virtualCallSiteReceivers were not built for virtual call $virtualCall")
@@ -632,7 +619,7 @@ internal object Devirtualization {
                             printPathToType(reversedEdges, receiverNode, VIRTUAL_TYPE_ID)
                         }
 
-                        continue
+                        return@forEachNonScopeNode
                     }
 
                     DEBUG_OUTPUT(0) {
@@ -797,13 +784,17 @@ internal object Devirtualization {
             private val preliminaryNumberOfNodes =
                     allTypes.size + // A possible source node for each type.
                             functions.size * 2 + // <returns> and <throws> nodes for each function.
-                            functions.values.sumBy { it.body.nodes.size } + // A node for each DataFlowIR.Node.
+                            functions.values.sumBy {
+                                it.body.allScopes.sumBy { it.nodes.size } // A node for each DataFlowIR.Node.
+                            } +
                             functions.values
                                     .sumBy { function ->
-                                        function.body.nodes.count { node ->
-                                            // A cast if types are different.
-                                            node is DataFlowIR.Node.Call
-                                                    && node.returnType.resolved() != node.callee.returnParameter.type.resolved()
+                                        function.body.allScopes.sumBy {
+                                            it.nodes.count { node ->
+                                                // A cast if types are different.
+                                                node is DataFlowIR.Node.Call
+                                                        && node.returnType.resolved() != node.callee.returnParameter.type.resolved()
+                                            }
                                         }
                                     }
 
@@ -818,8 +809,8 @@ internal object Devirtualization {
                 return true
             }
 
-            private fun makePrime(x: Int): Int {
-                var x = x
+            private fun makePrime(p: Int): Int {
+                var x = p
                 while (true) {
                     if (isPrime(x)) return x
                     ++x
@@ -832,6 +823,7 @@ internal object Devirtualization {
             val directEdgesCount = IntArrayList()
             val reversedEdgesCount = IntArrayList()
 
+            @OptIn(ExperimentalUnsignedTypes::class)
             private fun addEdge(from: Node, to: Node) {
                 val fromId = from.id
                 val toId = to.id
@@ -919,17 +911,17 @@ internal object Devirtualization {
                     val body = function.body
                     val functionConstraintGraph = constraintGraph.functions[symbol]!!
 
-                    body.nodes.forEach { dfgNodeToConstraintNode(functionConstraintGraph, it) }
+                    body.forEachNonScopeNode { dfgNodeToConstraintNode(functionConstraintGraph, it) }
                     addEdge(functionNodesMap[body.returns]!!, functionConstraintGraph.returns)
                     addEdge(functionNodesMap[body.throws]!!, functionConstraintGraph.throws)
 
                     DEBUG_OUTPUT(0) {
                         println("CONSTRAINT GRAPH FOR $symbol")
-                        val ids = function.body.nodes.asSequence().withIndex().associateBy({ it.value }, { it.index })
-                        for (node in function.body.nodes) {
+                        val ids = function.body.allScopes.flatMap { it.nodes }.withIndex().associateBy({ it.value }, { it.index })
+                        function.body.forEachNonScopeNode { node ->
                             println("FT NODE #${ids[node]}")
                             DataFlowIR.Function.printNode(node, ids)
-                            val constraintNode = functionNodesMap[node] ?: variables[node] ?: break
+                            val constraintNode = functionNodesMap[node] ?: variables[node] ?: return@forEachNonScopeNode
                             println("       CG NODE #${constraintNode.id}: ${constraintNode.toString(allTypes)}")
                             println()
                         }
@@ -1360,15 +1352,14 @@ internal object Devirtualization {
 
         fun <T : IrElement> IrStatementsBuilder<T>.irTemporary(value: IrExpression, tempName: String, type: IrType): IrVariable {
             val originalKotlinType = type.originalKotlinType ?: type.toKotlinType()
-            val descriptor = IrTemporaryVariableDescriptorImpl(
-                    scope.scopeOwner, Name.identifier(tempName), originalKotlinType, false)
+            val descriptor = IrTemporaryVariableDescriptorImpl(scope.scopeOwner, Name.identifier(tempName), originalKotlinType, false)
 
             val temporary = IrVariableImpl(
-                    value.startOffset, value.endOffset, IrDeclarationOrigin.IR_TEMPORARY_VARIABLE,
-                    descriptor,
-                    type,
-                    value
-            )
+                value.startOffset, value.endOffset, IrDeclarationOrigin.IR_TEMPORARY_VARIABLE, IrVariableSymbolImpl(descriptor),
+                descriptor.name, type, isVar = false, isConst = false, isLateinit = false
+            ).apply {
+                this.initializer = value
+            }
 
             +temporary
             return temporary
@@ -1419,7 +1410,7 @@ internal object Devirtualization {
                                                    actualType: IrType,
                                                    devirtualizedCallee: DevirtualizedCallee,
                                                    arguments: List<IrExpression>): IrCall {
-            val actualCallee = devirtualizedCallee.callee.irFunction!!
+            val actualCallee = devirtualizedCallee.callee.irFunction as IrSimpleFunction
             val call = IrCallImpl(
                     callSite.startOffset, callSite.endOffset,
                     actualType,
@@ -1600,7 +1591,7 @@ internal object Devirtualization {
                             expression
                         else with (cast) {
                             IrTypeOperatorCallImpl(startOffset, endOffset, type, operator,
-                                    typeOperand, typeOperandClassifier, expression)
+                                    typeOperand, expression)
                         }
                 with (coercion) {
                     return IrCallImpl(startOffset, endOffset, type, symbol, typeArgumentsCount, origin).apply {

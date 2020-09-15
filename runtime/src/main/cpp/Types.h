@@ -25,6 +25,7 @@
 #endif
 
 #include <deque>
+#include <list>
 #include <map>
 #include <string>
 #include <set>
@@ -78,6 +79,8 @@ template<class Key, class Value, class Compare = std::less<Key>>
 using KStdOrderedMap = std::map<Key, Value, Compare, KonanAllocator<std::pair<const Key, Value>>>;
 template<class Value>
 using KStdVector = std::vector<Value, KonanAllocator<Value>>;
+template<class Value>
+using KStdList = std::list<Value, KonanAllocator<Value>>;
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,6 +108,7 @@ extern const TypeInfo* theUnitTypeInfo;
 extern const TypeInfo* theWorkerBoundReferenceTypeInfo;
 
 KBoolean IsInstance(const ObjHeader* obj, const TypeInfo* type_info) RUNTIME_PURE;
+KBoolean IsInstanceOfClassFast(const ObjHeader* obj, int32_t lo, int32_t hi) RUNTIME_PURE;
 void CheckCast(const ObjHeader* obj, const TypeInfo* type_info);
 KBoolean IsArray(KConstRef obj) RUNTIME_PURE;
 bool IsSubInterface(const TypeInfo* thiz, const TypeInfo* other) RUNTIME_PURE;

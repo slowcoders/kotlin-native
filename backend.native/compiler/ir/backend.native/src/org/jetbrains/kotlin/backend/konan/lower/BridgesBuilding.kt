@@ -24,7 +24,6 @@ import org.jetbrains.kotlin.ir.descriptors.WrappedValueParameterDescriptor
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.*
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
-import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
@@ -82,7 +81,8 @@ internal class WorkersBridgesBuilding(val context: Context) : DeclarationContain
                                 returnType = context.irBuiltIns.anyNType,
                                 isExpect = false,
                                 isFakeOverride = false,
-                                isOperator = false
+                                isOperator = false,
+                                isInfix = false
                     ).apply {
                             it.bind(this)
                         }
@@ -109,7 +109,7 @@ internal class WorkersBridgesBuilding(val context: Context) : DeclarationContain
                         startOffset  = job.startOffset,
                         endOffset    = job.endOffset,
                         overriddenFunction = overriddenJobDescriptor,
-                        targetSymbol = job.symbol)
+                        targetSymbol = jobFunction.symbol)
                 bridges += bridge
                 expression.putValueArgument(3, IrFunctionReferenceImpl(
                         startOffset   = job.startOffset,
@@ -148,8 +148,8 @@ internal class BridgesBuilding(val context: Context) : ClassLoweringPass {
             override fun visitFunction(declaration: IrFunction): IrStatement {
                 declaration.transformChildrenVoid(this)
 
-                val body = declaration.body as? IrBlockBody
-                        ?: return declaration
+                val body = declaration.body ?: return declaration
+
                 val descriptor = declaration.descriptor
                 val typeSafeBarrierDescription = BuiltinMethodsWithSpecialGenericSignature.getDefaultValueForOverriddenBuiltinFunction(descriptor)
                 if (typeSafeBarrierDescription == null || builtBridges.contains(declaration))
@@ -158,7 +158,7 @@ internal class BridgesBuilding(val context: Context) : ClassLoweringPass {
                 val irBuilder = context.createIrBuilder(declaration.symbol, declaration.startOffset, declaration.endOffset)
                 declaration.body = irBuilder.irBlockBody(declaration) {
                     buildTypeSafeBarrier(declaration, declaration, typeSafeBarrierDescription)
-                    body.statements.forEach { +it }
+                    (body as IrBlockBody).statements.forEach { +it }
                 }
                 return declaration
             }
@@ -217,7 +217,7 @@ private fun IrBlockBodyBuilder.buildTypeSafeBarrier(function: IrFunction,
 }
 
 private fun Context.buildBridge(startOffset: Int, endOffset: Int,
-                                overriddenFunction: OverriddenFunctionInfo, targetSymbol: IrFunctionSymbol,
+                                overriddenFunction: OverriddenFunctionInfo, targetSymbol: IrSimpleFunctionSymbol,
                                 superQualifierSymbol: IrClassSymbol? = null): IrFunction {
 
     val bridge = specialDeclarationsFactory.getBridge(overriddenFunction)
