@@ -78,15 +78,12 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         for (v in variables) {
             if (!(v is SlotRecord)) continue;
 
-            val sv = v as SlotRecord;
-            if (sv != null) {
-                val values = sv.loadedValues;
-                var i = values.size;
-                while ( --i >= 0 ) {
-                    val vr = values.get(i);
-                    if (vr.first == layer) {
-                        values.removeAt(i);
-                    }
+            val values = v.loadedValues;
+            var i = values.size;
+            while ( --i >= 0 ) {
+                val vr = values.get(i);
+                if (vr.first == layer) {
+                    values.removeAt(i);
                 }
             }
         }

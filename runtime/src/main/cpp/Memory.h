@@ -16,11 +16,13 @@
 
 #ifndef RUNTIME_MEMORY_H
 #define RUNTIME_MEMORY_H
+#include <stdio.h>
 
 #include "KAssert.h"
 #include "Common.h"
 #include "TypeInfo.h"
 #include "Atomic.h"
+
 
 typedef enum {
   // Those bit masks are applied to refCount_ field.
@@ -28,20 +30,23 @@ typedef enum {
   CONTAINER_TAG_LOCAL = 0,
   // Container is frozen, could only refer to other frozen objects.
   // Refcounter update is atomics.
-  CONTAINER_TAG_FROZEN = 1 | 1,  // shareable
+  CONTAINER_TAG_FROZEN = 1 << 7,  // shareable
   // Stack container, no need to free, children cleanup still shall be there.
-  CONTAINER_TAG_STACK = 2,
+  CONTAINER_TAG_STACK = 2 << 7,
   // Atomic container, reference counter is atomically updated.
-  CONTAINER_TAG_SHARED = 3 | 1,  // shareable
+  CONTAINER_TAG_SHARED = 3 << 7,  // shareable
   // Shift to get actual counter.
-  CONTAINER_TAG_SHIFT = 2,
-  // Actual value to increment/decrement container by. Tag is in lower bits.
-  CONTAINER_TAG_INCREMENT = 1 << CONTAINER_TAG_SHIFT,
+  // CONTAINER_TAG_SHIFT = 2 << 7,
+  // not used in RTGC Actual value to increment/decrement container by. Tag is in lower bits.
+  // CONTAINER_TAG_INCREMENT = 1,// << CONTAINER_TAG_SHIFT,
   // Mask for container type.
-  CONTAINER_TAG_MASK = CONTAINER_TAG_INCREMENT - 1,
+  CONTAINER_TAG_MASK = 3 << 7,
+
+  RTGC_DESTROYED = 4 << 7,
+  NEED_CYCLIC_TEST = 8 << 7,
 
   // Shift to get actual object count, if has it.
-  CONTAINER_TAG_GC_SHIFT     = 7,
+  CONTAINER_TAG_GC_SHIFT     = 7 + 4,
   CONTAINER_TAG_GC_MASK      = (1 << CONTAINER_TAG_GC_SHIFT) - 1,
   CONTAINER_TAG_GC_INCREMENT = 1 << CONTAINER_TAG_GC_SHIFT,
   // Color mask of a container.
@@ -69,6 +74,7 @@ typedef enum {
   CONTAINER_TAG_GC_SEEN     = 1 << (CONTAINER_TAG_COLOR_SHIFT + 2),
   // If indeed has more that one object.
   CONTAINER_TAG_GC_HAS_OBJECT_COUNT = 1 << (CONTAINER_TAG_COLOR_SHIFT + 3)
+  
 } ContainerTag;
 
 typedef enum {
@@ -80,60 +86,80 @@ typedef enum {
 } ObjectTag;
 
 typedef uint32_t container_size_t;
+#include "RTGC.h"
+
 
 // Header of all container objects. Contains reference counter.
 struct ContainerHeader {
+private:  
   // Reference counter of container. Uses CONTAINER_TAG_SHIFT, lower bits of counter
   // for container type (for polymorphism in ::Release()).
-  uint32_t refCount_;
-  // Number of objects in the container.
-  uint32_t objectCount_;
+  union {
+    RTGCRef rtgc;
+    uint64_t count;
+  } ref_;
+
+  GCRefList rtNode;
+  // // Number of objects in the container.
+  // uint32_t objectCount_;
+  // uint32_t rtNode.flags_;   
+public:  
+
 
   inline bool local() const {
-      return (refCount_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_LOCAL;
+      return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_LOCAL;
   }
 
   inline bool frozen() const {
-    return (refCount_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_FROZEN;
+    return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_FROZEN;
+  }
+
+  inline void markFrozen() {
+    rtNode.flags_ |= CONTAINER_TAG_FROZEN;
+  }
+
+
+  inline void setRefCountAndFlags(uint32_t refCount, uint16_t flags) {
+    ref_.count = refCount; rtNode.flags_ = flags;
   }
 
   inline void freeze() {
-    refCount_ = (refCount_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_FROZEN;
+    rtNode.flags_ = (rtNode.flags_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_FROZEN;
   }
 
   inline void makeShared() {
-      refCount_ = (refCount_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_SHARED;
+      rtNode.flags_ = (rtNode.flags_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_SHARED;
   }
 
   inline bool shared() const {
-    return (refCount_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_SHARED;
+    return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_SHARED;
   }
 
   inline bool shareable() const {
-      return (tag() & 1) != 0; // CONTAINER_TAG_FROZEN || CONTAINER_TAG_SHARED
+      return (rtNode.flags_ & (CONTAINER_TAG_FROZEN & CONTAINER_TAG_SHARED)) != 0;
   }
 
   inline bool stack() const {
-    return (refCount_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_STACK;
+    return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_STACK;
   }
 
-  inline int refCount() const {
-    return (int)refCount_ >> CONTAINER_TAG_SHIFT;
+  inline int64_t refCount() const {
+    return ref_.count & RTGC_REF_COUNT_MASK;
   }
 
-  inline void setRefCount(unsigned refCount) {
-    refCount_ = tag() | (refCount << CONTAINER_TAG_SHIFT);
+  inline void setRefCount(int64_t refCount) {
+    ref_.count = (ref_.count & ~RTGC_REF_COUNT_MASK) + refCount;
   }
 
   template <bool Atomic>
   inline void incRefCount() {
 #ifdef KONAN_NO_THREADS
-    refCount_ += CONTAINER_TAG_INCREMENT;
+    ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #else
     if (Atomic)
-      __sync_add_and_fetch(&refCount_, CONTAINER_TAG_INCREMENT);
+      __sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT);
     else
-      refCount_ += CONTAINER_TAG_INCREMENT;
+      ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #endif
   }
 
@@ -141,9 +167,9 @@ struct ContainerHeader {
   inline bool tryIncRefCount() {
     if (Atomic) {
       while (true) {
-        uint32_t currentRefCount_ = refCount_;
-        if (((int)currentRefCount_ >> CONTAINER_TAG_SHIFT) > 0) {
-          if (compareAndSet(&refCount_, currentRefCount_, currentRefCount_ + CONTAINER_TAG_INCREMENT)) {
+        uint64_t currentRefCount_ = ref_.count;
+        if (refCount() > 0) {
+          if (compareAndSet(&ref_.count, currentRefCount_, currentRefCount_ + RTGC_ROOT_REF_INCREEMENT)) {
             return true;
           }
         } else {
@@ -163,118 +189,289 @@ struct ContainerHeader {
     }
   }
 
+  GCNode* getNode() {
+#if KONAN_ENABLE_ASSERT
+    if(ref_.rtgc.node == 0) {
+      RTGC_dumpRefInfo(this);
+      RuntimeAssert(ref_.rtgc.node != 0, "node not initialized");
+    }
+#endif    
+    if (this->isInCyclicNode()) {
+      return CyclicNode::getNode(ref_.rtgc.node);
+    }
+    else {
+      return (OnewayNode*)&rtNode;
+    }
+  }
+
+  int32_t getFlags() {
+    return this->rtNode.flags_;
+  }
+
+  OnewayNode* getLocalOnewayNode() {
+    return isInCyclicNode() ? NULL : (OnewayNode*)&rtNode;
+  }
+
+  CyclicNode* getLocalCyclicNode() {
+    return CyclicNode::getNode(getNodeId());
+  }
+
+  bool isGCNodeAttached() {
+    return ref_.rtgc.node != 0;
+  }
+  
+  RTGCRef getRTGCRef() {
+    return ref_.rtgc;
+  }
+
+  GCNode* attachNode() {
+    if (!isGCNodeAttached()) {
+      ref_.rtgc.node = 1;
+    }
+    return getNode();
+  }
+
+  void markNeedCyclicTest() {
+    this->rtNode.flags_ |= NEED_CYCLIC_TEST;
+  }
+
+  bool isNeedCyclicTest() {
+    return (this->rtNode.flags_ & NEED_CYCLIC_TEST) != 0;
+  }
+
+  void clearNeedCyclicTest() {
+    this->rtNode.flags_ &= ~NEED_CYCLIC_TEST;
+  }
+
+  void markDestroyed() {
+    this->rtNode.flags_ |= RTGC_DESTROYED;
+  }
+
+  bool isDestroyed() {
+    return (this->rtNode.flags_ & RTGC_DESTROYED) != 0;
+  }
+
+  bool isGarbage() {
+    return refCount() == 0;
+  }
+
+  bool isInCyclicNode() {
+    return getNodeId() >= CYCLIC_NODE_ID_START;
+  }
+
+  int getNodeId() {
+    return (int)ref_.rtgc.node;
+  }
+
+  void setNodeId(int node_id) {
+    ref_.rtgc.node = node_id;
+  }
+
+  int getRootRefCount() {
+    return ref_.rtgc.root;
+  }
+
+  template <bool Atomic>
+  inline void incMemberRefCount() {
+#ifdef KONAN_NO_THREADS
+    ref_.count += RTGC_MEMBER_REF_INCREEMENT;
+#else
+    int64_t value __attribute__((unused)) = Atomic ?
+        __sync_add_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count += RTGC_MEMBER_REF_INCREEMENT;
+#endif
+#if KONAN_ENABLE_ASSERT
+    RuntimeAssert(!isAcyclic(), "Acyclic objct does not have member refCount");
+    if (ref_.rtgc.obj == 0) {
+      RTGC_dumpRefInfo(this);
+      RuntimeAssert(ref_.rtgc.obj != 0, "member ref overflow");
+    }
+#endif    
+  }
+
+  template <bool Atomic>
+  inline void decMemberRefCount() {
+#if KONAN_ENABLE_ASSERT
+    RuntimeAssert(!isAcyclic(), "Acyclic objct does not have member refCount");
+    if (ref_.rtgc.obj == 0) {
+      RTGC_dumpRefInfo(this);
+      RuntimeAssert(ref_.rtgc.obj != 0, "member ref underflow");
+    }
+#endif    
+#ifdef KONAN_NO_THREADS
+    int64_t value __attribute__((unused)) = ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
+#else
+    int64_t value __attribute__((unused)) = Atomic ?
+       __sync_sub_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
+#endif
+  }
+
+  template <bool Atomic>
+  inline RTGCRef incRootCount() {
+#ifdef KONAN_NO_THREADS
+    int64_t value __attribute__((unused)) = ref_.count += RTGC_ROOT_REF_INCREEMENT;
+#else
+    int64_t value __attribute__((unused)) = Atomic ?
+       __sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count += RTGC_ROOT_REF_INCREEMENT;
+#endif
+#if KONAN_ENABLE_ASSERT
+    if (ref_.rtgc.root == 0 && !isAcyclic()) {
+      RTGC_dumpRefInfo(this);
+      RuntimeAssert(ref_.rtgc.root != 0, "root ref overflow");
+    }
+#endif    
+    return *(RTGCRef*)&value;
+  }
+
+  bool isAcyclic();
+
+  inline ObjHeader* asObjHeader() {
+    return (ObjHeader*)(this + 1);
+  }
+
+  template <bool Atomic>
+  inline RTGCRef decRootCount() {
+#if KONAN_ENABLE_ASSERT
+    if (ref_.rtgc.root == 0 && !isAcyclic()) {
+      RTGC_dumpRefInfo(this);
+      RuntimeAssert(ref_.rtgc.root != 0, "root ref underflow");
+    }
+#endif
+#ifdef KONAN_NO_THREADS
+    int64_t value __attribute__((unused)) = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
+#else
+    int64_t value __attribute__((unused)) = Atomic ?
+       __sync_sub_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count -= RTGC_ROOT_REF_INCREEMENT;
+#endif
+    return *(RTGCRef*)&value;
+  }
+
   template <bool Atomic>
   inline int decRefCount() {
+#if KONAN_ENABLE_ASSERT
+    if (ref_.rtgc.root == 0 && !isAcyclic()) {
+      RTGC_dumpRefInfo(this);
+      RuntimeAssert(ref_.rtgc.root != 0, "refCount underflow");
+    }
+#endif    
 #ifdef KONAN_NO_THREADS
-    int value = refCount_ -= CONTAINER_TAG_INCREMENT;
+    int value __attribute__((unused)) = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #else
-    int value = Atomic ?
-       __sync_sub_and_fetch(&refCount_, CONTAINER_TAG_INCREMENT) : refCount_ -= CONTAINER_TAG_INCREMENT;
+    int value __attribute__((unused)) = Atomic ?
+       __sync_sub_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #endif
-    return value >> CONTAINER_TAG_SHIFT;
+    return refCount();//value >> CONTAINER_TAG_SHIFT;
   }
 
   inline int decRefCount() {
+#if KONAN_ENABLE_ASSERT
+    if (ref_.rtgc.root == 0 && !isAcyclic()) {
+      RTGC_dumpRefInfo(this);
+      RuntimeAssert(ref_.rtgc.root != 0, "refCount underflow");
+    }
+#endif    
   #ifdef KONAN_NO_THREADS
-      int value = refCount_ -= CONTAINER_TAG_INCREMENT;
+      int value __attribute__((unused)) = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #else
-      int value = shareable() ?
-         __sync_sub_and_fetch(&refCount_, CONTAINER_TAG_INCREMENT) : refCount_ -= CONTAINER_TAG_INCREMENT;
+      int value __attribute__((unused)) = shareable() ?
+         __sync_sub_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #endif
-      return value >> CONTAINER_TAG_SHIFT;
+      return refCount();//value >> CONTAINER_TAG_SHIFT;
   }
 
   inline unsigned tag() const {
-    return refCount_ & CONTAINER_TAG_MASK;
+    return rtNode.flags_ & CONTAINER_TAG_MASK;
   }
 
   inline unsigned objectCount() const {
-    return (objectCount_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) != 0 ?
-        (objectCount_ >> CONTAINER_TAG_GC_SHIFT) : 1;
+    return (rtNode.flags_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) != 0 ?
+        (rtNode.flags_ >> CONTAINER_TAG_GC_SHIFT) : 1;
   }
 
   inline void incObjectCount() {
-    RuntimeAssert((objectCount_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) != 0, "Must have object count");
-    objectCount_ += CONTAINER_TAG_GC_INCREMENT;
+    RuntimeAssert((rtNode.flags_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) != 0, "Must have object count");
+    rtNode.flags_ += CONTAINER_TAG_GC_INCREMENT;
   }
 
   inline void setObjectCount(int count) {
     if (count == 1) {
-      objectCount_ &= ~CONTAINER_TAG_GC_HAS_OBJECT_COUNT;
+      rtNode.flags_ &= ~CONTAINER_TAG_GC_HAS_OBJECT_COUNT;
     } else {
-      objectCount_ = (count << CONTAINER_TAG_GC_SHIFT) | CONTAINER_TAG_GC_HAS_OBJECT_COUNT;
+      rtNode.flags_ = (count << CONTAINER_TAG_GC_SHIFT) | CONTAINER_TAG_GC_HAS_OBJECT_COUNT;
     }
   }
 
   inline unsigned containerSize() const {
-    RuntimeAssert((objectCount_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) == 0, "Must be single-object");
-    return (objectCount_ >> CONTAINER_TAG_GC_SHIFT);
+    RuntimeAssert((rtNode.flags_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) == 0, "Must be single-object");
+    return (rtNode.flags_ >> CONTAINER_TAG_GC_SHIFT);
   }
 
   inline void setContainerSize(unsigned size) {
-    RuntimeAssert((objectCount_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) == 0, "Must not have object count");
-    objectCount_ = (objectCount_ & CONTAINER_TAG_GC_MASK) | (size << CONTAINER_TAG_GC_SHIFT);
+    RuntimeAssert((rtNode.flags_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) == 0, "Must not have object count");
+    rtNode.flags_ = (rtNode.flags_ & CONTAINER_TAG_GC_MASK) | (size << CONTAINER_TAG_GC_SHIFT);
   }
 
   inline bool hasContainerSize() {
-    return (objectCount_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) == 0;
+    return (rtNode.flags_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) == 0;
   }
 
   inline unsigned color() const {
-    return objectCount_ & CONTAINER_TAG_GC_COLOR_MASK;
+    return rtNode.flags_ & CONTAINER_TAG_GC_COLOR_MASK;
   }
 
   inline void setColorAssertIfGreen(unsigned color) {
+    if (RTGC) return;
     RuntimeAssert(this->color() != CONTAINER_TAG_GC_GREEN, "Must not be green");
     setColorEvenIfGreen(color);
   }
 
   inline void setColorEvenIfGreen(unsigned color) {
     // TODO: do we need atomic color update?
-    objectCount_ = (objectCount_ & ~CONTAINER_TAG_GC_COLOR_MASK) | color;
+    if (RTGC) return;
+    rtNode.flags_ = (rtNode.flags_ & ~CONTAINER_TAG_GC_COLOR_MASK) | color;
   }
 
   inline void setColorUnlessGreen(unsigned color) {
     // TODO: do we need atomic color update?
-    unsigned objectCount = objectCount_;
-    if ((objectCount & CONTAINER_TAG_GC_COLOR_MASK) != CONTAINER_TAG_GC_GREEN)
-        objectCount_ = (objectCount & ~CONTAINER_TAG_GC_COLOR_MASK) | color;
+    if (RTGC) return;
+    unsigned flags = rtNode.flags_;
+    if ((flags & CONTAINER_TAG_GC_COLOR_MASK) != CONTAINER_TAG_GC_GREEN)
+        rtNode.flags_ = (flags & ~CONTAINER_TAG_GC_COLOR_MASK) | color;
   }
 
   inline bool buffered() const {
-    return (objectCount_ & CONTAINER_TAG_GC_BUFFERED) != 0;
+    return (rtNode.flags_ & CONTAINER_TAG_GC_BUFFERED) != 0;
   }
 
   inline void setBuffered() {
-    objectCount_ |= CONTAINER_TAG_GC_BUFFERED;
+    rtNode.flags_ |= CONTAINER_TAG_GC_BUFFERED;
   }
 
   inline void resetBuffered() {
-    objectCount_ &= ~CONTAINER_TAG_GC_BUFFERED;
+    rtNode.flags_ &= ~CONTAINER_TAG_GC_BUFFERED;
   }
 
   inline bool marked() const {
-    return (objectCount_ & CONTAINER_TAG_GC_MARKED) != 0;
+    return (rtNode.flags_ & CONTAINER_TAG_GC_MARKED) != 0;
   }
 
   inline void mark() {
-    objectCount_ |= CONTAINER_TAG_GC_MARKED;
+    rtNode.flags_ |= CONTAINER_TAG_GC_MARKED;
   }
 
   inline void unMark() {
-    objectCount_ &= ~CONTAINER_TAG_GC_MARKED;
+    rtNode.flags_ &= ~CONTAINER_TAG_GC_MARKED;
   }
 
   inline bool seen() const {
-    return (objectCount_ & CONTAINER_TAG_GC_SEEN) != 0;
+    return (rtNode.flags_ & CONTAINER_TAG_GC_SEEN) != 0;
   }
 
   inline void setSeen() {
-    objectCount_ |= CONTAINER_TAG_GC_SEEN;
+    rtNode.flags_ |= CONTAINER_TAG_GC_SEEN;
   }
 
   inline void resetSeen() {
-    objectCount_ &= ~CONTAINER_TAG_GC_SEEN;
+    rtNode.flags_ &= ~CONTAINER_TAG_GC_SEEN;
   }
 
   // Following operations only work on freed container which is in finalization queue.
@@ -337,6 +534,10 @@ struct ObjHeader {
 
   const TypeInfo* type_info() const {
     return clearPointerBits(typeInfoOrMeta_, OBJECT_TAG_MASK)->typeInfo_;
+  }
+
+  bool isAcyclic() const {
+    return (type_info()->flags_ & (TF_IMMUTABLE | TF_ACYCLIC)) != 0;
   }
 
   bool has_meta_object() const {
@@ -410,7 +611,7 @@ extern "C" {
 #define OBJ_GETTER0(name) ObjHeader* name(ObjHeader** OBJ_RESULT)
 #define OBJ_GETTER(name, ...) ObjHeader* name(__VA_ARGS__, ObjHeader** OBJ_RESULT)
 #define MODEL_VARIANTS(returnType, name, ...)            \
-   returnType name(__VA_ARGS__) RUNTIME_NOTHROW;         \
+   returnType name(__VA_ARGS__) RUNTIME_NOTHROW RTGC_NO_INLINE;         \
    returnType name##Strict(__VA_ARGS__) RUNTIME_NOTHROW; \
    returnType name##Relaxed(__VA_ARGS__) RUNTIME_NOTHROW;
 #define RETURN_OBJ(value) { ObjHeader* __obj = value; \
@@ -501,7 +702,7 @@ MODEL_VARIANTS(void, SetStackRef, ObjHeader** location, const ObjHeader* object)
 // Sets heap location.
 MODEL_VARIANTS(void, SetHeapRef, ObjHeader** location, const ObjHeader* object);
 // Zeroes heap location.
-void ZeroHeapRef(ObjHeader** location) RUNTIME_NOTHROW;
+void ZeroHeapRef(ObjHeader** location);
 // Zeroes an array.
 void ZeroArrayRefs(ArrayHeader* array) RUNTIME_NOTHROW;
 // Zeroes stack location.
@@ -509,7 +710,7 @@ MODEL_VARIANTS(void, ZeroStackRef, ObjHeader** location);
 // Updates stack location.
 MODEL_VARIANTS(void, UpdateStackRef, ObjHeader** location, const ObjHeader* object);
 // Updates heap/static data location.
-MODEL_VARIANTS(void, UpdateHeapRef, ObjHeader** location, const ObjHeader* object);
+MODEL_VARIANTS(void, UpdateHeapRef, ObjHeader** location, const ObjHeader* object, const ObjHeader* owner);
 // Updates location if it is null, atomically.
 MODEL_VARIANTS(void, UpdateHeapRefIfNull, ObjHeader** location, const ObjHeader* object);
 // Updates reference in return slot.
@@ -517,16 +718,19 @@ MODEL_VARIANTS(void, UpdateReturnRef, ObjHeader** returnSlot, const ObjHeader* o
 // Compares and swaps reference with taken lock.
 OBJ_GETTER(SwapHeapRefLocked,
     ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock,
-    int32_t* cookie) RUNTIME_NOTHROW;
+    ObjHeader* owner, int32_t* cookie) RUNTIME_NOTHROW;
 // Sets reference with taken lock.
 void SetHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock,
-    int32_t* cookie) RUNTIME_NOTHROW;
+    ObjHeader* owner, int32_t* cookie) RUNTIME_NOTHROW;
 // Reads reference with taken lock.
 OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* cookie) RUNTIME_NOTHROW;
 // Called on frame enter, if it has object slots.
 MODEL_VARIANTS(void, EnterFrame, ObjHeader** start, int parameters, int count);
 // Called on frame leave, if it has object slots.
 MODEL_VARIANTS(void, LeaveFrame, ObjHeader** start, int parameters, int count);
+
+MODEL_VARIANTS(const ObjHeader*, LeaveFrameAndReturnRef, ObjHeader** start, int param_count, ObjHeader** resultSlot, const ObjHeader* returnRef);
+
 // Clears object subgraph references from memory subsystem, and optionally
 // checks if subgraph referenced by given root is disjoint from the rest of
 // object graph, i.e. no external references exists.
@@ -625,5 +829,16 @@ class ExceptionObjHolder {
 
 class ForeignRefManager;
 typedef ForeignRefManager* ForeignRefContext;
+
+inline bool ContainerHeader::isAcyclic() {
+  return asObjHeader()->isAcyclic();
+}
+
+
+#ifdef RTGC
+
+void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner) RTGC_NO_INLINE;
+void freeContainer(ContainerHeader* header, int garbageNodeId=-1) RTGC_NO_INLINE;
+#endif
 
 #endif // RUNTIME_MEMORY_H
