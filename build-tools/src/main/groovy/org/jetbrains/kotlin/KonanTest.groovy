@@ -483,6 +483,8 @@ fun runTest() {
             List<TestFile> compileList = []
             ktFiles.each {
                 def src = project.buildDir.relativePath(it)
+                println("RTZZ RTGC ### ==============")
+                println(src)
                 if (isEnabledForNativeBackend(src)) {
                     // Create separate output directory for each test in the group.
                     project.file("$outputDirectory/${it.name}").mkdirs()
@@ -554,6 +556,8 @@ fun runTest() {
             ktFiles.each { file ->
                 def src = project.buildDir.relativePath(file)
                 def savedArgs = arguments
+                println("RTZZ RTGC ==============")
+                println(file)
                 arguments += "--ktest_filter=_${normalize(file.name)}.*"
                 use(KonanTestSuiteReportKt) {
                     project.logger.quiet("TEST: $file.name " +

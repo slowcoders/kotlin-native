@@ -442,7 +442,7 @@
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
             uuid = "D726B09A-6FA0-456C-9788-6944E402DAAE"
-            shouldBeEnabled = "Yes"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "../../runtime/src/main/kotlin/kotlin/native/concurrent/Atomics.kt"
