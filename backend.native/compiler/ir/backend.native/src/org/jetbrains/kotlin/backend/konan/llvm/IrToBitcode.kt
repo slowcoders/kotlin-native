@@ -504,12 +504,10 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         context.llvm.fileUsesThreadLocalObjects = false
         context.llvm.globalSharedObjects.clear()
 
-        if (declaration.fileEntry.name.contains("/_local/")) {
-            var name = declaration.fileEntry.name;
-            if (name == null) {
-                println("wrong name")
-            }
-        }
+        // if (declaration.fileEntry.name.contains("/_local/")) {
+        //     var name = declaration.fileEntry.name;
+        //         println(name)
+        // }
 
         @Suppress("UNCHECKED_CAST")
         using(FileScope(declaration)) {

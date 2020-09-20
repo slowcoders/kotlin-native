@@ -267,7 +267,7 @@ internal class StackLocalsManagerImpl(
                 if (isObjectType(fieldType)) {
                     val fieldPtr = LLVMBuildStructGEP(builder, stackLocal.bodyPtr, fieldIndex, "")!!
                     if (refsOnly)
-                        storeHeapRef(kNullObjHeaderPtr, fieldPtr)
+                        storeStackRef(kNullObjHeaderPtr, fieldPtr)
                     else
                         call(context.llvm.zeroHeapRefFunction, listOf(fieldPtr))
                 }

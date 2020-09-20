@@ -1223,7 +1223,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
   }
   else {
     // Now let's clean all object's fields in this container.
-    traverseContainerObjectFields(container, [container](ObjHeader** location, ObjHeader* owner) {
+    traverseContainerObjectFields(container, [](ObjHeader** location, ObjHeader* owner) {
           ZeroHeapRef(location);
     });
   }
@@ -2381,7 +2381,6 @@ namespace {
 template <bool Strict>
 void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
   UPDATE_REF_EVENT(memoryState, *location, object, location, owner);
-    ContainerHeader* container = owner->container();
     RuntimeAssert(owner->container() != nullptr && owner->container()->tag() != CONTAINER_TAG_STACK, "illegal heap ref");
 
   GCNode::rtgcLock();
@@ -3016,10 +3015,10 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
   // Remove all no longer owned containers from GC structures.
   // TODO: not very efficient traversal.
   for (auto it = state->toFree->begin(); it != state->toFree->end(); ++it) {
-    auto container = *it;
     #ifdef RTGC
       RuntimeAssert(!RTGC, "no kotlin gc");
     #else  
+    auto container = *it;
     if (visited.count(container) != 0) {
       MEMORY_LOG("removing %p from the toFree list\n", container)
       container->resetBuffered();
@@ -3029,10 +3028,10 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
     #endif
   }
   for (auto it = state->toRelease->begin(); it != state->toRelease->end(); ++it) {
-    auto container = *it;
     #ifdef RTGC
       RuntimeAssert(!RTGC, "no kotlin gc");
     #else
+    auto container = *it;
     if (!isMarkedAsRemoved(container) && visited.count(container) != 0) {
       MEMORY_LOG("removing %p from the toRelease list\n", container)
       container->decRefCount<false>();
@@ -3375,7 +3374,7 @@ OBJ_GETTER(createAndFillArray, const C& container) {
   auto* result = AllocArrayInstance(theArrayTypeInfo, container.size(), OBJ_RESULT)->array();
   KRef* place = ArrayAddressOfElementAt(result, 0);
   for (KRef it: container) {
-    UpdateHeapRef(place++, it);
+    UpdateHeapRef(place++, it, result->obj());
   }
   RETURN_OBJ(result->obj());
 }
