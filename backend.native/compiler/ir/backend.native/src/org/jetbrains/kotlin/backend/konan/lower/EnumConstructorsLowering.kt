@@ -11,7 +11,7 @@ import org.jetbrains.kotlin.backend.common.runOnFilePostfix
 import org.jetbrains.kotlin.backend.konan.Context
 import org.jetbrains.kotlin.backend.konan.DECLARATION_ORIGIN_ENUM
 import org.jetbrains.kotlin.descriptors.ClassKind
-import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrConstructorImpl
@@ -106,19 +106,16 @@ internal class EnumConstructorsLowering(val context: Context) : ClassLoweringPas
             return loweredEnumConstructor
         }
 
-        private fun lowerEnumConstructor(constructor: IrConstructor): IrConstructorImpl {
+        private fun lowerEnumConstructor(constructor: IrConstructor): IrConstructor {
             val startOffset = constructor.startOffset
             val endOffset = constructor.endOffset
-            val loweredConstructor = WrappedClassConstructorDescriptor(
-                    constructor.descriptor.annotations,
-                    constructor.descriptor.source
-            ).let {
+            val loweredConstructor = WrappedClassConstructorDescriptor().let {
                 IrConstructorImpl(
                         startOffset, endOffset,
                         constructor.origin,
                         IrConstructorSymbolImpl(it),
                         constructor.name,
-                        Visibilities.PROTECTED,
+                        DescriptorVisibilities.PROTECTED,
                         constructor.returnType,
                         isInline = false,
                         isExternal = false,
@@ -133,7 +130,7 @@ internal class EnumConstructorsLowering(val context: Context) : ClassLoweringPas
                 }
             }
 
-            fun createSynthesizedValueParameter(index: Int, name: String, type: IrType) =
+            fun createSynthesizedValueParameter(index: Int, name: String, type: IrType): IrValueParameter =
                     WrappedValueParameterDescriptor().let {
                         IrValueParameterImpl(
                                 startOffset, endOffset,
@@ -266,7 +263,7 @@ internal class EnumConstructorsLowering(val context: Context) : ClassLoweringPas
                 throw AssertionError("Unexpected delegating constructor call within enum entry: $enumEntry")
             }
 
-            abstract fun createConstructorCall(startOffset: Int, endOffset: Int, loweredConstructor: IrConstructorSymbol): IrMemberAccessExpression
+            abstract fun createConstructorCall(startOffset: Int, endOffset: Int, loweredConstructor: IrConstructorSymbol): IrMemberAccessExpression<*>
         }
 
         private inner class InEnumEntryClassConstructor(enumEntry: IrEnumEntry) : InEnumEntry(enumEntry) {

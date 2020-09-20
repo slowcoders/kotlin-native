@@ -287,6 +287,8 @@ task detectJarCollision(type: CollisionDetector) {
     resolvingRules["META-INF/type-system.kotlin_module"] = "kotlin-compiler"
     resolvingRules["META-INF/util.runtime.kotlin_module"] = "kotlin-compiler"
     resolvingRules["META-INF/kotlin-native-utils.kotlin_module"] = "kotlin-compiler"
+    resolvingRules["META-INF/compiler.common.kotlin_module"] = "kotlin-compiler"
+    resolvingRules["META-INF/compiler.common.jvm.kotlin_module"] = "kotlin-compiler"
 
     // These collisions are introduced by kotlinx-metadata-klib.
     resolvingRules["META-INF/serialization.kotlin_module"] = "kotlin-compiler"
@@ -313,16 +315,18 @@ task detectJarCollision(type: CollisionDetector) {
         librariesWithIgnoredClassCollisions.addAll(["util", "container", "resolution", "serialization", "psi", "frontend",
                                                     "config", "config.jvm", "js.config", "javac-wrapper",
                                                     "frontend.common", "frontend.java", "cli-common", "ir.tree",
+                                                    "ir.tree.impl", "ir.tree.persisting",
                                                     "ir.psi2ir", "ir.backend.common", "backend.jvm", "backend.js",
                                                     "backend.wasm", "ir.serialization.common", "ir.serialization.js",
-                                                    "ir.serialization.jvm", "jvm", "compiler.version",
+                                                    "ir.serialization.jvm", "ir.interpreter", "jvm", "compiler.version",
                                                     "backend-common", "backend", "plugin-api", "light-classes", "cli",
                                                     "cli-js", "incremental-compilation-impl", "js.ast", "js.serializer",
                                                     "js.parser", "js.frontend", "js.translator", "js.dce", "metadata",
                                                     "metadata.jvm", "descriptors", "descriptors.jvm", "descriptors.runtime",
                                                     "deserialization", "util.runtime", "type-system", "cones", "resolve",
                                                     "tree", "psi2fir", "fir2ir", "java", "kotlin-build-common", "lightTree",
-                                                    "jvm", "checkers", "fir-common", "light-tree2fir", "fir-serialization"])
+                                                    "jvm", "checkers", "raw-fir.common", "light-tree2fir", 
+                                                    "fir-serialization", "fir-deserialization", "entrypoint"])
     }
 }
 
@@ -576,11 +580,8 @@ task bundleRegular(type: (isWindows()) ? Zip : Tar) {
         exclude 'klib/testLibrary'
         // Don't include platform libraries into the bundle (generate them at the user side instead).
         exclude 'klib/platform'
-        exclude {
-            // Exclude platform libraries caches too.
-            !it.isDirectory() && it.relativePath.startsWithAny("klib/cache") &&
-                    it.name != "libstdlib-cache.a" && it.name != "libkotlinx-cli-cache.a"
-        }
+        // Exclude platform libraries caches too. Keep caches for stdlib and endorsed libs.
+        exclude 'klib/cache/*/org.jetbrains.kotlin.native.platform.*/**'
         into archiveBaseName
     }
     from(project.rootDir) {

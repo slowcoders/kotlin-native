@@ -9,7 +9,6 @@ import org.jetbrains.kotlin.backend.konan.InteropBuiltIns
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.ir.builders.IrBuilder
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.declarations.impl.IrClassImpl
 import org.jetbrains.kotlin.ir.declarations.impl.IrConstructorImpl
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -20,6 +19,7 @@ import org.jetbrains.kotlin.ir.types.impl.IrUninitializedType
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.resolve.descriptorUtil.getSuperClassNotAny
 import org.jetbrains.kotlin.resolve.descriptorUtil.getSuperInterfaces
+import org.jetbrains.kotlin.resolve.descriptorUtil.isEffectivelyExternal
 import org.jetbrains.kotlin.resolve.descriptorUtil.parentsWithSelf
 import org.jetbrains.kotlin.types.KotlinType
 
@@ -50,12 +50,8 @@ internal interface DescriptorToIrTranslationMixin {
      */
     fun createClass(descriptor: ClassDescriptor, builder: (IrClass) -> Unit): IrClass =
             symbolTable.declareClass(descriptor) {
-                IrClassImpl(
-                    startOffset = SYNTHETIC_OFFSET,
-                    endOffset = SYNTHETIC_OFFSET,
-                    origin = IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB,
-                    symbol = it,
-                    descriptor = descriptor
+                symbolTable.irFactory.createIrClassFromDescriptor(
+                    SYNTHETIC_OFFSET, SYNTHETIC_OFFSET, IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB, it, descriptor
                 )
             }.also { irClass ->
                 symbolTable.withScope(descriptor) {
@@ -79,17 +75,18 @@ internal interface DescriptorToIrTranslationMixin {
                 is PropertyDescriptor -> createProperty(it)
                 is FunctionDescriptor -> createFunction(it, IrDeclarationOrigin.FAKE_OVERRIDE)
                 else -> error("Unexpected fake override descriptor: $it")
-            } as IrDeclaration // Assistance for type inference.
+            }
         }
     }
 
     fun createConstructor(constructorDescriptor: ClassConstructorDescriptor): IrConstructor {
         val irConstructor = symbolTable.declareConstructor(constructorDescriptor) {
-            IrConstructorImpl(
-                SYNTHETIC_OFFSET, SYNTHETIC_OFFSET,
-                IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB,
-                it, IrUninitializedType, constructorDescriptor
-            )
+            with(constructorDescriptor) {
+                IrConstructorImpl(
+                    SYNTHETIC_OFFSET, SYNTHETIC_OFFSET, IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB, it, name, visibility,
+                    IrUninitializedType, isInline, isEffectivelyExternal(), isPrimary, isExpect
+                )
+            }
         }
         irConstructor.valueParameters += constructorDescriptor.valueParameters.map { valueParameterDescriptor ->
             symbolTable.declareValueParameter(

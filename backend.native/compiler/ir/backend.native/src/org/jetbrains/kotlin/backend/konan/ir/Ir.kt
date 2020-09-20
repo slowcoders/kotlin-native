@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.backend.konan.descriptors.kotlinNativeInternal
 import org.jetbrains.kotlin.backend.konan.llvm.findMainEntryPoint
 import org.jetbrains.kotlin.backend.konan.lower.TestProcessor
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
+import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.builtins.UnsignedType
 import org.jetbrains.kotlin.config.coroutinesIntrinsicsPackageFqName
 import org.jetbrains.kotlin.config.coroutinesPackageFqName
@@ -254,13 +255,13 @@ internal class KonanSymbols(
 
     val throwIndexOutOfBoundsException = internalFunction("ThrowIndexOutOfBoundsException")
 
-    override val ThrowNullPointerException = internalFunction("ThrowNullPointerException")
+    override val throwNullPointerException = internalFunction("ThrowNullPointerException")
 
-    override val ThrowNoWhenBranchMatchedException = internalFunction("ThrowNoWhenBranchMatchedException")
+    override val throwNoWhenBranchMatchedException = internalFunction("ThrowNoWhenBranchMatchedException")
 
-    override val ThrowTypeCastException = internalFunction("ThrowTypeCastException")
+    override val throwTypeCastException = internalFunction("ThrowTypeCastException")
 
-    override val ThrowKotlinNothingValueException  = internalFunction("ThrowKotlinNothingValueException")
+    override val throwKotlinNothingValueException  = internalFunction("ThrowKotlinNothingValueException")
 
     val throwClassCastException = internalFunction("ThrowClassCastException")
 
@@ -271,7 +272,7 @@ internal class KonanSymbols(
     val throwIllegalArgumentExceptionWithMessage = internalFunction("ThrowIllegalArgumentExceptionWithMessage")
 
 
-    override val ThrowUninitializedPropertyAccessException = internalFunction("ThrowUninitializedPropertyAccessException")
+    override val throwUninitializedPropertyAccessException = internalFunction("ThrowUninitializedPropertyAccessException")
 
     override val stringBuilder = symbolTable.referenceClass(
             builtInsPackage("kotlin", "text").getContributedClassifier(
@@ -320,7 +321,7 @@ internal class KonanSymbols(
     }
     
     val copyInto = arrays.map { symbol ->
-        val packageViewDescriptor = builtIns.builtInsModule.getPackage(KotlinBuiltIns.COLLECTIONS_PACKAGE_FQ_NAME)
+        val packageViewDescriptor = builtIns.builtInsModule.getPackage(StandardNames.COLLECTIONS_PACKAGE_FQ_NAME)
         val functionDescriptor = packageViewDescriptor.memberScope
                 .getContributedFunctions(Name.identifier("copyInto"), NoLookupLocation.FROM_BACKEND)
                 .single {
@@ -420,6 +421,8 @@ internal class KonanSymbols(
                         it.extensionReceiverParameter?.type?.constructor?.declarationDescriptor == kotlinResult.descriptor
                     }
     )
+
+    override val functionAdapter = symbolTable.referenceClass(context.getKonanInternalClass("FunctionAdapter"))
 
     val refClass = symbolTable.referenceClass(context.getKonanInternalClass("Ref"))
 

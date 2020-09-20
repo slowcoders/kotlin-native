@@ -8,11 +8,8 @@ package org.jetbrains.kotlin.backend.konan.objcexport
 import org.jetbrains.kotlin.backend.common.serialization.findSourceFile
 import org.jetbrains.kotlin.backend.konan.*
 import org.jetbrains.kotlin.backend.konan.descriptors.*
-import org.jetbrains.kotlin.builtins.KotlinBuiltIns
+import org.jetbrains.kotlin.builtins.*
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns.isAny
-import org.jetbrains.kotlin.builtins.getReceiverTypeFromFunctionType
-import org.jetbrains.kotlin.builtins.getReturnTypeFromFunctionType
-import org.jetbrains.kotlin.builtins.getValueParameterTypesFromFunctionType
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.resolve.constants.ArrayValue
@@ -201,7 +198,7 @@ internal class ObjCExportTranslatorImpl(
 
         return translateClassOrInterfaceName(descriptor).also {
             val objcName = forwardDeclarationObjcClassName(objcGenerics, descriptor, namer)
-            generator?.referenceClass(objcName, descriptor)
+            generator?.referenceClass(objcName)
         }
     }
 
@@ -211,7 +208,7 @@ internal class ObjCExportTranslatorImpl(
         generator?.requireClassOrInterface(descriptor)
 
         return translateClassOrInterfaceName(descriptor).also {
-            generator?.referenceProtocol(it.objCName, descriptor)
+            generator?.referenceProtocol(it.objCName)
         }
     }
 
@@ -682,7 +679,7 @@ internal class ObjCExportTranslatorImpl(
         return null
     }
 
-    private val throwableClassId = ClassId.topLevel(KotlinBuiltIns.FQ_NAMES.throwable)
+    private val throwableClassId = ClassId.topLevel(StandardNames.FqNames.throwable)
 
     private fun getEffectiveThrows(method: FunctionDescriptor): Sequence<ClassId> {
         method.overriddenDescriptors.firstOrNull()?.let { return getEffectiveThrows(it) }
@@ -1137,11 +1134,11 @@ abstract class ObjCExportHeaderGenerator internal constructor(
         }
     }
 
-    internal fun referenceClass(objCName: String, descriptor: ClassDescriptor? = null) {
+    internal fun referenceClass(objCName: String) {
         classForwardDeclarations += objCName
     }
 
-    internal fun referenceProtocol(objCName: String, descriptor: ClassDescriptor? = null) {
+    internal fun referenceProtocol(objCName: String) {
         protocolForwardDeclarations += objCName
     }
 }
@@ -1238,5 +1235,22 @@ private fun Deprecation.toDeprecationAttribute(): String {
 
     val message = this.message.orEmpty()
 
-    return "$attribute(\"$message\")"
+    return "$attribute(${quoteAsCStringLiteral(message)})"
+}
+
+private fun quoteAsCStringLiteral(str: String): String = buildString {
+    append('"')
+    for (c in str) {
+        when (c) {
+            '\n' -> append("\\n")
+
+            '\r' -> append("\\r")
+
+            '"', '\\' -> append('\\').append(c)
+
+            // TODO: handle more special cases.
+            else -> append(c)
+        }
+    }
+    append('"')
 }

@@ -104,7 +104,7 @@ fun createJsonReport(projectProperties: Map<String, Any>): String {
     val kotlin = Compiler(backend, getValue("kotlinVersion"))
     val benchDesc = getValue("benchmarks")
     val benchmarksArray = JsonTreeParser.parse(benchDesc)
-    val benchmarks = BenchmarksReport.parseBenchmarksArray(benchmarksArray)
+    val benchmarks = parseBenchmarksArray(benchmarksArray)
             .union(projectProperties["compileTime"] as List<BenchmarkResult>).union(
                     listOf(projectProperties["codeSize"] as? BenchmarkResult).filterNotNull()).toList()
     val report = BenchmarksReport(env, benchmarks, kotlin)
@@ -145,7 +145,8 @@ fun getCompileOnlyBenchmarksOpts(project: Project, defaultCompilerOpts: List<Str
 
 // Find file with set name in directory.
 fun findFile(fileName: String, directory: String): String? =
-    File(directory).walkBottomUp().find { it.name == fileName }?.getAbsolutePath()
+        File(directory).walkTopDown().filter { !it.absolutePath.contains(".dSYM") }
+                .find { it.name == fileName }?.getAbsolutePath()
 
 fun uploadFileToArtifactory(url: String, project: String, artifactoryFilePath: String,
                         filePath: String, password: String) {

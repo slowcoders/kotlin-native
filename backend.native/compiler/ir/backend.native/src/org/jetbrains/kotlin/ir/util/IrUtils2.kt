@@ -6,24 +6,24 @@
 package org.jetbrains.kotlin.ir.util
 
 import org.jetbrains.kotlin.backend.common.CommonBackendContext
-import org.jetbrains.kotlin.backend.common.descriptors.substitute
 import org.jetbrains.kotlin.backend.konan.KonanBackendContext
 import org.jetbrains.kotlin.backend.konan.KonanCompilationException
 import org.jetbrains.kotlin.backend.konan.descriptors.synthesizedName
 import org.jetbrains.kotlin.backend.konan.ir.buildSimpleAnnotation
-import org.jetbrains.kotlin.backend.konan.ir.containsNull
-import org.jetbrains.kotlin.builtins.KOTLIN_REFLECT_FQ_NAME
+import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.config.LanguageVersionSettings
-import org.jetbrains.kotlin.descriptors.*
-import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.ParameterDescriptor
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.descriptors.impl.PackageFragmentDescriptorImpl
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.SourceManager
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.declarations.impl.*
+import org.jetbrains.kotlin.ir.declarations.impl.IrFieldImpl
+import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
+import org.jetbrains.kotlin.ir.declarations.impl.IrValueParameterImpl
+import org.jetbrains.kotlin.ir.declarations.impl.IrVariableImpl
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.descriptors.WrappedFieldDescriptor
 import org.jetbrains.kotlin.ir.descriptors.WrappedVariableDescriptor
@@ -34,6 +34,7 @@ import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.IrFieldSymbolImpl
+import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrVariableSymbolImpl
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
@@ -44,8 +45,8 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.calls.checkers.isRestrictsSuspensionReceiver
 import org.jetbrains.kotlin.resolve.scopes.MemberScope
-import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.KotlinType
+import org.jetbrains.kotlin.types.TypeUtils
 import org.jetbrains.kotlin.types.typeUtil.immediateSupertypes
 import java.lang.reflect.Proxy
 
@@ -75,11 +76,10 @@ internal fun IrFile.addTopLevelInitializer(expression: IrExpression, context: Ko
             IrFieldSymbolImpl(descriptor),
             "topLevelInitializer${topLevelInitializersCounter++}".synthesizedName,
             expression.type,
-            Visibilities.PRIVATE,
+            DescriptorVisibilities.PRIVATE,
             isFinal = true,
             isExternal = false,
             isStatic = true,
-            isFakeOverride = false
     ).apply {
         descriptor.bind(this)
 
@@ -134,7 +134,7 @@ object SetDeclarationsParentVisitor : IrElementVisitor<Unit, IrDeclarationParent
         }
     }
 
-    override fun visitDeclaration(declaration: IrDeclaration, data: IrDeclarationParent) {
+    override fun visitDeclaration(declaration: IrDeclarationBase, data: IrDeclarationParent) {
         declaration.parent = data
         super.visitDeclaration(declaration, data)
     }
@@ -192,14 +192,6 @@ fun IrFunctionAccessExpression.addArguments(args: Map<IrValueParameter, IrExpres
     }
 }
 
-private fun FunctionDescriptor.substitute(
-        typeArguments: List<IrType>
-): FunctionDescriptor = if (typeArguments.isEmpty()) {
-    this
-} else {
-    this.substitute(*typeArguments.map { it.toKotlinType() }.toTypedArray())
-}
-
 fun IrType.substitute(map: Map<IrTypeParameterSymbol, IrType>): IrType {
     if (this !is IrSimpleType) return this
 
@@ -246,7 +238,7 @@ fun IrBuilderWithScope.irCall(symbol: IrFunctionSymbol, typeArguments: List<IrTy
 fun IrBuilderWithScope.irCall(irFunction: IrFunction, typeArguments: List<IrType> = emptyList()) =
         irCall(irFunction.symbol, typeArguments)
 
-internal fun irCall(startOffset: Int, endOffset: Int, irFunction: IrFunction, typeArguments: List<IrType>): IrCall =
+internal fun irCall(startOffset: Int, endOffset: Int, irFunction: IrSimpleFunction, typeArguments: List<IrType>): IrCall =
         IrCallImpl(
                 startOffset, endOffset, irFunction.substitutedReturnType(typeArguments),
                 irFunction.symbol, typeArguments.size
@@ -294,7 +286,7 @@ fun IrBuilderWithScope.irCatch(type: IrType) =
  * Binds the arguments explicitly represented in the IR to the parameters of the accessed function.
  * The arguments are to be evaluated in the same order as they appear in the resulting list.
  */
-fun IrMemberAccessExpression.getArgumentsWithIr(): List<Pair<IrValueParameter, IrExpression>> {
+fun IrMemberAccessExpression<*>.getArgumentsWithIr(): List<Pair<IrValueParameter, IrExpression>> {
     val res = mutableListOf<Pair<IrValueParameter, IrExpression>>()
     val irFunction = when (this) {
         is IrFunctionAccessExpression -> this.symbol.owner
@@ -360,11 +352,10 @@ fun createField(
             IrFieldSymbolImpl(it),
             name,
             type,
-            Visibilities.PRIVATE,
+            DescriptorVisibilities.PRIVATE,
             !isMutable,
             false,
             false,
-            false
     ).apply {
         it.bind(this)
         owner.declarations += this
@@ -381,12 +372,9 @@ fun IrValueParameter.copy(newDescriptor: ParameterDescriptor): IrValueParameter 
     //}
 
     return IrValueParameterImpl(
-            startOffset,
-            endOffset,
-            IrDeclarationOrigin.DEFINED,
-            newDescriptor,
-            type,
-            varargElementType
+        startOffset, endOffset, IrDeclarationOrigin.DEFINED, IrValueParameterSymbolImpl(newDescriptor),
+        newDescriptor.name, newDescriptor.indexOrMinusOne, type, varargElementType,
+        newDescriptor.isCrossinline, newDescriptor.isNoinline
     )
 }
 
@@ -402,4 +390,7 @@ fun IrFunction.isRestrictedSuspendFunction(languageVersionSettings: LanguageVers
 fun IrFunction.isTypeOfIntrinsic(): Boolean =
         this.name.asString() == "typeOf" &&
                 this.valueParameters.isEmpty() &&
-                (this.parent as? IrPackageFragment)?.fqName == KOTLIN_REFLECT_FQ_NAME
+                (this.parent as? IrPackageFragment)?.fqName == StandardNames.KOTLIN_REFLECT_FQ_NAME
+
+fun IrBuilderWithScope.irByte(value: Byte) =
+        IrConstImpl.byte(startOffset, endOffset, context.irBuiltIns.byteType, value)

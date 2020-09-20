@@ -31,15 +31,13 @@ open class KonanCacheTask: DefaultTask() {
     val cacheDirectory: File
         get() = cacheRoot.resolve("$target-g$cacheKind")
 
-    @get:OutputFile
+    @get:OutputDirectory
     protected val cacheFile: File
         get() {
-            val konanTarget = HostManager().targetByName(target)
-            val klibName = originalKlib.nameWithoutExtension
-            val cachePrefix = cacheKind.outputKind.prefix(konanTarget)
-            val cacheSuffix = cacheKind.outputKind.suffix(konanTarget)
-            val cacheName = "${cachePrefix}${klibName}-cache${cacheSuffix}"
-            return cacheDirectory.resolve(cacheName)
+            val klibName = originalKlib.let {
+                if (it.isDirectory) it.name else it.nameWithoutExtension
+            }
+            return cacheDirectory.resolve("${klibName}-cache")
         }
 
     @Input
@@ -53,6 +51,12 @@ open class KonanCacheTask: DefaultTask() {
 
     @TaskAction
     fun compile() {
+        // Compiler doesn't create a cache if the cacheFile already exists. So we need to remove it manually.
+        if (cacheFile.exists()) {
+            val deleted = cacheFile.deleteRecursively()
+            check(deleted) { "Cannot delete stale cache: ${cacheFile.absolutePath}" }
+        }
+
         val args = listOf(
             "-g",
             "-target", target,

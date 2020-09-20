@@ -11,10 +11,9 @@ import org.jetbrains.kotlin.backend.common.atMostOne
 import org.jetbrains.kotlin.backend.common.ir.copyTo
 import org.jetbrains.kotlin.backend.common.lower.*
 import org.jetbrains.kotlin.backend.konan.*
-import org.jetbrains.kotlin.backend.konan.descriptors.target
 import org.jetbrains.kotlin.backend.konan.ir.*
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.declarations.*
@@ -31,6 +30,7 @@ import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.symbols.impl.IrFieldSymbolImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrPropertySymbolImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
+import org.jetbrains.kotlin.ir.transformStatement
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.*
@@ -243,32 +243,38 @@ private class InlineClassTransformer(private val context: Context) : IrBuildingT
         return declaration
     }
 
-    private fun IrField.isInlinedClassField(): Boolean {
-        val parentClass = this.parent as? IrClass
-        return parentClass != null && parentClass.isInlined()
-    }
-
     override fun visitGetField(expression: IrGetField): IrExpression {
         super.visitGetField(expression)
 
-        return if (expression.symbol.owner.isInlinedClassField()) {
-            expression.receiver!!
-        } else {
+        val field = expression.symbol.owner
+        val parentClass = field.parentClassOrNull
+        return if (parentClass == null || !parentClass.isInlined())
             expression
+        else {
+            builder.at(expression)
+                    .irCall(symbols.reinterpret, field.type,
+                            listOf(parentClass.defaultType, field.type)
+                    ).apply {
+                        extensionReceiver = expression.receiver!!
+                    }
         }
     }
 
     override fun visitSetField(expression: IrSetField): IrExpression {
         super.visitSetField(expression)
 
-        return if (expression.symbol.owner.isInlinedClassField()) {
+        return if (expression.symbol.owner.parentClassOrNull?.isInlined() == true) {
             // TODO: it is better to get rid of functions setting such fields.
+            // Here we're trying to maintain all IR nodes as is, albeit the transformed IR isn't equivalent to the original.
+            // By far SET_FIELD can only be in the constructor which won't be codegened.
+            // Box functions use createUninitializedInstance instead of constructor calls
+            // and are placed separately so they won't be processed here.
             val startOffset = expression.startOffset
             val endOffset = expression.endOffset
             IrBlockImpl(startOffset, endOffset, irBuiltIns.unitType).apply {
                 statements.addIfNotNull(expression.receiver)
                 statements += expression.value
-                statements += IrCallImpl(startOffset, endOffset, irBuiltIns.nothingType, symbols.ThrowNullPointerException)
+                statements += IrCallImpl(startOffset, endOffset, irBuiltIns.nothingType, symbols.throwNullPointerException)
                 statements += IrGetObjectValueImpl(startOffset, endOffset, irBuiltIns.unitType, irBuiltIns.unitClass)
             }
         } else {
@@ -391,11 +397,10 @@ private class InlineClassTransformer(private val context: Context) : IrBuildingT
                 IrFieldSymbolImpl(descriptor),
                 Name.identifier("value"),
                 declaration.defaultType,
-                Visibilities.PRIVATE,
+                DescriptorVisibilities.PRIVATE,
                 isFinal = true,
                 isExternal = false,
                 isStatic = false,
-                isFakeOverride = false
         )
         irField.parent = declaration
 
@@ -420,7 +425,7 @@ private class InlineClassTransformer(private val context: Context) : IrBuildingT
     }
 
     private fun IrBuilderWithScope.lowerConstructorCallToValue(
-            expression: IrMemberAccessExpression,
+            expression: IrMemberAccessExpression<*>,
             callee: IrConstructor
     ): IrExpression = if (callee.isPrimary) {
         expression.getValueArgument(0)!!
@@ -444,7 +449,7 @@ private class InlineClassTransformer(private val context: Context) : IrBuildingT
 
             (irConstructor.body as IrBlockBody).statements.forEach { statement ->
                 statement.setDeclarationsParent(result)
-                +statement.transform(object : IrElementTransformerVoid() {
+                +statement.transformStatement(object : IrElementTransformerVoid() {
                     override fun visitDelegatingConstructorCall(expression: IrDelegatingConstructorCall): IrExpression {
                         expression.transformChildrenVoid()
 
@@ -475,8 +480,7 @@ private class InlineClassTransformer(private val context: Context) : IrBuildingT
 
                         return expression
                     }
-
-                }, null)
+                })
             }
             +irReturn(irGet(thisVar))
         }
@@ -490,7 +494,7 @@ private val Context.getLoweredInlineClassConstructor: (IrConstructor) -> IrSimpl
     require(irConstructor.constructedClass.isInlined())
     require(!irConstructor.isPrimary)
 
-    val descriptor = WrappedSimpleFunctionDescriptor(irConstructor.descriptor.annotations, irConstructor.descriptor.source)
+    val descriptor = WrappedSimpleFunctionDescriptor()
     IrFunctionImpl(
             irConstructor.startOffset, irConstructor.endOffset,
             IrDeclarationOrigin.DEFINED,
@@ -505,7 +509,8 @@ private val Context.getLoweredInlineClassConstructor: (IrConstructor) -> IrSimpl
             returnType = irConstructor.returnType,
             isExpect = false,
             isFakeOverride = false,
-            isOperator = false
+            isOperator = false,
+            isInfix = false
     ).apply {
         descriptor.bind(this)
         parent = irConstructor.parent

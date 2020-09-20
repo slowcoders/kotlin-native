@@ -5,8 +5,12 @@
 
 package org.jetbrains.kotlin.backend.konan.llvm
 
-import kotlinx.cinterop.*
+import kotlinx.cinterop.allocArray
+import kotlinx.cinterop.get
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.toKString
 import llvm.*
+import org.jetbrains.kotlin.backend.konan.CachedLibraries
 import org.jetbrains.kotlin.library.resolver.TopologicalLibraryOrder
 import org.jetbrains.kotlin.backend.konan.Context
 import org.jetbrains.kotlin.backend.konan.hash.GlobalHash
@@ -15,22 +19,24 @@ import org.jetbrains.kotlin.descriptors.konan.CompiledKlibModuleOrigin
 import org.jetbrains.kotlin.descriptors.konan.CurrentKlibModuleOrigin
 import org.jetbrains.kotlin.descriptors.konan.DeserializedKlibModuleOrigin
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.util.file
 import org.jetbrains.kotlin.ir.util.fqNameForIrSerialization
 import org.jetbrains.kotlin.ir.util.isReal
-import org.jetbrains.kotlin.ir.util.render
 import org.jetbrains.kotlin.konan.library.KonanLibrary
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import org.jetbrains.kotlin.library.KotlinLibrary
+import org.jetbrains.kotlin.library.resolver.TopologicalLibraryOrder
 import org.jetbrains.kotlin.library.uniqueName
-import org.jetbrains.kotlin.library.unresolvedDependencies
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.utils.addToStdlib.cast
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 internal sealed class SlotType {
+    // An object is statically allocated on stack.
+    object STACK : SlotType()
+
     // Frame local arena slot can be used.
     object ARENA : SlotType()
 
@@ -55,6 +61,12 @@ internal sealed class SlotType {
 
 // Lifetimes class of reference, computed by escape analysis.
 internal sealed class Lifetime(val slotType: SlotType) {
+    object STACK : Lifetime(SlotType.STACK) {
+        override fun toString(): String {
+            return "STACK"
+        }
+    }
+
     // If reference is frame-local (only obtained from some call and never leaves).
     object LOCAL : Lifetime(SlotType.ARENA) {
         override fun toString(): String {
@@ -63,7 +75,7 @@ internal sealed class Lifetime(val slotType: SlotType) {
     }
 
     // If reference is only returned.
-    object RETURN_VALUE : Lifetime(SlotType.RETURN) {
+    object RETURN_VALUE : Lifetime(SlotType.ANONYMOUS) {
         override fun toString(): String {
             return "RETURN_VALUE"
         }
@@ -161,7 +173,8 @@ internal interface ContextUtils : RuntimeAware {
      * It may be declared as external function prototype.
      */
     val IrFunction.llvmFunction: LLVMValueRef
-        get() = llvmFunctionOrNull ?: error("$name in $file/${parent.fqNameForIrSerialization}")
+        get() = llvmFunctionOrNull
+                ?: error("$name in $file/${parent.fqNameForIrSerialization}")
 
     val IrFunction.llvmFunctionOrNull: LLVMValueRef?
         get() {
@@ -208,7 +221,7 @@ internal interface ContextUtils : RuntimeAware {
      */
     fun GlobalHash.getBytes(): ByteArray {
         val size = GlobalHash.size
-        assert(size.toLong() == LLVMStoreSizeOfType(llvmTargetData, runtime.globalHashType))
+        assert(size == LLVMStoreSizeOfType(llvmTargetData, runtime.globalHashType))
 
         return this.bits.getBytes(size)
     }
@@ -394,19 +407,58 @@ internal class Llvm(val context: Context, val llvmModule: LLVMModuleRef) {
                 .filter {
                     require(it is KonanLibrary)
                     (!it.isDefault && !context.config.purgeUserLibs) || imports.nativeDependenciesAreUsed(it)
-                } as List<KonanLibrary>
+                }.cast<List<KonanLibrary>>()
+    }
 
+    private val immediateBitcodeDependencies: List<KonanLibrary> by lazy {
+        context.config.resolvedLibraries.getFullList(TopologicalLibraryOrder).cast<List<KonanLibrary>>()
+                .filter { (!it.isDefault && !context.config.purgeUserLibs) || imports.bitcodeIsUsed(it) }
+    }
+
+    val allCachedBitcodeDependencies: List<KonanLibrary> by lazy {
+        val allLibraries = context.config.resolvedLibraries.getFullList().associateBy { it.uniqueName }
+        val result = mutableSetOf<KonanLibrary>()
+
+        fun addDependencies(cachedLibrary: CachedLibraries.Cache) {
+            cachedLibrary.bitcodeDependencies.forEach {
+                val library = allLibraries[it] ?: error("Bitcode dependency to an unknown library: $it")
+                result.add(library as KonanLibrary)
+                addDependencies(context.config.cachedLibraries.getLibraryCache(library)
+                        ?: error("Library $it is expected to be cached"))
+            }
+        }
+
+        for (library in immediateBitcodeDependencies) {
+            val cache = context.config.cachedLibraries.getLibraryCache(library)
+            if (cache != null) {
+                result += library
+                addDependencies(cache)
+            }
+        }
+
+        result.toList()
     }
 
     val allNativeDependencies: List<KonanLibrary> by lazy {
-        val cachedLibraries = context.librariesWithDependencies.filter {
-            context.config.cachedLibraries.isLibraryCached(it)
+        (nativeDependenciesToLink + allCachedBitcodeDependencies).distinct()
+    }
+
+    val allBitcodeDependencies: List<KonanLibrary> by lazy {
+        val allNonCachedDependencies = context.librariesWithDependencies.filter {
+            context.config.cachedLibraries.getLibraryCache(it) == null
         }
-        (nativeDependenciesToLink + cachedLibraries).distinct()
+        val set = (allNonCachedDependencies + allCachedBitcodeDependencies).toSet()
+        // This list is used in particular to build the libraries' initializers chain.
+        // The initializers must be called in the topological order, so make sure that the
+        // libraries list being returned is also toposorted.
+        context.config.resolvedLibraries
+                .getFullList(TopologicalLibraryOrder)
+                .cast<List<KonanLibrary>>()
+                .filter { it in set }
     }
 
     val bitcodeToLink: List<KonanLibrary> by lazy {
-        (context.config.resolvedLibraries.getFullList(TopologicalLibraryOrder) as List<KonanLibrary>)
+        (context.config.resolvedLibraries.getFullList(TopologicalLibraryOrder).cast<List<KonanLibrary>>())
                 .filter { shouldContainBitcode(it) }
     }
 
@@ -450,8 +502,11 @@ internal class Llvm(val context: Context, val llvmModule: LLVMModuleRef) {
     val initInstanceFunction = importModelSpecificRtFunction("InitInstance")
     val initSharedInstanceFunction = importModelSpecificRtFunction("InitSharedInstance")
     val updateHeapRefFunction = importModelSpecificRtFunction("UpdateHeapRef")
+    val releaseHeapRefFunction = importModelSpecificRtFunction("ReleaseHeapRef")
     val updateStackRefFunction = importModelSpecificRtFunction("UpdateStackRef")
     val updateReturnRefFunction = importModelSpecificRtFunction("UpdateReturnRef")
+    val zeroHeapRefFunction = importRtFunction("ZeroHeapRef")
+    val zeroArrayRefsFunction = importRtFunction("ZeroArrayRefs")
     val enterFrameFunction = importModelSpecificRtFunction("EnterFrame")
     val leaveFrameFunction = importModelSpecificRtFunction("LeaveFrame")
     // RTGC
@@ -467,6 +522,7 @@ internal class Llvm(val context: Context, val llvmModule: LLVMModuleRef) {
     val lookupTLS = importRtFunction("LookupTLS")
     val initRuntimeIfNeeded = importRtFunction("Kotlin_initRuntimeIfNeeded")
     val mutationCheck = importRtFunction("MutationCheck")
+    val checkLifetimesConstraint = importRtFunction("CheckLifetimesConstraint")
     val freezeSubgraph = importRtFunction("FreezeSubgraph")
     val checkMainThread = importRtFunction("CheckIsMainThread")
 

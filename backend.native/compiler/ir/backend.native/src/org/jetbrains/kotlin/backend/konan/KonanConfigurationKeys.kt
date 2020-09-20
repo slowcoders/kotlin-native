@@ -18,6 +18,8 @@ class KonanConfigKeys {
                 = CompilerConfigurationKey.create("compatible compiler versions")
         val DEBUG: CompilerConfigurationKey<Boolean>
                 = CompilerConfigurationKey.create("add debug information")
+        val DISABLE_FAKE_OVERRIDE_VALIDATOR: CompilerConfigurationKey<Boolean>
+                = CompilerConfigurationKey.create("disable fake override validator")
         val DISABLED_PHASES: CompilerConfigurationKey<List<String>> 
                 = CompilerConfigurationKey.create("disable backend phases")
         val BITCODE_EMBEDDING_MODE: CompilerConfigurationKey<BitcodeEmbedding.Mode>
@@ -138,6 +140,10 @@ class KonanConfigKeys {
                 = CompilerConfigurationKey.create("path to *.profraw coverage output")
         val OBJC_GENERICS: CompilerConfigurationKey<Boolean>
                 = CompilerConfigurationKey.create("write objc header with generics support")
+        val DEBUG_PREFIX_MAP: CompilerConfigurationKey<Map<String, String>>
+                = CompilerConfigurationKey.create("remap file source paths in debug info")
+        val PRE_LINK_CACHES: CompilerConfigurationKey<Boolean>
+                = CompilerConfigurationKey.create("perform compiler caches pre-link")
     }
 }
 

@@ -7,8 +7,9 @@ package org.jetbrains.kotlin.backend.konan.ir
 
 import org.jetbrains.kotlin.backend.common.atMostOne
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
+import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.expressions.IrConst
@@ -21,6 +22,7 @@ import org.jetbrains.kotlin.ir.types.isMarkedNullable
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 val IrField.fqNameForIrSerialization: FqName get() = this.parent.fqNameForIrSerialization.child(this.name)
 
@@ -36,15 +38,15 @@ val IrFunction.allParameters: List<IrValueParameter>
         explicitParameters
     }
 
-fun IrClass.isUnit() = this.fqNameForIrSerialization == KotlinBuiltIns.FQ_NAMES.unit.toSafe()
+fun IrClass.isUnit() = this.fqNameForIrSerialization == StandardNames.FqNames.unit.toSafe()
 
-fun IrClass.isKotlinArray() = this.fqNameForIrSerialization == KotlinBuiltIns.FQ_NAMES.array.toSafe()
+fun IrClass.isKotlinArray() = this.fqNameForIrSerialization == StandardNames.FqNames.array.toSafe()
 
 val IrClass.superClasses get() = this.superTypes.map { it.classifierOrFail as IrClassSymbol }
 fun IrClass.getSuperClassNotAny() = this.superClasses.map { it.owner }.atMostOne { !it.isInterface && !it.isAny() }
 
-fun IrClass.isAny() = this.fqNameForIrSerialization == KotlinBuiltIns.FQ_NAMES.any.toSafe()
-fun IrClass.isNothing() = this.fqNameForIrSerialization == KotlinBuiltIns.FQ_NAMES.nothing.toSafe()
+fun IrClass.isAny() = this.fqNameForIrSerialization == StandardNames.FqNames.any.toSafe()
+fun IrClass.isNothing() = this.fqNameForIrSerialization == StandardNames.FqNames.nothing.toSafe()
 
 fun IrClass.getSuperInterfaces() = this.superClasses.map { it.owner }.filter { it.isInterface }
 
@@ -53,7 +55,7 @@ val IrProperty.isReal: Boolean get() = this.descriptor.kind.isReal
 val IrField.isReal: Boolean get() = this.descriptor.kind.isReal
 
 val IrSimpleFunction.isOverridable: Boolean
-    get() = visibility != Visibilities.PRIVATE
+    get() = visibility != DescriptorVisibilities.PRIVATE
             && modality != Modality.FINAL
             && (parent as? IrClass)?.isFinalClass != true
 
@@ -67,12 +69,12 @@ val IrClass.isFinalClass: Boolean
 
 fun IrClass.isSpecialClassWithNoSupertypes() = this.isAny() || this.isNothing()
 
-fun <T> IrDeclaration.getAnnotationArgumentValue(fqName: FqName, argumentName: String): T? {
+inline fun <reified T> IrDeclaration.getAnnotationArgumentValue(fqName: FqName, argumentName: String): T? {
     val annotation = this.annotations.findAnnotation(fqName) ?: return null
     for (index in 0 until annotation.valueArgumentsCount) {
         val parameter = annotation.symbol.owner.valueParameters[index]
         if (parameter.name == Name.identifier(argumentName)) {
-            val actual = annotation.getValueArgument(index) as? IrConst<T>
+            val actual = annotation.getValueArgument(index).safeAs<IrConst<T>>()
             return actual?.value
         }
     }

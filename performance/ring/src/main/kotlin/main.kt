@@ -26,6 +26,7 @@ class RingLauncher : Launcher() {
             mutableMapOf(
                     "AbstractMethod.sortStrings" to BenchmarkEntryWithInit.create(::AbstractMethodBenchmark, { sortStrings() }),
                     "AbstractMethod.sortStringsWithComparator" to BenchmarkEntryWithInit.create(::AbstractMethodBenchmark, { sortStringsWithComparator() }),
+                    "AllocationBenchmark.allocateObjects" to BenchmarkEntryWithInit.create(::AllocationBenchmark, { allocateObjects() }),
                     "ClassArray.copy" to BenchmarkEntryWithInit.create(::ClassArrayBenchmark, { copy() }),
                     "ClassArray.copyManual" to BenchmarkEntryWithInit.create(::ClassArrayBenchmark, { copyManual() }),
                     "ClassArray.filterAndCount" to BenchmarkEntryWithInit.create(::ClassArrayBenchmark, { filterAndCount() }),
@@ -208,7 +209,8 @@ class RingLauncher : Launcher() {
                     "Casts.classCast" to BenchmarkEntryWithInit.create(::CastsBenchmark, { classCast() }),
                     "Casts.interfaceCast" to BenchmarkEntryWithInit.create(::CastsBenchmark, { interfaceCast() }),
                     "LocalObjects.localArray" to BenchmarkEntryWithInit.create(::LocalObjectsBenchmark, { localArray() }),
-                    "LinkedListWithAtomicsBenchmark" to BenchmarkEntryWithInit.create(::LinkedListWithAtomicsBenchmark, { ensureNext() })
+                    "LinkedListWithAtomicsBenchmark" to BenchmarkEntryWithInit.create(::LinkedListWithAtomicsBenchmark, { ensureNext() }),
+                    "Inheritance.baseCalls" to BenchmarkEntryWithInit.create(::InheritanceBenchmark, { baseCalls() })
             )
     )
 }

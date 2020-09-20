@@ -145,6 +145,9 @@ class K2NativeCompilerArguments : CommonCompilerArguments() {
     )
     var exportedLibraries: Array<String>? = null
 
+    @Argument(value="-Xdisable-fake-override-validator", description = "Disable IR fake override validator")
+    var disableFakeOverrideValidator: Boolean = false
+
     @Argument(
             value = "-Xframework-import-header",
             valueDescription = "<header>",
@@ -264,6 +267,16 @@ class K2NativeCompilerArguments : CommonCompilerArguments() {
 
     @Argument(value = "-Xmetadata-klib", description = "Produce a klib that only contains the declarations metadata")
     var metadataKlib: Boolean = false
+
+    @Argument(value = "-Xdebug-prefix-map", valueDescription = "<old1=new1,old2=new2,...>", description = "Remap file source directory paths in debug info")
+    var debugPrefixMap: Array<String>? = null
+
+    @Argument(
+            value = "-Xpre-link-caches",
+            valueDescription = "{disable|enable}",
+            description = "Perform caches pre-link"
+    )
+    var preLinkCaches: String? = null
 
     override fun configureAnalysisFlags(collector: MessageCollector): MutableMap<AnalysisFlag<*>, Any> =
             super.configureAnalysisFlags(collector).also {
