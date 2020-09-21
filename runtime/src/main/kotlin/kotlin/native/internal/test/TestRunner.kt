@@ -26,9 +26,6 @@ internal class TestRunner(val suites: List<TestSuite>, args: Array<String>) {
             it.startsWith("--gtest_") || it.startsWith("--ktest_") || it == "--help" || it == "-h"
         }.forEach {
             val arg = it.split('=')
-            println("RTZZ RTGC ARG ==============")
-            println(arg)
-
             when (arg.size) {
                 1 -> when (arg[0]) {
                     "--gtest_list_tests",
@@ -267,10 +264,8 @@ internal class TestRunner(val suites: List<TestSuite>, args: Array<String>) {
     }
 
     fun run(): Int {
-        println("+++++++++ TestRunner.run " + runTests)
         if (!runTests)
             return 0
-        println("+++++++++ TestRunner.run " + runTests)
         sendToListeners { startTesting(this@TestRunner) }
         val totalTime = measureTimeMillis {
             var i = 1

@@ -143,14 +143,12 @@ void AppendToInitializersTail(InitNode *next) {
 }
 
 void Kotlin_initRuntimeIfNeeded() {
-  printf("===============================222");
   if (!isValidRuntime()) {
     initRuntime();
     RuntimeCheck(updateStatusIf(::runtimeState, SUSPENDED, RUNNING), "Cannot transition state to RUNNING for init");
     // Register runtime deinit function at thread cleanup.
     konan::onThreadExit(Kotlin_deinitRuntimeCallback, runtimeState);
   }
-  printf("===============================333");
 }
 
 void Kotlin_deinitRuntimeIfNeeded() {

@@ -66,7 +66,6 @@ extern "C" RUNTIME_USED int Init_and_run_start(int argc, const char** argv, int 
 }
 
 extern "C" RUNTIME_USED int Konan_main(int argc, const char** argv) {
-    printf("=========================================");
     return Init_and_run_start(argc, argv, 1);
 }
 

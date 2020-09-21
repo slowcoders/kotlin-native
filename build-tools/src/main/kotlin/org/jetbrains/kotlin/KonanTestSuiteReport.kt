@@ -53,8 +53,6 @@ class KonanTestSuiteReportEnvironment(val name: String, val project: Project, va
     fun executeTest(testName: String, action:() -> Unit) {
         var test: KonanTestCaseReport?
         try {
-            println("RTZZ RTGC ==============")
-            println("testName")
             tc?.startTest(testName)
             action()
             tc?.passTest(testName)
