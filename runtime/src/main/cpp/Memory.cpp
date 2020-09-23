@@ -152,6 +152,7 @@ class ScopedRefHolder {
 
   ScopedRefHolder(ScopedRefHolder&& other) noexcept: obj_(other.obj_) {
     other.obj_ = nullptr;
+    RTGC_LOG("ScopedRefHolder created %p\n", &other);
   }
 
   ScopedRefHolder& operator=(const ScopedRefHolder&) = delete;
@@ -159,6 +160,7 @@ class ScopedRefHolder {
   ScopedRefHolder& operator=(ScopedRefHolder&& other) noexcept {
     ScopedRefHolder tmp(std::move(other));
     swap(tmp);
+    RTGC_LOG("ScopedRefHolder assigned %p\n", &other);
     return *this;
   }
 
@@ -222,6 +224,8 @@ class CycleDetector {
 
     auto it = candidateList_.insert(candidateList_.begin(), candidate);
     candidateInList_.emplace(candidate, it);
+    RTGC_LOG("CycleDetector insertCandidate %p\n", candidate);
+
   }
 
   void removeCandidate(KRef candidate) {
@@ -232,6 +236,7 @@ class CycleDetector {
       return;
     candidateList_.erase(it->second);
     candidateInList_.erase(it);
+    RTGC_LOG("CycleDetector removeCandidate %p\n", candidate);
   }
 
   SimpleMutex lock_;
@@ -874,8 +879,22 @@ inline void traverseReferredObjects(ObjHeader* obj, func process) {
   });
 }
 
+//*
 template <typename func>
-inline void traverseContainerObjects(ContainerHeader* container, func process) {
+inline void traverseContainerObjectFields(ContainerHeader* container, func process) {
+  RuntimeAssert(!isAggregatingFrozenContainer(container), "Must not be called on such containers");
+  ObjHeader* obj = reinterpret_cast<ObjHeader*>(container + 1);
+
+  for (uint32_t i = 0; i < container->objectCount(); ++i) {
+    traverseObjectFields(obj, process);
+    obj = reinterpret_cast<ObjHeader*>(
+      reinterpret_cast<uintptr_t>(obj) + objectSize(obj));
+  }
+}
+
+/*/
+template <typename func>
+inline void traverseContainerObjects_obsolete(ContainerHeader* container, func process) {
   RuntimeAssert(!isAggregatingFrozenContainer(container), "Must not be called on such containers");
   ObjHeader* obj = reinterpret_cast<ObjHeader*>(container + 1);
   for (uint32_t i = 0; i < container->objectCount(); ++i) {
@@ -887,10 +906,11 @@ inline void traverseContainerObjects(ContainerHeader* container, func process) {
 
 template <typename func>
 inline void traverseContainerObjectFields(ContainerHeader* container, func process) {
-  traverseContainerObjects(container, [process](ObjHeader* obj) {
+  traverseContainerObjects_obsolete(container, [process](ObjHeader* obj) {
     traverseObjectFields(obj, process);
   });
 }
+//*/
 
 template <typename func>
 inline void traverseContainerReferredObjects(ContainerHeader* container, func process) {
@@ -1193,12 +1213,12 @@ ALWAYS_INLINE void runDeallocationHooks(ContainerHeader* container) {
 void freeContainer(ContainerHeader* container, int garbageNodeId) {
   RuntimeAssert(container != nullptr, "this kind of container shalln't be freed");
 
-  RTGC_LOG("## RTGC free container %p(%d)\n", container, garbageNodeId);
-
   if (isAggregatingFrozenContainer(container)) {
     freeAggregatingFrozenContainer(container);
     return;
   }
+
+  RTGC_LOG("## RTGC free container %p(%d)\n", container, garbageNodeId);
 
   runDeallocationHooks(container);
   container->markDestroyed();
@@ -1224,15 +1244,19 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
   else {
     // Now let's clean all object's fields in this container.
     traverseContainerObjectFields(container, [](ObjHeader** location, ObjHeader* owner) {
+          RTGC_LOG("--- cleaning not freeable %p\n", location);
           ZeroHeapRef(location);
     });
   }
   // And release underlying memory.
   if (isFreeable(container)) {
     container->setColorEvenIfGreen(CONTAINER_TAG_GC_BLACK);
-    if (!container->buffered())
+    if (!container->buffered()) {
       scheduleDestroyContainer(memoryState, container);
+    }
   }
+
+  // RTGC_LOG("## RTGC free container done %p(%d)\n", container, garbageNodeId);
 }
 
 namespace {
@@ -1614,7 +1638,7 @@ void dumpContainerContent(ContainerHeader* container) {
     MEMORY_LOG("%s aggregating container %p with %d objects rc=%d\n",
                colorNames[container->color()], container, container->objectCount(), container->refCount());
     ContainerHeader** subContainer = reinterpret_cast<ContainerHeader**>(container + 1);
-    for (int i = 0; i < container->objectCount(); ++i) {
+    for (uint32_t i = 0; i < container->objectCount(); ++i) {
       ContainerHeader* sub = *subContainer++;
       MEMORY_LOG("    container %p\n ", sub);
       dumpContainerContent(sub);
@@ -2215,7 +2239,7 @@ void deinitMemory(MemoryState* memoryState) {
   atomicAdd(&pendingDeinit, 1);
 #if USE_GC
   bool lastMemoryState = atomicAdd(&aliveMemoryStatesCount, -1) == 0;
-  bool checkLeaks = Kotlin_memoryLeakCheckerEnabled() && lastMemoryState;
+  bool checkLeaks __attribute__((unused))= Kotlin_memoryLeakCheckerEnabled() && lastMemoryState;
   if (lastMemoryState) {
    garbageCollect(memoryState, true);
 #if USE_CYCLIC_GC
@@ -3164,6 +3188,7 @@ void freezeCyclic(ObjHeader* root,
 // These hooks are only allowed to modify `obj` subgraph.
 void runFreezeHooks(ObjHeader* obj) {
   if (obj->type_info() == theWorkerBoundReferenceTypeInfo) {
+    RTGC_LOG("runFreezeHooks: %p\n", obj)
     WorkerBoundReferenceFreezeHook(obj);
   }
 }
@@ -3373,6 +3398,8 @@ template <typename C>
 OBJ_GETTER(createAndFillArray, const C& container) {
   auto* result = AllocArrayInstance(theArrayTypeInfo, container.size(), OBJ_RESULT)->array();
   KRef* place = ArrayAddressOfElementAt(result, 0);
+  RTGC_LOG("createAndFillArray: %p\n", result);
+
   for (KRef it: container) {
     UpdateHeapRef(place++, it, result->obj());
   }
@@ -3383,6 +3410,7 @@ OBJ_GETTER0(detectCyclicReferences) {
   auto rootset = CycleDetector::collectRootset();
 
   KStdVector<KRef> cyclic;
+  RTGC_LOG("detectCyclicReferences\n");
 
   for (KRef root: rootset.roots) {
     if (!findCycleWithDFS(root, rootset).empty()) {
@@ -3395,7 +3423,7 @@ OBJ_GETTER0(detectCyclicReferences) {
 
 OBJ_GETTER(findCycle, KRef root) {
   auto rootset = CycleDetector::collectRootset();
-
+  RTGC_LOG("findCycle: %p\n", root);
   auto cycle = findCycleWithDFS(root, rootset);
   if (cycle.empty()) {
     RETURN_OBJ(nullptr);
@@ -3410,6 +3438,7 @@ OBJ_GETTER(findCycle, KRef root) {
 MetaObjHeader* ObjHeader::createMetaObject(TypeInfo** location) {
   TypeInfo* typeInfo = *location;
   RuntimeCheck(!hasPointerBits(typeInfo, OBJECT_TAG_MASK), "Object must not be tagged");
+  RTGC_LOG("ObjHeader::createMetaObject: %p\n", typeInfo);
 
 #if !KONAN_NO_THREADS
   if (typeInfo->typeInfo_ != typeInfo) {
@@ -3707,6 +3736,8 @@ void UpdateReturnRefRelaxed(ObjHeader** returnSlot, const ObjHeader* value) {
 }
 
 void ZeroArrayRefs(ArrayHeader* array) {
+  RTGC_LOG("ZeroArrayRefs: %p\n", array);
+
   for (uint32_t index = 0; index < array->count_; ++index) {
     ObjHeader** location = ArrayAddressOfElementAt(array, index);
     zeroHeapRef(location);
@@ -3852,6 +3883,8 @@ KBoolean Kotlin_native_internal_GC_getTuneThreshold(KRef) {
 }
 
 OBJ_GETTER(Kotlin_native_internal_GC_detectCycles, KRef) {
+  RTGC_LOG("Kotlin_native_internal_GC_detectCycles");
+
 #if USE_CYCLE_DETECTOR
   if (!KonanNeedDebugInfo || !Kotlin_memoryLeakCheckerEnabled()) RETURN_OBJ(nullptr);
   RETURN_RESULT_OF0(detectCyclicReferences);
@@ -3861,6 +3894,8 @@ OBJ_GETTER(Kotlin_native_internal_GC_detectCycles, KRef) {
 }
 
 OBJ_GETTER(Kotlin_native_internal_GC_findCycle, KRef, KRef root) {
+  RTGC_LOG("Kotlin_native_internal_GC_findCycle");
+
 #if USE_CYCLE_DETECTOR
   RETURN_RESULT_OF(findCycle, root);
 #else

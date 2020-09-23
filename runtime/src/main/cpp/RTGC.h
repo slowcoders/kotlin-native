@@ -26,8 +26,15 @@ static const int CYCLIC_NODE_ID_START = 2;
 static const int ENABLE_RTGC_LOG = 0;
 bool rtgc_trap() NO_INLINE;
 
-#define RTGC_LOG if (ENABLE_RTGC_LOG) printf
-#define RTGC_TRAP if (rtgc_trap()) printf
+#if ENABLE_RTGC_LOG
+#define RTGC_LOG(...) konan::consolePrintf(__VA_ARGS__);
+#define RTGC_TRAP(...) if (rtgc_trap()) konan::consolePrintf(__VA_ARGS__);
+#else
+#define RTGC_LOG(...)
+#define RTGC_TRAP(...)
+#endif
+
+
 void RTGC_dumpRefInfo(GCObject*) NO_INLINE;
 void RTGC_Error(GCObject* obj) NO_INLINE;
 
