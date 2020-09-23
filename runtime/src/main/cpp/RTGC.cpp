@@ -102,7 +102,8 @@ void GCRefList::push(GCObject* item) {
 void GCRefList::remove(GCObject* item) {
     GCRefChain* prev = topChain();
     if (prev->obj_ == item) {
-        first_ = prev->next_ - g_refChains;
+        GCRefChain* next = prev->next_;
+        first_ = (next == NULL) ? 0 : prev->next_ - g_refChains;
         recycleChain(prev, "first");
         return;
     }
@@ -204,7 +205,7 @@ void GCRefList::setFirst(GCRefChain* newFirst) {
 void OnewayNode::dealloc() {
     RuntimeAssert(isLocked(), "GCNode is not locked")
     if (dump_recyle_log) {//} || node_id % 1000 == 0) {
-         printf("OnewayNode::dealloc, top %p\n", externalReferrers.topChain());
+         RTGC_LOG("OnewayNode::dealloc, top %p\n", externalReferrers.topChain());
     }
     externalReferrers.clear();
 }
@@ -249,7 +250,9 @@ void RTGCGlobal::init() {
     g_freeCyclicNode = new CyclicNode[CNT_CYCLIC_NODE];
     g_cyclicNodes = g_freeCyclicNode;
     g_freeRefChain = new GCRefChain[CNT_REF_CHAIN];
+
     GCRefList::g_refChains = g_freeRefChain - 1;
+    RTGC_LOG("g_freeRefChain = %p\n", GCRefList::g_refChains + 1);
 
     int i = CNT_CYCLIC_NODE-1;
     for (CyclicNode* node = g_freeCyclicNode; --i >= 0;) {

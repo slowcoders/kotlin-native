@@ -276,7 +276,7 @@ public:
 #ifdef KONAN_NO_THREADS
     ref_.count += RTGC_MEMBER_REF_INCREEMENT;
 #else
-    int64_t value __attribute__((unused)) = Atomic ?
+    int64_t value __attribute__((unused))= Atomic ?
         __sync_add_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count += RTGC_MEMBER_REF_INCREEMENT;
 #endif
 #if KONAN_ENABLE_ASSERT
@@ -298,9 +298,9 @@ public:
     }
 #endif    
 #ifdef KONAN_NO_THREADS
-    int64_t value __attribute__((unused)) = ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
+    int64_t value __attribute__((unused))= ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
 #else
-    int64_t value __attribute__((unused)) = Atomic ?
+    int64_t value __attribute__((unused))= Atomic ?
        __sync_sub_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
 #endif
   }
@@ -308,9 +308,9 @@ public:
   template <bool Atomic>
   inline RTGCRef incRootCount() {
 #ifdef KONAN_NO_THREADS
-    int64_t value __attribute__((unused)) = ref_.count += RTGC_ROOT_REF_INCREEMENT;
+    int64_t value __attribute__((unused))= ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #else
-    int64_t value __attribute__((unused)) = Atomic ?
+    int64_t value __attribute__((unused))= Atomic ?
        __sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #endif
 #if KONAN_ENABLE_ASSERT
@@ -337,9 +337,9 @@ public:
     }
 #endif
 #ifdef KONAN_NO_THREADS
-    int64_t value __attribute__((unused)) = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
+    int64_t value __attribute__((unused))= ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #else
-    int64_t value __attribute__((unused)) = Atomic ?
+    int64_t value __attribute__((unused))= Atomic ?
        __sync_sub_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #endif
     return *(RTGCRef*)&value;
@@ -354,9 +354,9 @@ public:
     }
 #endif    
 #ifdef KONAN_NO_THREADS
-    int value __attribute__((unused)) = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
+    int value __attribute__((unused))= ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #else
-    int value __attribute__((unused)) = Atomic ?
+    int value __attribute__((unused))= Atomic ?
        __sync_sub_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #endif
     return refCount();//value >> CONTAINER_TAG_SHIFT;
@@ -370,9 +370,9 @@ public:
     }
 #endif    
   #ifdef KONAN_NO_THREADS
-      int value __attribute__((unused)) = ref_.count -= RTGC_ROOT_REF_INCREEMENT;
+      int value __attribute__((unused))= ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #else
-      int value __attribute__((unused)) = shareable() ?
+      int value __attribute__((unused))= shareable() ?
          __sync_sub_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #endif
       return refCount();//value >> CONTAINER_TAG_SHIFT;
@@ -433,9 +433,9 @@ public:
   inline void setColorUnlessGreen(unsigned color) {
     // TODO: do we need atomic color update?
     if (RTGC) return;
-    unsigned flags = rtNode.flags_;
-    if ((flags & CONTAINER_TAG_GC_COLOR_MASK) != CONTAINER_TAG_GC_GREEN)
-        rtNode.flags_ = (flags & ~CONTAINER_TAG_GC_COLOR_MASK) | color;
+    unsigned objectCount = rtNode.flags_;//objectCount_;
+    if ((objectCount & CONTAINER_TAG_GC_COLOR_MASK) != CONTAINER_TAG_GC_GREEN)
+        rtNode.flags_ /*objectCount_*/ = (objectCount & ~CONTAINER_TAG_GC_COLOR_MASK) | color;
   }
 
   inline bool buffered() const {
@@ -702,7 +702,7 @@ MODEL_VARIANTS(void, SetStackRef, ObjHeader** location, const ObjHeader* object)
 // Sets heap location.
 MODEL_VARIANTS(void, SetHeapRef, ObjHeader** location, const ObjHeader* object);
 // Zeroes heap location.
-void ZeroHeapRef(ObjHeader** location);
+void ZeroHeapRef(ObjHeader** location) RUNTIME_NOTHROW;
 // Zeroes an array.
 void ZeroArrayRefs(ArrayHeader* array) RUNTIME_NOTHROW;
 // Zeroes stack location.

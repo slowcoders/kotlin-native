@@ -506,9 +506,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
 
         // if (declaration.fileEntry.name.contains("/_local/")) {
         //     var name = declaration.fileEntry.name;
-        //     if (name == null) {
-        //         println("wrong name")
-        //     }
+        //         println(name)
         // }
 
         @Suppress("UNCHECKED_CAST")

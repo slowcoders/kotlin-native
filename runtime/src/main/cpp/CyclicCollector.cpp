@@ -85,7 +85,7 @@ class Locker {
 };
 
 template <typename func>
-inline void traverseObjectFields(ObjHeader* obj, func process) {
+inline void traverseObjectFields_cyclic(ObjHeader* obj, func process) {
   RuntimeAssert(obj != nullptr, "Must be non null");
   const TypeInfo* typeInfo = obj->type_info();
   if (typeInfo != theArrayTypeInfo) {
@@ -209,7 +209,7 @@ class CyclicCollector {
            RuntimeCheck(objContainer->shareable(), "Must be shareable");
            if (visited.count(obj) == 0) {
              visited.insert(obj);
-             traverseObjectFields(obj, [&toVisit, obj, &sideRefCounts](ObjHeader** location) {
+             traverseObjectFields_cyclic(obj, [&toVisit, obj, &sideRefCounts](ObjHeader** location) {
                 ObjHeader* ref = *location;
                 if (ref != nullptr) {
                   COLLECTOR_LOG("object field %p in %p\n", ref, obj)
@@ -270,7 +270,7 @@ class CyclicCollector {
              restartCount++;
              goto restart;
            }
-           traverseObjectFields(obj, [&toVisit, &visited](ObjHeader** location) {
+           traverseObjectFields_cyclic(obj, [&toVisit, &visited](ObjHeader** location) {
               ObjHeader* ref = *location;
               if (ref != nullptr && (visited.count(ref) == 0)) {
                 toVisit.push_back(ref);
@@ -390,7 +390,7 @@ class CyclicCollector {
         COLLECTOR_LOG("clearing %d release candidates on %p\n", toRelease_.size(), worker);
         for (auto* it: toRelease_) {
           COLLECTOR_LOG("clear references in %p\n", it)
-          traverseObjectFields(it, [&heapRefsToRelease](ObjHeader** location) {
+          traverseObjectFields_cyclic(it, [&heapRefsToRelease](ObjHeader** location) {
             // Avoid using ZeroHeapRef here: it can provoke garbageCollect() which would then stuck on taking [lock_]
             // (which is already taken above).
             auto* value = *location;

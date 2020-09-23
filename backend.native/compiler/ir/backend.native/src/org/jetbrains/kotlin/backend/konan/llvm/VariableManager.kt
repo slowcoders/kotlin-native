@@ -77,7 +77,6 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         val layer = argLists.size;
         for (v in variables) {
             if (!(v is SlotRecord)) continue;
-
             val values = v.loadedValues;
             var i = values.size;
             while ( --i >= 0 ) {
