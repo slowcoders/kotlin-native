@@ -24,10 +24,14 @@
 
 // CycleDetector internally uses static local with runtime initialization,
 // which requires atomics. Atomics are not available on WASM.
+#if RTGC
+#define USE_CYCLE_DETECTOR 0
+#else
 #ifdef KONAN_WASM
 #define USE_CYCLE_DETECTOR 0
 #else
 #define USE_CYCLE_DETECTOR 1
+#endif
 #endif
 
 #include "Alloc.h"

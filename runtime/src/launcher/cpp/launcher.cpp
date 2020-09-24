@@ -43,7 +43,13 @@ extern "C" KInt Konan_start(const ObjHeader*);
 extern "C" KInt Konan_run_start(int argc, const char** argv) {
     ObjHolder args;
     setupArgs(argc, argv, args.slot());
-    return Konan_start(args.obj());
+    //konan::consolePrintf("Konan_start argc = %d\n", argc);
+    for (int i = 0; i < argc; i ++) {
+      //konan::consolePrintf("Konan_start arg = %s\n", argv[i]);
+    }
+    KInt res = Konan_start(args.obj());
+    //konan::consolePrintf("Konan_start res = %d\n", res);
+    return res;
 }
 
 extern "C" RUNTIME_USED int Init_and_run_start(int argc, const char** argv, int memoryDeInit) {

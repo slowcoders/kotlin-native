@@ -107,6 +107,11 @@ fun test(str: String) {
     try {
 printTime("start")
 
+
+runFreezeStressTest();
+printTime("runFreezeStressTest")
+
+
 runArray0Test()
 runWeakTest1()
 runWeakTest2()
@@ -158,9 +163,6 @@ printTime("runHashSet0Test")
 
 runEnumIdentityTest();
 printTime("runEnumIdentityTest")
-
-runFreezeStressTest();
-printTime("runFreezeStressTest")
 
 
 runWorker1Test();

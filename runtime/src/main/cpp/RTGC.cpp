@@ -56,20 +56,24 @@ bool GCNode::isLocked() {
     return curr_thread == g_lockThread;
 }
 
-static bool dump_recyle_log = false;
-GCRefChain* popFreeChain() {
+static int dump_recycle_log = ENABLE_RTGC_LOG;
+static GCRefChain* popFreeChain() {
     assert(GCNode::isLocked());
     GCRefChain* freeChain = RTGCGlobal::g_freeRefChain;
     if (freeChain == NULL) {
-        printf("Insufficient RefChains!");
-        GCNode::dumpGCLog();
-        dump_recyle_log = true;
+        RTGC_LOG("Insufficient RefChains!");
+        if (ENABLE_RTGC_LOG) {
+            GCNode::dumpGCLog();
+            dump_recycle_log ++;
+        }
         CyclicNode::detectCycles();
         freeChain = RTGCGlobal::g_freeRefChain;
-        GCNode::dumpGCLog();
-        dump_recyle_log = false;
+        if (ENABLE_RTGC_LOG) {
+            dump_recycle_log --;
+            GCNode::dumpGCLog();
+        }
         if (freeChain == NULL) {
-            printf("Out of RefChains!");
+            RTGC_LOG("Out of RefChains!");
             ThrowOutOfMemoryError();
         }
     }
@@ -82,28 +86,31 @@ GCRefChain* popFreeChain() {
     return freeChain;
 }
 
-void recycleChain(GCRefChain* expired, const char* type) {
+static void recycleChain(GCRefChain* expired, const char* type) {
     SET_NEXT_FREE(expired, RTGCGlobal::g_freeRefChain);
     RTGCGlobal::cntRefChain --;
-    if (dump_recyle_log) {//} || node_id % 1000 == 0) {
-        printf("RTGC Recycle chain: %d\n", RTGCGlobal::cntRefChain);
+    if (ENABLE_RTGC_LOG && dump_recycle_log > 0) {//} || node_id % 1000 == 0) {
+        RTGC_LOG("RTGC Recycle chain: %d\n", RTGCGlobal::cntRefChain);
     }
     RTGCGlobal::g_freeRefChain = expired;
+}
+
+static int getRefChainIndex(GCRefChain* chain) {
+    return chain == NULL ? 0 : chain - GCRefList::g_refChains;
 }
 
 void GCRefList::push(GCObject* item) {
     GCRefChain* chain = popFreeChain();
     chain->obj_ = item;
     chain->next_ = this->topChain();
-    first_ = chain - g_refChains;
+    first_ = getRefChainIndex(chain);
 }
 
-
 void GCRefList::remove(GCObject* item) {
+    RuntimeAssert(this->first_ != 0, "RefList is empty");
     GCRefChain* prev = topChain();
     if (prev->obj_ == item) {
-        GCRefChain* next = prev->next_;
-        first_ = (next == NULL) ? 0 : prev->next_ - g_refChains;
+        first_ = getRefChainIndex(prev->next_);
         recycleChain(prev, "first");
         return;
     }
@@ -118,12 +125,13 @@ void GCRefList::remove(GCObject* item) {
 }
 
 void GCRefList::moveTo(GCObject* item, GCRefList* receiver) {
+    RuntimeAssert(this->first_ != 0, "RefList is empty");
     GCRefChain* prev = topChain();
     if (prev->obj_ == item) {
-        first_ = prev->next_ - g_refChains;
+        first_ = getRefChainIndex(prev->next_);
         // move to receiver;
         prev->next_ = receiver->topChain();
-        receiver->first_ = prev - g_refChains;
+        receiver->first_ = getRefChainIndex(prev);
         return;
     }
 
@@ -135,7 +143,7 @@ void GCRefList::moveTo(GCObject* item, GCRefList* receiver) {
     prev->next_ = chain->next_;
     // move to receiver;
     chain->next_ = receiver->topChain();
-    receiver->first_ = chain - g_refChains;
+    receiver->first_ = getRefChainIndex(chain);
 }
 
 GCObject* GCRefList::pop() { 
@@ -143,7 +151,7 @@ GCObject* GCRefList::pop() {
     if (chain == NULL) { 
         return NULL;
     }
-    first_ = chain->next_ - g_refChains; 
+    first_ = getRefChainIndex(chain->next_); 
     GCObject* obj = chain->obj();
     recycleChain(chain, "pop");
     return obj;
@@ -154,7 +162,7 @@ bool GCRefList::tryRemove(GCObject* item) {
     for (GCRefChain* chain = topChain(); chain != NULL; chain = chain->next()) {
         if (chain->obj_ == item) {
             if (prev == NULL) {
-                first_ = chain->next_ - g_refChains;;
+                first_ = getRefChainIndex(chain->next_);
             }
             else {
                 prev->next_ = chain->next_;
@@ -186,25 +194,20 @@ GCRefChain* GCRefList::find(int node_id) {
 }
 
 void GCRefList::setFirst(GCRefChain* newFirst) {
-    if (dump_recyle_log) {//} || node_id % 1000 == 0) {
-         printf("RTGC setFirst %p, top %p\n", newFirst, topChain());
+    if (ENABLE_RTGC_LOG && dump_recycle_log > 0) {//} || node_id % 1000 == 0) {
+         RTGC_LOG("RTGC setFirst %p, top %p\n", newFirst, topChain());
     }
     for (GCRefChain* chain = topChain(); chain != newFirst; ) {
         GCRefChain* next = chain->next_;
         recycleChain(chain, "setLast");
         chain = next;
     }
-    if (newFirst == NULL) {
-        this->first_ = 0;
-    }
-    else {
-        this->first_ = newFirst - g_refChains;
-    }
+    this->first_ = getRefChainIndex(newFirst);
 }
 
 void OnewayNode::dealloc() {
     RuntimeAssert(isLocked(), "GCNode is not locked")
-    if (dump_recyle_log) {//} || node_id % 1000 == 0) {
+    if (ENABLE_RTGC_LOG && dump_recycle_log > 0) {//} || node_id % 1000 == 0) {
          RTGC_LOG("OnewayNode::dealloc, top %p\n", externalReferrers.topChain());
     }
     externalReferrers.clear();

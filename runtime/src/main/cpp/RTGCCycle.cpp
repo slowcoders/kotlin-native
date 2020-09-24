@@ -157,7 +157,7 @@ void CyclicNode::detectCyclicNodes(GCObject* tracingObj, GCRefList* tracingList,
         }
         case IN_TRACING: // 순환 경로 발견
         {
-            RTGC_LOG("## RTGC Cyclic Found %p-%d", referrer, referrer->getNodeId());
+            RTGC_LOG("## RTGC Cyclic Found %p-%d\n", referrer, referrer->getNodeId());
             if (referrer_node == tracingObj->getNode()) {
                 RTGC_LOG("## RTGC Cyclic inside: %p:%p, %p:%p\n", tracingObj, referrer->getNode(), referrer, referrer->getNode());
                 break;
@@ -190,11 +190,11 @@ void CyclicNode::detectCyclicNodes(GCObject* tracingObj, GCRefList* tracingList,
     }
     if (last_node_id != tracingObj->getNodeId()) {
         if (last_node_id < CYCLIC_NODE_ID_START) {
-    // printf("## ___ deallic OnewayNode %p\n", current_node->externalReferrers.topChain());
+            RTGC_LOG("## ___ deallic OnewayNode %p\n", current_node->externalReferrers.topChain());
             ((OnewayNode*)current_node)->dealloc();
         }
         else {
-    // printf("## RTGC deallic CyclicNode 0\n");
+            RTGC_LOG("## RTGC deallic CyclicNode %d\n", ((CyclicNode*)current_node)->getId());
             ((CyclicNode*)current_node)->dealloc();
         }
     }
@@ -206,33 +206,34 @@ void CyclicNode::detectCycles() {
     GCRefList tracingList;
     GCRefList finishedList;
     for (GCObject* root = g_cyclicTestNodes.pop(); root != NULL; root = g_cyclicTestNodes.pop()) {
-        RTGC_LOG("## RTGC c root: %p, next: %p/n", root, g_cyclicTestNodes.topChain() == NULL ? NULL : g_cyclicTestNodes.topChain()->obj());
+        RTGC_LOG("## RTGC c root: %p, next: %p\n", root, g_cyclicTestNodes.topChain() == NULL ? NULL : g_cyclicTestNodes.topChain()->obj());
         int last_node_id = root->getNodeId();
         GCNode* root_node = root->getNode();
         assert(root->getNodeId() != 0);
         if (!root->isNeedCyclicTest()) {
-            RTGC_LOG("## RTGC skip root: %p/n", root);
+            RTGC_LOG("## RTGC skip root: %p\n", root);
             continue;
         }
         if (!root->getNode()->isSuspectedCyclic()) {
-            RTGC_LOG("## RTGC skip node root: %p/n", root);
+            RTGC_LOG("## RTGC skip node root: %p\n", root);
             root->clearNeedCyclicTest();
             continue;
         }
-        RTGC_LOG("## RTGC scan root: %p/n", root);
+        RTGC_LOG("## RTGC scan root: %p\n", root);
         root->clearNeedCyclicTest();
         detectCyclicNodes(root, &tracingList, &finishedList);
         if (last_node_id != root->getNodeId()) {
             if (last_node_id < CYCLIC_NODE_ID_START) {
-    // printf("## RTGC deallic OnewayNode 1\n");
+                RTGC_LOG("## ___ dealloc OnewayNode %p\n", root_node->externalReferrers.topChain());
                 ((OnewayNode*)root_node)->dealloc();
             }
             else {
-    // printf("## RTGC deallic CyclicNode 1\n");
+                RTGC_LOG("## RTGC dealloc CyclicNode %d\n", ((CyclicNode*)root_node)->getId());
                 ((CyclicNode*)root_node)->dealloc();
             }
         }
 
+        RTGC_LOG("## RTGC 1-2");
 
         assert(tracingList.topChain()->obj() == root);
         assert(tracingList.topChain()->next() == NULL);

@@ -1,0 +1,808 @@
+> Task :backend.native:tests:compileKonanWorker_bound_reference0Macos_x64 FAILED
+
+FAILURE: Build completed with 50 failures.
+
+1: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:atomic0'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  35
+  20
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+2: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:check_stacktrace_format'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+3: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:custom_hook'.
+> Test failed. Expected exit status: 1, actual: 139
+  stdout:
+  value 42: Error
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+4: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:freeze0'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  frozen bit is true
+  Worker: SharedData(string=Hello, int=10, member=SharedDataMember(double=0.1))
+  Main: SharedData(string=Hello, int=10, member=SharedDataMember(double=0.1))
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+5: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:freeze2'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  Worker 1: Hello world
+  Worker2: 42
+  Worker3: 239.0
+  Worker4: a
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+6: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:freeze3'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+7: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:freeze6'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  OK
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+8: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:freeze_stress'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+9: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:harmonyRegexTest'.
+> Test /Users/zeedh/slowcoders/kotlin-native/test.output/stdlib/harmonyRegexTest/macos_x64/harmonyRegexTest.kexe exited with 139
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+10: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:hash_map0'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+11: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:initializers6'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+12: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:inline_lateinitProperty_linkTest'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+13: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:interop_enums'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+14: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:interop_objc_illegal_sharing'.
+> Test failed. Actual exit status doesn't match with exit status checker: 0
+  stdout:
+  Before
+  After
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+15: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:interop_objc_illegal_sharing_with_weak'.
+> Test failed. Actual exit status doesn't match with exit status checker: 0
+  stdout:
+  Before
+  After true
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+16: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:interop_objc_smoke'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+  Class TestExportObjCClass34 has multiple implementations. Which one will be used is undefined.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+17: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:interop_objc_tests'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  [==========] Running 20 tests from 20 test cases.
+  [----------] Global test environment set-up.
+  [----------] 1 tests from KT38234_overrideKt
+  [ RUN      ] KT38234_overrideKt.testKT38234
+  [       OK ] KT38234_overrideKt.testKT38234 (0 ms)
+  [----------] 1 tests from KT38234_overrideKt (0 ms total)
+  
+  [----------] 1 tests from AllocNoRetainKt
+  [ RUN      ] AllocNoRetainKt.testAllocNoRetain
+  [       OK ] AllocNoRetainKt.testAllocNoRetain (0 ms)
+  [----------] 1 tests from AllocNoRetainKt (0 ms total)
+  
+  [----------] 1 tests from BlocksKt
+  [ RUN      ] BlocksKt.testBlocks
+  [       OK ] BlocksKt.testBlocks (0 ms)
+  [----------] 1 tests from BlocksKt (0 ms total)
+  
+  [----------] 1 tests from CallableReferencesKt
+  [ RUN      ] CallableReferencesKt.testCallableReferences
+  [       OK ] CallableReferencesKt.testCallableReferences (0 ms)
+  [----------] 1 tests from CallableReferencesKt (0 ms total)
+  
+  [----------] 1 tests from ClashingWithAnyKt
+  [ RUN      ] ClashingWithAnyKt.testClashingWithAny
+  [       OK ] ClashingWithAnyKt.testClashingWithAny (1 ms)
+  [----------] 1 tests from ClashingWithAnyKt (1 ms total)
+  
+  [----------] 1 tests from ConstructorReturnsNullKt
+  [ RUN      ] ConstructorReturnsNullKt.testConstructorReturnsNull
+  [       OK ] ConstructorReturnsNullKt.testConstructorReturnsNull (0 ms)
+  [----------] 1 tests from ConstructorReturnsNullKt (0 ms total)
+  
+  [----------] 1 tests from ConversionsKt
+  [ RUN      ] ConversionsKt.testConversions
+  [       OK ] ConversionsKt.testConversions (0 ms)
+  [----------] 1 tests from ConversionsKt (0 ms total)
+  
+  [----------] 1 tests from CustomStringKt
+  [ RUN      ] CustomStringKt.testCustomString
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+18: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:interop_structs'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+19: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:kt-37572'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+20: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:lazy2'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  123
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+21: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:lazy3'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+22: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:leakMemory'.
+> Test failed. Actual exit status doesn't match with exit status checker: 0
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+23: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:leakMemoryWithWorkerTermination'.
+> Test failed. Actual exit status doesn't match with exit status checker: 0
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+24: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':runtime:wasm32Runtime'.
+> Process 'command '/Users/zeedh/.konan/dependencies/clang-llvm-apple-8.0.0-darwin-macos/bin/clang++'' finished with non-zero exit value 1
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+25: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:local_ea_arraysfieldwrite'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+26: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:memory_cycles0'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+27: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:memory_stable_ref_cross_thread_check'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+28: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:memory_weak0'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  Data(s=Hello)
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+29: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:runtime_worker_random'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+30: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:serialized_catch'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  Gotcha1: XXX
+  Gotcha2: YYY
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+31: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:stack_trace_inline'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+32: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:stdlibTest'.
+> Test /Users/zeedh/slowcoders/kotlin-native/test.output/stdlib/stdlibTest/macos_x64/stdlibTest.kexe exited with 139
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+33: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:testObjCExport'.
+> Execution of swiftTestExecutable failed with exit code: 139 
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+34: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:testObjCExportStatic'.
+> Execution of swiftTestExecutable failed with exit code: 139 
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+35: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:testStdlibFramework'.
+> Execution of swiftTestExecutable failed with exit code: 139 
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+36: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:testing_custom_main'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  Custom main
+  Starting testing
+  Starting iteration: 1
+  Starting test suite: kotlin.test.tests.Custom_mainKt
+  Starting test case: test (kotlin.test.tests.Custom_mainKt)
+  test
+  Passed: test (kotlin.test.tests.Custom_mainKt)
+  Test suite finished: kotlin.test.tests.Custom_mainKt
+  Iteration finished: 1
+  Starting iteration: 2
+  Starting test suite: kotlin.test.tests.Custom_mainKt
+  Starting test case: test (kotlin.test.tests.Custom_mainKt)
+  test
+  Passed: test (kotlin.test.tests.Custom_mainKt)
+  Test suite finished: kotlin.test.tests.Custom_mainKt
+  Iteration finished: 2
+  Testing finished
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+37: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:testing_library_usage'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  B.before
+  B.test1
+  A.after
+  B.before
+  B.test2
+  A.after
+  B.before
+  B.ignored2
+  A.after
+  B.before
+  A.test0
+  A.after
+  B.before
+  B.test2
+  A.after
+  B.before
+  B.ignored2
+  A.after
+  B.before
+  A.test0
+  A.after
+  B.before
+  B.test1
+  A.after
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+38: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker0'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  Got Input processed
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+39: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker1'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+40: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker10'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+41: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker11'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+42: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker2'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+43: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker3'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+44: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker4'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  Got 42
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+45: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker5'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  Got 3
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+46: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker6'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  Got 42
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+47: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker7'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  Input
+  Got kotlin.Unit
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+48: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker8'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  SharedData(string=Hello, int=10, member=SharedDataMember(double=0.1))
+  Got kotlin.Unit
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+49: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker9'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  zzz
+  42
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+50: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:compileKonanWorker_bound_reference0Macos_x64'.
+> Process 'command '/Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/bin/java'' finished with non-zero exit value 1
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+* Get more help at https://help.gradle.org
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 7.0.
+Use '--warning-mode all' to show the individual deprecation warnings.
+See https://docs.gradle.org/6.6.1/userguide/command_line_interface.html#sec:command_line_warnings
+
+BUILD FAILED in 43m 56s
+1296 actionable tasks: 804 executed, 492 up-to-date
