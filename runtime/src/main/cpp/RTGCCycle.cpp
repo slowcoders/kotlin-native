@@ -115,7 +115,7 @@ void CyclicNode::addCyclicObject(
     for(GCRefChain* chain = oldNode->externalReferrers.topChain(); chain != NULL; chain = chain->next()) {
         GCObject* referrer = chain->obj();
         if (referrer->getNode() != this) {
-            RTGC_LOG("## RTGC add referrer: %p=%p\n", chain, referrer);
+            RTGC_LOG("## RTGC add referrer of cyclic: %p=%p\n", chain, referrer);
             this->externalReferrers.push(referrer);
         }
     }
@@ -176,9 +176,9 @@ void CyclicNode::detectCyclicNodes(GCObject* tracingObj, GCRefList* tracingList,
             cyclicNode->setTraceState(IN_TRACING);
             tracingList->setFirst(chain);
             cnt = 1;
-            RTGC_LOG("## rootObjCount in cyclic node: %d -> %d\n", cyclicNode->getId(), cyclicNode->getRootObjectCount());
+            RTGC_LOG("## rootObjCount of cyclic node: %d -> %d\n", cyclicNode->getId(), cyclicNode->getRootObjectCount());
             for (GCRefChain* c = cyclicNode->externalReferrers.topChain(); c != NULL; c = c->next()) {
-                RTGC_LOG("## Referrer in cyclic node: %d, %d:%p\n", cyclicNode->getId(), ++cnt, c->obj());
+                RTGC_LOG("## External Referrer of cyclic node: %d, %d:%p\n", cyclicNode->getId(), ++cnt, c->obj());
             }
             break;
         }    
@@ -233,13 +233,13 @@ void CyclicNode::detectCycles() {
             }
         }
 
-        RTGC_LOG("## RTGC 1-2");
+        RTGC_LOG("## RTGC 1-2\n");
 
         assert(tracingList.topChain()->obj() == root);
         assert(tracingList.topChain()->next() == NULL);
         tracingList.clear();
 
-        RTGC_LOG("## RTGC 2");
+        RTGC_LOG("## RTGC 2\n");
         for (GCObject* obj_ = root; obj_ != NULL; obj_ = finishedList.pop()) {
             CyclicNode* cyclic = obj_->getLocalCyclicNode();
             if ((cyclic != NULL) && cyclic->isGarbage()) {

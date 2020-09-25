@@ -577,7 +577,7 @@ struct MemoryState {
   // How many candidate elements in toFree shall trigger cycle collection.
   uint64_t gcCollectCyclesThreshold;
   // If collection is in progress.
-  bool gcInProgress;
+  int gcInProgress;
   // Objects to be released.
   ContainerHeaderList* toRelease;
 
@@ -889,7 +889,8 @@ inline void traverseContainerObjectFields(ContainerHeader* container, func proce
   RuntimeAssert(!isAggregatingFrozenContainer(container), "Must not be called on such containers");
   ObjHeader* obj = reinterpret_cast<ObjHeader*>(container + 1);
 
-  for (uint32_t i = 0; i < container->objectCount(); ++i) {
+  RTGC_LOG("traverseContainerObjectFields %p(%d)\n", container, container->objectCount());
+  for (uint32_t i = container->objectCount(); i > 0; i--) {
     traverseObjectFields(obj, process);
     obj = reinterpret_cast<ObjHeader*>(
       reinterpret_cast<uintptr_t>(obj) + objectSize(obj));
@@ -1021,6 +1022,7 @@ ContainerHeader* allocAggregatingFrozenContainer(KStdVector<ContainerHeader*>& c
 
 void processFinalizerQueue(MemoryState* state) {
   // TODO: reuse elements of finalizer queue for new allocations.
+  RTGC_LOG("Processing FinalizerQ");
   while (state->finalizerQueue != nullptr) {
     auto* container = state->finalizerQueue;
     state->finalizerQueue = container->nextLink();
@@ -1033,6 +1035,7 @@ void processFinalizerQueue(MemoryState* state) {
     atomicAdd(&allocCount, -1);
   }
   RuntimeAssert(state->finalizerQueueSize == 0, "Queue must be empty here");
+  RTGC_LOG("Processing FinalizerQ done");
 }
 
 
@@ -1142,22 +1145,27 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 #endif  // USE_GC
 
 void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container) {
+  RTGC_LOG("scheduleDestroyContainer %1\n", container);
   OnewayNode* node = container->getLocalOnewayNode();
   GCNode::rtgcLock();
   if (node != NULL) {
     node->dealloc();
   }
+    RTGC_LOG("scheduleDestroyContainer 1 %p\n", container);
   CyclicNode::removeCyclicTest(container);
+    RTGC_LOG("scheduleDestroyContainer 2 %p\n", container);
   GCNode::rtgcUnlock();
 #if USE_GC
   RuntimeAssert(container != nullptr, "Cannot destroy null container");
 
+    RTGC_LOG("scheduleDestroyContainer 3 %p\n", container);
   container->setNextLink(state->finalizerQueue);
   state->finalizerQueue = container;
   state->finalizerQueueSize++;
   // We cannot clean finalizer queue while in GC.
   if (!state->gcInProgress && state->finalizerQueueSuspendCount == 0 &&
       state->finalizerQueueSize >= kFinalizerQueueThreshold) {
+    RTGC_LOG("scheduleDestroyContainer finalize %p\n", container);
     processFinalizerQueue(state);
   }
 #else
@@ -1223,26 +1231,31 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
   }
 
   RTGC_LOG("## RTGC free container %p(%d)\n", container, garbageNodeId);
-
+  memoryState->gcInProgress ++;
   runDeallocationHooks(container);
   container->markDestroyed();
   if (RTGC && isFreeable(container)) {
       traverseContainerObjectFields(container, [container, garbageNodeId](ObjHeader** location, ObjHeader* owner) {
         ObjHeader* old = *location;
+        RTGC_LOG("--- cleaning fields start %p IN %p\n", old, owner->container());
         if (old != NULL && old->container() != NULL && !old->container()->isDestroyed()) {
-          RTGC_LOG("--- cleaning fields %p IN %p\n", old, container + 1);
+          RTGC_LOG("--- cleaning fields %p in %p(%d)\n", old->container(), owner->container(), garbageNodeId);
           if (garbageNodeId != 0) {
             *location = NULL;
             if (old->container()->getNodeId() == garbageNodeId) {
+              RTGC_LOG("--- cleaning fields in cyclicNode %p (%d)\n", old->container(), garbageNodeId);
               freeContainer(old->container(), garbageNodeId);
             }
             else {
+              RTGC_LOG("--- cleaning fields Node %p (%d)\n", old->container(), garbageNodeId);
               updateHeapRef_internal(NULL, old, (ObjHeader*)(container + 1));
             }
           } else {
+            RTGC_LOG("--- cleaning fields any %p (%d)\n", old->container(), garbageNodeId);
             UpdateHeapRef(location, NULL, (ObjHeader*)(container + 1));
           }
         }
+        RTGC_LOG("--- cleaning fields done %p (%d)\n", old, garbageNodeId);
       });
   }
   else {
@@ -1252,7 +1265,10 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
           ZeroHeapRef(location);
     });
   }
+
+  RTGC_LOG("--- free container check free %p\n", container);
   // And release underlying memory.
+  memoryState->gcInProgress --;
   if (isFreeable(container)) {
     container->setColorEvenIfGreen(CONTAINER_TAG_GC_BLACK);
     if (!container->buffered()) {
@@ -1260,7 +1276,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
     }
   }
 
-  // RTGC_LOG("## RTGC free container done %p(%d)\n", container, garbageNodeId);
+  RTGC_LOG("## RTGC free container done %p(%d) gcDepth=(%d)\n", container, garbageNodeId, memoryState->gcInProgress);
 }
 
 namespace {

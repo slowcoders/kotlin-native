@@ -23,7 +23,7 @@ typedef struct ContainerHeader GCObject;
 #define RTGC_REF_COUNT_MASK        ((uint64_t)((1LL << RTGC_REF_COUNT_BITS) -1))
 static const int CYCLIC_NODE_ID_START = 2;
 
-#define ENABLE_RTGC_LOG 0
+#define ENABLE_RTGC_LOG             0
 bool rtgc_trap() NO_INLINE;
 
 #if ENABLE_RTGC_LOG

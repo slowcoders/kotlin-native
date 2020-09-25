@@ -56,7 +56,7 @@ bool GCNode::isLocked() {
     return curr_thread == g_lockThread;
 }
 
-static int dump_recycle_log = ENABLE_RTGC_LOG;
+static int dump_recycle_log = 0;//ENABLE_RTGC_LOG;
 static GCRefChain* popFreeChain() {
     assert(GCNode::isLocked());
     GCRefChain* freeChain = RTGCGlobal::g_freeRefChain;
