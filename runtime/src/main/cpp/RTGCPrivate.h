@@ -11,13 +11,12 @@ struct RTGCGlobal : GCNode {
   static int g_cntLocalCyclicTest;
   static int g_cntMemberCyclicTest;
 
-  static CyclicNode* g_freeCyclicNode;
-
-  static GCRefChain* g_freeRefChain;
+  // static CyclicNode* g_freeCyclicNode;
+  // static GCRefChain* g_freeRefChain;
 
   static void validateMemPool();
 
-  static void init();
+  static void init(RTGCMemState* state);
 };
 
 inline void* GET_NEXT_FREE(void* chain) {

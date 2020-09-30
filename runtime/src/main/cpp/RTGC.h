@@ -38,7 +38,7 @@ bool rtgc_trap() NO_INLINE;
 void RTGC_dumpRefInfo(GCObject*) NO_INLINE;
 void RTGC_Error(GCObject* obj) NO_INLINE;
 
-#define RTGC_NO_INLINE NO_INLINE
+#define RTGC_NO_INLINE // NO_INLINE
 
 struct RTGCRef {
   uint64_t root: RTGC_ROOT_REF_BITS;
@@ -73,9 +73,9 @@ private:
 public:
   uint32_t flags_;
 
-  static GCRefChain* g_refChains;
+  // static GCRefChain* g_refChains;
   GCRefList() { first_ = 0; }
-  GCRefChain* topChain() { return first_ == 0 ? NULL : g_refChains + first_; }
+  GCRefChain* topChain();// { return first_ == 0 ? NULL : g_refChains + first_; }
   GCRefChain* find(GCObject* obj);
   GCRefChain* find(int node_id);
   GCObject* pop();
@@ -96,7 +96,7 @@ struct GCNode {
   GCRefList externalReferrers;
 protected:  
 
-  static CyclicNode* g_cyclicNodes;
+  //static CyclicNode* g_cyclicNodes;
 
   void clearSuspectedCyclic() { externalReferrers.flags_ &= ~NEED_CYCLIC_TEST; } 
   void markSuspectedCyclic() { externalReferrers.flags_ |= NEED_CYCLIC_TEST; } 
@@ -107,7 +107,7 @@ public:
     return (externalReferrers.flags_ & NEED_CYCLIC_TEST) != 0;
   }
 
-  static void initMemory();
+  static void initMemory(struct RTGCMemState* state);
 
 
   static void rtgcLock() RTGC_NO_INLINE;
@@ -138,24 +138,20 @@ private:
   CyclicNode* nextDamaged;
   GCRefList garbageTestList;
 
-  static CyclicNode* g_damagedCylicNodes;
-  static GCRefList g_cyclicTestNodes;
-
   void addCyclicObject(GCObject* obj)  RTGC_NO_INLINE;
   void mergeCyclicNode(GCObject* obj, int expiredNodeId)  RTGC_NO_INLINE;
   static void detectCyclicNodes(GCObject* tracingObj, GCRefList* traceList, GCRefList* finishedList)  RTGC_NO_INLINE;
 public:
 
-  int getId() {
-    return (this - g_cyclicNodes) + CYCLIC_NODE_ID_START;
-  }
+  int getId(); // { return (this - g_cyclicNodes) + CYCLIC_NODE_ID_START; }
 
-  static CyclicNode* getNode(int nodeId) {
-    if (nodeId < CYCLIC_NODE_ID_START) {
-      return NULL;
-    }
-    return g_cyclicNodes + nodeId - CYCLIC_NODE_ID_START;
-  }
+  static CyclicNode* getNode(int nodeId);
+  // {
+  //   if (nodeId < CYCLIC_NODE_ID_START) {
+  //     return NULL;
+  //   }
+  //   return g_cyclicNodes + nodeId - CYCLIC_NODE_ID_START;
+  // }
 
   bool isDamaged() {
     return nextDamaged != 0;
@@ -195,6 +191,15 @@ public:
   static void addCyclicTest(GCObject* node, bool isLocalTest)  RTGC_NO_INLINE;
   static void removeCyclicTest(GCObject* node)  RTGC_NO_INLINE;
   static void detectCycles()  RTGC_NO_INLINE;
+};
+
+struct RTGCMemState {
+  CyclicNode* g_freeCyclicNode;
+  GCRefChain* g_refChains;
+  GCRefChain* g_freeRefChain;
+  CyclicNode* g_cyclicNodes;
+  CyclicNode* g_damagedCylicNodes;
+  GCRefList g_cyclicTestNodes;
 };
 
 using RTGC_FIELD_TRAVERSE_CALLBACK = std::function<void(GCObject*)>;

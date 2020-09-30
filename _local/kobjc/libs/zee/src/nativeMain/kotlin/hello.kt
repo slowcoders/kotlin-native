@@ -117,6 +117,12 @@ runWeakTest1()
 runWeakTest2()
 printTime("runWeakTest1,2")
 
+runHashMap0Test();
+printTime("runHashMap0Test")
+
+
+
+
 val test_ref_count_bug_in_param_side_effect = true;
 if (test_ref_count_bug_in_param_side_effect) {
     runVar1Test()
@@ -132,9 +138,14 @@ printTime("runLeakMemoryWithWorkerTerminationTest")
 runIlleagalSharingWithWeakTest()
 printTime("runIlleagalSharingWithWeakTest")
 
+val test_gc_bug_in_worker_thread = false;
+if (test_gc_bug_in_worker_thread) {
+    runWorkerBoundReference0Test()
+    printTime("runWorkerBoundReference0Test")
 
-runWorkerBoundReference0Test()
-printTime("runWorkerBoundReference0Test")
+    runAtomicTest();
+    printTime("runAtomicTest")
+}
 
 runPatternTest()
 printTime("runPatternTest")
@@ -151,12 +162,6 @@ printTime("testObjCSmoke")
 testTypes();
 printTime("testTypes")
 
-runAtomicTest();
-printTime("runAtomicTest")
-
-
-runHashMap0Test();
-printTime("runHashMap0Test")
 
 runHashSet0Test();
 printTime("runHashSet0Test")

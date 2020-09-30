@@ -545,7 +545,7 @@ private:
   }
 };
 
-struct MemoryState {
+struct MemoryState : RTGCMemState {
 #if TRACE_MEMORY
   // Set of all containers.
   ContainerHeaderSet* containers;
@@ -2249,8 +2249,8 @@ MemoryState* initMemory() {
 #if USE_CYCLIC_GC
     cyclicInit();
 #endif  // USE_CYCLIC_GC
-    GCNode::initMemory();
   }
+  GCNode::initMemory(memoryState);
   return memoryState;
 }
 
@@ -3277,7 +3277,7 @@ void freezeSubgraph(ObjHeader* root) {
 
   MEMORY_LOG("Freeze subgraph of %p\n", root)
 
-  #if USE_GC
+  #if USE_GC && !RTGC
     auto state = memoryState;
     // Free cyclic garbage to decrease number of analyzed objects.
     checkIfForceCyclicGcNeeded(state);
@@ -3303,7 +3303,7 @@ void freezeSubgraph(ObjHeader* root) {
   }
   MEMORY_LOG("Graph of %p is %s with %d elements\n", root, hasCycles ? "cyclic" : "acyclic", newlyFrozen.size())
 
-#if USE_GC
+#if USE_GC && !RTGC
   // Now remove frozen objects from the toFree list.
   // TODO: optimize it by keeping ignored (i.e. freshly frozen) objects in the set,
   // and use it when analyzing toFree during collection.
