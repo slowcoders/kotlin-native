@@ -306,6 +306,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     override val context = codegen.context
     val RTGC:Boolean = context.memoryModel == MemoryModel.RELAXED;
     var ENABLE_ALTER_ARGS:Boolean = true;
+    val RTGC_ENABLE_STACK_LOCAL:Boolean = true;
     val vars = VariableManager(this)
     private val basicBlockToLastLocation = mutableMapOf<LLVMBasicBlockRef, LocationInfoRange>()
 
@@ -610,7 +611,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             call(context.llvm.allocInstanceFunction, listOf(typeInfo), lifetime)
 
     fun allocInstance(irClass: IrClass, lifetime: Lifetime, stackLocalsManager: StackLocalsManager) =
-            if (lifetime == Lifetime.STACK)
+            if (RTGC_ENABLE_STACK_LOCAL && lifetime == Lifetime.STACK)
                 stackLocalsManager.alloc(irClass,
                         // In case the allocation is not from the root scope, fields must be cleaned up explicitly,
                         // as the object might be being reused.
@@ -625,7 +626,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         exceptionHandler: ExceptionHandler
     ): LLVMValueRef {
         val typeInfo = codegen.typeInfoValue(irClass)
-        return if (lifetime == Lifetime.STACK) {
+        return if (RTGC_ENABLE_STACK_LOCAL && lifetime == Lifetime.STACK) {
             stackLocalsManager.allocArray(irClass, count)
         } else {
             call(context.llvm.allocArrayFunction, listOf(typeInfo, count), lifetime, exceptionHandler)
@@ -1437,11 +1438,15 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             call(context.llvm.leaveFrameFunction,
                     listOf(slotsPhi!!, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm))
         }
-        stackLocalsManager.clean(refsOnly = true) // Only bother about not leaving any dangling references.
+        if (RTGC_ENABLE_STACK_LOCAL) {
+            stackLocalsManager.clean(refsOnly = true) // Only bother about not leaving any dangling references.
+        }
     }
 
     private fun releaseVars(phi: LLVMValueRef, returnSlot: LLVMValueRef) {
-        //updateReturnRef(phi, returnSlot!!)
+        if (RTGC_ENABLE_STACK_LOCAL) {
+            stackLocalsManager.clean(refsOnly = true) // Only bother about not leaving any dangling references.
+        }
         if (needSlots) {
             val param_count = (vars.skipSlots * 256 * 256) + slotCount;
             callRaw(context.llvm.leaveFrameAndReturnRefFunction,
