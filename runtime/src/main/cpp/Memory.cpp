@@ -2427,6 +2427,11 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeade
   UPDATE_REF_EVENT(memoryState, *location, object, location, owner);
     RuntimeAssert(owner->container() != nullptr && owner->container()->tag() != CONTAINER_TAG_STACK, "illegal heap ref");
 
+  if (owner->local()) {
+    // konan::consolePrintf("updateHeapRef on stackLocal Owner");
+    UpdateStackRef(location, object);
+    return;
+  }
   GCNode::rtgcLock();
   ObjHeader* old = *location;
   if (old != object) {
