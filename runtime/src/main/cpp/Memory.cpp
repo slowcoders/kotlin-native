@@ -1374,7 +1374,7 @@ inline void incrementRC(ContainerHeader* container) {
 
     CyclicNode* cyclic = CyclicNode::getNode(ref.node);
     if (cyclic != NULL) {
-      cyclic->incRootObjectCount();
+      cyclic->incRootObjectCount<Atomic>();
     }
   } while(false);
   GCNode::rtgcUnlock();
@@ -1389,7 +1389,7 @@ inline void decrementRC(ContainerHeader* container) {
 
     CyclicNode* cyclic = CyclicNode::getNode(ref.node);
     if (cyclic != NULL) {
-      if (0 == cyclic->decRootObjectCount()
+      if (0 == cyclic->decRootObjectCount<Atomic>()
       &&  cyclic->externalReferrers.isEmpty()) {
         freeContainer(container, cyclic->getId());
         cyclic->dealloc();
@@ -2539,7 +2539,7 @@ OBJ_GETTER(allocInstance, const TypeInfo* type_info) {
 #if USE_GC
   if (Strict) {
     rememberNewContainer(container.header());
-  } else {
+  } else if (!RTGC) {
     makeShareable(container.header());
   }
 #endif  // USE_GC
@@ -2569,7 +2569,7 @@ OBJ_GETTER(allocArrayInstance, const TypeInfo* type_info, int32_t elements) {
 #if USE_GC
   if (Strict) {
     rememberNewContainer(container.header());
-  } else {
+  } else if (!RTGC) {
     makeShareable(container.header());
   }
 #endif  // USE_GC

@@ -180,12 +180,19 @@ public:
     return rootObjectCount; 
   }
 
+  template <bool Atomic>
   void incRootObjectCount() {
-    this->rootObjectCount ++;
+    int32_t value __attribute__((unused))= Atomic ?
+       __sync_add_and_fetch(&rootObjectCount, 1)
+        : rootObjectCount += 1;
   }
 
+  template <bool Atomic>
   int decRootObjectCount() {
-    return --this->rootObjectCount;
+    int32_t value = Atomic ?
+       __sync_sub_and_fetch(&rootObjectCount, 1)
+        : rootObjectCount -= 1;
+    return value;
   }
 
   void dealloc();
