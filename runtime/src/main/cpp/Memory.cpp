@@ -1023,6 +1023,20 @@ ContainerHeader* allocAggregatingFrozenContainer(KStdVector<ContainerHeader*>& c
 void processFinalizerQueue(MemoryState* state) {
   // TODO: reuse elements of finalizer queue for new allocations.
   RTGC_LOG("Processing FinalizerQ");
+#if 0
+  GCNode::rtgcLock();
+  for (ContainerHeader* container = state->finalizerQueue; container != NULL; container = container->nextLink()) {
+    OnewayNode* node = container->getLocalOnewayNode();
+    if (node != NULL) {
+      node->dealloc();
+    }
+    RTGC_LOG("scheduleDestroyContainer 1 %p\n", container);
+    CyclicNode::removeCyclicTest(container);
+    RTGC_LOG("scheduleDestroyContainer 2 %p\n", container);
+  }
+  GCNode::rtgcUnlock();
+#endif
+
   while (state->finalizerQueue != nullptr) {
     auto* container = state->finalizerQueue;
     state->finalizerQueue = container->nextLink();
@@ -1367,29 +1381,29 @@ inline bool tryIncrementRC(ContainerHeader* container) {
 
 template <bool Atomic>
 inline void incrementRC(ContainerHeader* container) {
-  GCNode::rtgcLock();
+  if (Atomic) GCNode::rtgcLock();
   do {
     RTGCRef ref = container->incRootCount<false>();
     if (ref.root != 1) break;
 
     CyclicNode* cyclic = CyclicNode::getNode(ref.node);
     if (cyclic != NULL) {
-      cyclic->incRootObjectCount<Atomic>();
+      cyclic->incRootObjectCount<false>();
     }
   } while(false);
-  GCNode::rtgcUnlock();
+  if (Atomic) GCNode::rtgcUnlock();
 }
 
 template <bool Atomic, bool UseCycleCollector>
 inline void decrementRC(ContainerHeader* container) {
-  GCNode::rtgcLock();
+  if (Atomic) GCNode::rtgcLock();
   do {
     RTGCRef ref = container->decRootCount<false>();
     if (ref.root != 0) break;
 
     CyclicNode* cyclic = CyclicNode::getNode(ref.node);
     if (cyclic != NULL) {
-      if (0 == cyclic->decRootObjectCount<Atomic>()
+      if (0 == cyclic->decRootObjectCount<false>()
       &&  cyclic->externalReferrers.isEmpty()) {
         freeContainer(container, cyclic->getId());
         cyclic->dealloc();
@@ -1400,7 +1414,7 @@ inline void decrementRC(ContainerHeader* container) {
       freeContainer(container, -1);
     }
   } while(false);
-  GCNode::rtgcUnlock();
+  if (Atomic) GCNode::rtgcUnlock();
 }
 
 inline void decrementRC(ContainerHeader* container) {
@@ -1411,12 +1425,7 @@ inline void decrementRC(ContainerHeader* container) {
 }
 
 
-template <bool Atomic>
-void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner);
-
-
-template <bool Atomic>
-void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
+void incrementMemberRC_impl(ContainerHeader* container, ContainerHeader* owner) {
   // @zee rootRef 변경으로 인해 Atomic 처리 필요.
   GCNode* val_node;
   GCNode* owner_node = owner->attachNode();
@@ -1429,7 +1438,7 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   }
   else {
     val_node = container->getNode();
-    container->incMemberRefCount<Atomic>();
+    container->incMemberRefCount<false>();
     if (val_node == owner_node) {
       return;
     }
@@ -1443,16 +1452,22 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   val_node->externalReferrers.push(owner);
 }
 
-template <bool Atomic>
-void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) RTGC_NO_INLINE;
 
 template <bool Atomic>
-void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
-  // @zee rootRef 변경으로 인해 Atomic 처리 필요.
+void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
+  if (Atomic) 
+  GCNode::rtgcLock();
+  incrementMemberRC_impl(container, owner);
+  if (Atomic) 
+  GCNode::rtgcUnlock();
+}
+
+void decrementMemberRC_impl(ContainerHeader* container, ContainerHeader* owner) {
+
   GCNode* owner_node = owner->getNode();
   GCNode* val_node = container->getNode();
 
-  container->decMemberRefCount<Atomic>();
+  container->decMemberRefCount<false>();
   MEMORY_LOG("decrementMemberRC %p: rc=%d\n", container, container->refCount());
 
   if (val_node != owner_node) {
@@ -1496,6 +1511,17 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     !val_node->externalReferrers.isEmpty()) {
       CyclicNode::addCyclicTest(container, false);
   }
+}
+
+template <bool Atomic>
+void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
+  // @zee rootRef 변경으로 인해 Atomic 처리 필요.
+  if (Atomic) 
+  GCNode::rtgcLock();
+  decrementMemberRC_impl(container, owner);
+  if (Atomic) 
+  GCNode::rtgcUnlock();
+
 }
 
 #elif !USE_GC
@@ -2376,6 +2402,9 @@ void zeroStackRef(ObjHeader** location) {
 
 void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner) {
 
+  // bool isShared = owner->container()->shareable();
+  // if (isShared) GCNode::rtgcLock();
+
   if (object != nullptr && object != owner) {
     ContainerHeader* container = object->container();
 
@@ -2417,6 +2446,8 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
       }
     }
     //releaseHeapRef<Strict>(old);
+    // if (isShared) GCNode::rtgcUnlock();
+
   }
 
 }
@@ -2432,13 +2463,11 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeade
     UpdateStackRef(location, object);
     return;
   }
-  GCNode::rtgcLock();
   ObjHeader* old = *location;
   if (old != object) {
     *location = (ObjHeader*)object;
     updateHeapRef_internal(object, old, owner);
   }
-  GCNode::rtgcUnlock();
 }
 
 

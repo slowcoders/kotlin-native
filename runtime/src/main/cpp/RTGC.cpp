@@ -33,7 +33,7 @@ int RTGCGlobal::g_cntMemberCyclicTest = 0;
 
 static pthread_t g_lockThread = NULL;
 static int g_cntLock = 0;
-THREAD_LOCAL_VARIABLE int32_t isHeapLocked = 0;
+//std::recursive_mutex g_mutex;
 
 
 void GCNode::rtgcLock() {
@@ -56,9 +56,10 @@ bool GCNode::isLocked() {
     return curr_thread == g_lockThread;
 }
 
-static int dump_recycle_log = 0;//ENABLE_RTGC_LOG;
+static int dump_recycle_log = 0;
+static const int LOCKFREE_REF_CHAIN_POOL = true;
 static GCRefChain* popFreeChain() {
-    assert(GCNode::isLocked());
+    assert(LOCKFREE_REF_CHAIN_POOL || GCNode::isLocked());
     GCRefChain* freeChain = RTGCGlobal::g_freeRefChain;
     if (freeChain == NULL) {
         RTGC_LOG("Insufficient RefChains!");
@@ -77,7 +78,16 @@ static GCRefChain* popFreeChain() {
             ThrowOutOfMemoryError();
         }
     }
-    RTGCGlobal::g_freeRefChain = (GCRefChain*)GET_NEXT_FREE(freeChain);
+    if (LOCKFREE_REF_CHAIN_POOL) {
+        while (true) {
+            GCRefChain* next = (GCRefChain*)GET_NEXT_FREE(freeChain);
+            if (__sync_bool_compare_and_swap(&RTGCGlobal::g_freeRefChain, freeChain, next)) break;
+            freeChain = RTGCGlobal::g_freeRefChain;
+        }
+    }
+    else {
+        RTGCGlobal::g_freeRefChain = (GCRefChain*)GET_NEXT_FREE(freeChain);
+    }
     RTGCGlobal::cntRefChain ++;
     int node_id = freeChain - GCRefList::g_refChains;
     if (true || node_id % 1000 == 0) {
@@ -87,12 +97,21 @@ static GCRefChain* popFreeChain() {
 }
 
 static void recycleChain(GCRefChain* expired, const char* type) {
-    SET_NEXT_FREE(expired, RTGCGlobal::g_freeRefChain);
+    if (LOCKFREE_REF_CHAIN_POOL) {
+        while (true) {
+            GCRefChain* freeChain = RTGCGlobal::g_freeRefChain;
+            SET_NEXT_FREE(expired, freeChain);
+            if (__sync_bool_compare_and_swap(&RTGCGlobal::g_freeRefChain, freeChain, expired)) break;
+        }
+    }
+    else {
+        SET_NEXT_FREE(expired, RTGCGlobal::g_freeRefChain);
+        RTGCGlobal::g_freeRefChain = expired;
+    }
     RTGCGlobal::cntRefChain --;
     if (ENABLE_RTGC_LOG && dump_recycle_log > 0) {//} || node_id % 1000 == 0) {
         RTGC_LOG("RTGC Recycle chain: %d\n", RTGCGlobal::cntRefChain);
     }
-    RTGCGlobal::g_freeRefChain = expired;
 }
 
 static int getRefChainIndex(GCRefChain* chain) {

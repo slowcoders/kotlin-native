@@ -53,7 +53,7 @@ void CyclicNode::markDamaged() {
 }
 
 void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
-    assert(isLocked());
+    //assert(isLocked());
     RTGC_LOG("addCyclicTest %p\n", obj);
     obj->markNeedCyclicTest();
     obj->getNode()->markSuspectedCyclic();
@@ -63,18 +63,21 @@ void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
     else {
         RTGCGlobal::g_cntMemberCyclicTest ++;
     }
-
+    GCNode::rtgcLock();
     g_cyclicTestNodes.push(obj);
+    GCNode::rtgcUnlock();
 }
 
 void CyclicNode::removeCyclicTest(GCObject* obj) {
-    RuntimeAssert(isLocked(), "GCNode is not locked")
+    //RuntimeAssert(isLocked(), "GCNode is not locked")
     if (!obj->isNeedCyclicTest()) return;
     obj->clearNeedCyclicTest();
     RTGCGlobal::g_cntLocalCyclicTest --;
 
     RTGC_LOG("## RTGC Remove Cyclic Test %p:%d\n", obj, obj->getNodeId());
+    GCNode::rtgcLock();
     g_cyclicTestNodes.remove(obj);
+    GCNode::rtgcUnlock();
 }
 
 void CyclicNode::mergeCyclicNode(GCObject* obj, int expiredNodeId) {
