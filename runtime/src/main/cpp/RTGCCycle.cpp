@@ -22,11 +22,7 @@ extern THREAD_LOCAL_VARIABLE RTGCMemState* memoryState;
 
 CyclicNode* CyclicNode::create() {
     assert(isLocked());
-    CyclicNode* node = memoryState->g_freeCyclicNode;
-        //if (__sync_bool_compare_and_swap(pRef, ref, new_ref)) {
-    memoryState->g_freeCyclicNode = (CyclicNode*)GET_NEXT_FREE(node);
-    assert(memoryState->g_freeCyclicNode != node);
-    assert(memoryState->g_freeCyclicNode >= memoryState->g_cyclicNodes && memoryState->g_freeCyclicNode < memoryState->g_cyclicNodes + CNT_CYCLIC_NODE);
+    CyclicNode* node = memoryState->cyclicNodeAllocator.allocItem();
     memset(node, 0, sizeof(CyclicNode));
     RTGCGlobal::cntCyclicNodes ++;
     return node;
@@ -36,8 +32,7 @@ void CyclicNode::dealloc() {
     RTGC_LOG("## RTGC deallic node:%d\n", this->getId());
     RuntimeAssert(isLocked(), "GCNode is not locked")
     externalReferrers.clear();
-    SET_NEXT_FREE(this, memoryState->g_freeCyclicNode);
-    memoryState->g_freeCyclicNode = (CyclicNode*)this;
+    memoryState->cyclicNodeAllocator.recycleItem(this);
     RTGCGlobal::cntCyclicNodes --;
 }
 

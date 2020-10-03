@@ -1367,7 +1367,7 @@ inline bool tryIncrementRC(ContainerHeader* container) {
 
 template <bool Atomic>
 inline void incrementRC(ContainerHeader* container) {
-  GCNode::rtgcLock();
+  if (Atomic) GCNode::rtgcLock();
   do {
     RTGCRef ref = container->incRootCount<false>();
     if (ref.root != 1) break;
@@ -1377,12 +1377,12 @@ inline void incrementRC(ContainerHeader* container) {
       cyclic->incRootObjectCount<Atomic>();
     }
   } while(false);
-  GCNode::rtgcUnlock();
+  if (Atomic) GCNode::rtgcUnlock();
 }
 
 template <bool Atomic, bool UseCycleCollector>
 inline void decrementRC(ContainerHeader* container) {
-  GCNode::rtgcLock();
+  if (Atomic) GCNode::rtgcLock();
   do {
     RTGCRef ref = container->decRootCount<false>();
     if (ref.root != 0) break;
@@ -1400,7 +1400,7 @@ inline void decrementRC(ContainerHeader* container) {
       freeContainer(container, -1);
     }
   } while(false);
-  GCNode::rtgcUnlock();
+  if (Atomic) GCNode::rtgcUnlock();
 }
 
 inline void decrementRC(ContainerHeader* container) {
@@ -2391,7 +2391,9 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
           break;
         /* case CONTAINER_TAG_FROZEN: case CONTAINER_TAG_SHARED: */
         default:
+          GCNode::rtgcLock();
           incrementMemberRC</* Atomic = */ true>(container, owner->container());
+          GCNode::rtgcUnlock();
           break;      
       }
     }
@@ -2412,7 +2414,10 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
           break;
         /* case CONTAINER_TAG_FROZEN: case CONTAINER_TAG_SHARED: */
         default:
+          GCNode::rtgcLock();
           decrementMemberRC</* Atomic = */ true>(container, owner->container());
+          GCNode::rtgcUnlock();
+
           break;      
       }
     }
@@ -2432,13 +2437,11 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeade
     UpdateStackRef(location, object);
     return;
   }
-  GCNode::rtgcLock();
   ObjHeader* old = *location;
   if (old != object) {
     *location = (ObjHeader*)object;
     updateHeapRef_internal(object, old, owner);
   }
-  GCNode::rtgcUnlock();
 }
 
 

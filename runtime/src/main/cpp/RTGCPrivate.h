@@ -19,13 +19,6 @@ struct RTGCGlobal : GCNode {
   static void init(RTGCMemState* state);
 };
 
-inline void* GET_NEXT_FREE(void* chain) {
-    return *(void**)chain;
-}
-
-inline void* SET_NEXT_FREE(void* chain, void* next) {
-    return (*(void**)chain = next);
-}
 
 
 #endif // RTGC_PRIVATE_H

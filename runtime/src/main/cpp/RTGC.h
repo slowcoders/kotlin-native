@@ -7,6 +7,8 @@
 #include "Atomic.h"
 #include <functional>
 #include <utility>
+#include <atomic>
+#include <vector>
 
 #define RTGC 1
 
@@ -200,14 +202,147 @@ public:
   static void detectCycles()  RTGC_NO_INLINE;
 };
 
+
+template <class T, int ITEM_COUNT, int BUCKET_COUNT> 
+struct BucketPool {
+  struct _Bucket {
+    T* _freeItem;
+    _Bucket* _next;
+    T* _items;
+
+    void setItems(T* items) {
+      this->_items = items;
+    }
+
+    void initBucket() {
+      if (GET_NEXT_FREE(_items) == NULL) {
+        T* item = _items;
+        for (int i = ITEM_COUNT; --i > 0; ) {
+          SET_NEXT_FREE(item, item+1);
+        }
+      }
+    }
+
+    T* popItem() {
+      T* item = _freeItem;
+      if (item != NULL) {
+        _freeItem = GET_NEXT_FREE(item);
+      }
+      return item;
+    }
+
+    void recycleItem(T* item) {
+      SET_NEXT_FREE(item, _freeItem);
+      _freeItem = item;
+    }
+  };
+
+  T* _alocatedItems;
+  _Bucket _buckets[BUCKET_COUNT];
+  _Bucket* _freeBuckets[BUCKET_COUNT];
+  std::atomic<int> _cntFreeBucket;
+
+  BucketPool() {
+    _alocatedItems = new T[ITEM_COUNT*BUCKET_COUNT];
+    _cntFreeBucket = BUCKET_COUNT;
+
+    for (int i = 0; i < BUCKET_COUNT; i++) {
+      _buckets[i].setItems(_alocatedItems + i * ITEM_COUNT);
+      _freeBuckets[BUCKET_COUNT-1-i] = _buckets + i;
+    }
+  }
+
+  static T* GET_NEXT_FREE(T* chain) {
+      return *(T**)chain;
+  }
+
+  static void SET_NEXT_FREE(T* chain, T* next) {
+      (*(T**)chain = next);
+  }
+
+  _Bucket* getBucket(T* item) {
+    int offset = reinterpret_cast<char*>(item) - reinterpret_cast<char*>(_alocatedItems);
+    int idx = offset / (sizeof(T) * ITEM_COUNT);
+    return _buckets + idx;
+  }
+
+  _Bucket* popBucket() {
+    int idx = --_cntFreeBucket;
+    RuntimeAssert(idx >= 0, "Inssuficient Buckets");
+    _Bucket* bucket = _freeBuckets[idx];
+    bucket->initBucket();
+    return bucket;
+  }
+
+  void recycleBuckets(_Bucket* bucket) {
+    bucket->_next = NULL;
+    _freeBuckets[_cntFreeBucket++] = bucket;
+  }
+
+  struct LocalAllocator {
+    _Bucket* _currBucket;
+    BucketPool* _buckets;
+
+    void init(BucketPool* buckets) {
+      this->_buckets = buckets;
+    }
+
+    int getItemIndex(T* item) {
+      return item - _buckets->_alocatedItems;
+    }
+
+    T* getItem(int idx) {
+      return _buckets->_alocatedItems + idx;
+    }
+
+    T* allocItem() {
+      _Bucket* prev = _currBucket;
+      T* item = prev->popItem();
+      if (item != NULL) return item;
+
+      _Bucket* bucket;
+      for (bucket = prev->_next; bucket != NULL; bucket = bucket->_next) {
+        if (bucket->_freeItem != NULL) {
+          prev->_next = bucket->_next;
+          bucket->_next = _currBucket;
+          _currBucket = bucket;
+          return bucket->popItem();
+        }
+      }
+
+      bucket = _buckets->popBucket();
+      bucket->_next = _currBucket;
+      return bucket->popItem();
+    }
+
+    void recycleItem(T* item) {
+      _Bucket* bucket = _buckets->getBucket(item);
+      bucket->recycleItem(item);
+    }
+
+    void destroyAlloctor() {
+      for (_Bucket* bucket = _currBucket; bucket != NULL; ) {
+        _Bucket* next = bucket->_next;
+        _buckets->recycleBuckets(bucket);
+        bucket = next;
+      }
+    }
+  };
+};
+
+
+typedef BucketPool<GCRefChain, 8192, 256> RefBucket;
+typedef BucketPool<CyclicNode, 1024, 256> CyclicBucket;
+
 struct RTGCMemState {
-  CyclicNode* g_freeCyclicNode;
-  GCRefChain* g_refChains;
-  GCRefChain* g_freeRefChain;
-  CyclicNode* g_cyclicNodes;
+  RefBucket::LocalAllocator refChainAllocator;
+  CyclicBucket::LocalAllocator cyclicNodeAllocator;
+
   CyclicNode* g_damagedCylicNodes;
   GCRefList g_cyclicTestNodes;
 };
+
+
 
 using RTGC_FIELD_TRAVERSE_CALLBACK = std::function<void(GCObject*)>;
 

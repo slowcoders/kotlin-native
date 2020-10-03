@@ -25,7 +25,8 @@ int RTGCGlobal::cntCyclicNodes = 0;
 
 CyclicNode lastDummy;
 
-
+RefBucket g_refBucket;
+CyclicBucket g_cyclicBucket;
 // CyclicNode* RTGCGlobal::g_freeCyclicNode;
 // GCRefChain* GCRefList::g_refChains;
 // GCRefChain* RTGCGlobal::g_freeRefChain;
@@ -73,49 +74,19 @@ bool GCNode::isLocked() {
 
 static int dump_recycle_log = 0;//ENABLE_RTGC_LOG;
 static GCRefChain* popFreeChain() {
-    assert(GCNode::isLocked());
-    GCRefChain* freeChain = memoryState->g_freeRefChain;
-    if (freeChain == NULL) {
-        RTGC_LOG("Insufficient RefChains!");
-        if (ENABLE_RTGC_LOG) {
-            GCNode::dumpGCLog();
-            dump_recycle_log ++;
-        }
-        CyclicNode::detectCycles();
-        freeChain = memoryState->g_freeRefChain;
-        if (ENABLE_RTGC_LOG) {
-            dump_recycle_log --;
-            GCNode::dumpGCLog();
-        }
-        if (freeChain == NULL) {
-            RTGC_LOG("Out of RefChains!");
-            ThrowOutOfMemoryError();
-        }
-    }
-    memoryState->g_freeRefChain = (GCRefChain*)GET_NEXT_FREE(freeChain);
-    RTGCGlobal::cntRefChain ++;
-    int node_id = freeChain - memoryState->g_refChains;
-    if (true || node_id % 1000 == 0) {
-       // printf("RTGC Ref chain: %d, %p\n", node_id, g_freeRefChain);
-    }
-    return freeChain;
+    return memoryState->refChainAllocator.allocItem();
 }
 
 static void recycleChain(GCRefChain* expired, const char* type) {
-    SET_NEXT_FREE(expired, memoryState->g_freeRefChain);
-    RTGCGlobal::cntRefChain --;
-    if (ENABLE_RTGC_LOG && dump_recycle_log > 0) {//} || node_id % 1000 == 0) {
-        RTGC_LOG("RTGC Recycle chain: %d\n", RTGCGlobal::cntRefChain);
-    }
-    memoryState->g_freeRefChain = expired;
+    memoryState->refChainAllocator.recycleItem(expired);
 }
 
 static int getRefChainIndex(GCRefChain* chain) {
-    return chain == NULL ? 0 : chain - memoryState->g_refChains;
+    return chain == NULL ? 0 : memoryState->refChainAllocator.getItemIndex(chain);
 }
 
 GCRefChain* GCRefList::topChain() { 
-    return first_ == 0 ? NULL : memoryState->g_refChains + first_; 
+    return first_ == 0 ? NULL : memoryState->refChainAllocator.getItem(first_); 
 }
 
 void GCRefList::push(GCObject* item) {
@@ -266,18 +237,19 @@ KInt Kotlin_native_internal_GC_refCount(KRef __unused, KRef obj) {
 
 
 int CyclicNode::getId() { 
-    return (this - memoryState->g_cyclicNodes) + CYCLIC_NODE_ID_START; 
+    return memoryState->cyclicNodeAllocator.getItemIndex(this) + CYCLIC_NODE_ID_START; 
 }
 
 CyclicNode* CyclicNode::getNode(int nodeId) {
     if (nodeId < CYCLIC_NODE_ID_START) {
         return NULL;
     }
-    return memoryState->g_cyclicNodes + nodeId - CYCLIC_NODE_ID_START;
+    return memoryState->cyclicNodeAllocator.getItem(nodeId - CYCLIC_NODE_ID_START);
 }
 
 void GCNode::initMemory(RTGCMemState* memState) {
-    RTGCGlobal::init(memState);
+    memState->refChainAllocator.init(&g_refBucket);
+    memState->cyclicNodeAllocator.init(&g_cyclicBucket);
     memoryState = memState;
 }
 
@@ -290,32 +262,6 @@ void RTGCGlobal::validateMemPool() {
     // assert(node == g_cyclicNodes + CNT_CYCLIC_NODE - 1);
 }
 
-void RTGCGlobal::init(RTGCMemState* memoryState) {
-    if (memoryState->g_cyclicNodes != NULL) return;
-    // printf("GCNode initialized");
-
-    memoryState->g_freeCyclicNode = new CyclicNode[CNT_CYCLIC_NODE];
-    memoryState->g_cyclicNodes = memoryState->g_freeCyclicNode;
-    memoryState->g_freeRefChain = new GCRefChain[CNT_REF_CHAIN];
-    memoryState->g_damagedCylicNodes = &lastDummy;
-
-
-    memoryState->g_refChains = memoryState->g_freeRefChain - 1;
-    RTGC_LOG("g_freeRefChain = %p\n", memoryState->g_refChains + 1);
-
-    int i = CNT_CYCLIC_NODE-1;
-    for (CyclicNode* node = memoryState->g_freeCyclicNode; --i >= 0;) {
-        node = (CyclicNode*)SET_NEXT_FREE(node, node + 1);
-    }
-
-    i = CNT_REF_CHAIN-1;
-    for (GCRefChain* node = memoryState->g_freeRefChain; --i >= 0;) {
-        node = (GCRefChain*)SET_NEXT_FREE(node, node + 1);
-    }
-
-    ::memoryState = memoryState;
-    validateMemPool();
-}
 
 bool enable_rtgc_trap = ENABLE_RTGC_LOG;
 bool rtgc_trap() {
