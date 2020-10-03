@@ -1146,15 +1146,16 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 
 void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container) {
   RTGC_LOG("scheduleDestroyContainer %1\n", container);
+  bool isShared = container->shareable();
   OnewayNode* node = container->getLocalOnewayNode();
-  GCNode::rtgcLock();
+  if (isShared) GCNode::rtgcLock();
   if (node != NULL) {
     node->dealloc();
   }
     RTGC_LOG("scheduleDestroyContainer 1 %p\n", container);
   CyclicNode::removeCyclicTest(container);
     RTGC_LOG("scheduleDestroyContainer 2 %p\n", container);
-  GCNode::rtgcUnlock();
+  if (isShared) GCNode::rtgcUnlock();
 #if USE_GC
   RuntimeAssert(container != nullptr, "Cannot destroy null container");
 
@@ -2290,6 +2291,11 @@ void deinitMemory(MemoryState* memoryState) {
 
   atomicAdd(&pendingDeinit, -1);
 
+#if RTGC  
+  memoryState->refChainAllocator.destroyAlloctor();
+  memoryState->cyclicNodeAllocator.destroyAlloctor();
+#endif
+
 #if TRACE_MEMORY
   if (IsStrictMemoryModel && lastMemoryState && allocCount > 0) {
     MEMORY_LOG("*** Memory leaks, leaked %d containers ***\n", allocCount);
@@ -2427,6 +2433,8 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
 }
 namespace {
 
+void shareAny(ObjHeader* obj);
+
 template <bool Strict>
 void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
   UPDATE_REF_EVENT(memoryState, *location, object, location, owner);
@@ -2437,11 +2445,17 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeade
     UpdateStackRef(location, object);
     return;
   }
+  bool isShared = owner->container()->shareable();
+  if (isShared) {
+    if (object != NULL) shareAny((ObjHeader*)object);
+    GCNode::rtgcLock();
+  }
   ObjHeader* old = *location;
   if (old != object) {
     *location = (ObjHeader*)object;
     updateHeapRef_internal(object, old, owner);
   }
+  if (isShared) GCNode::rtgcUnlock();
 }
 
 
@@ -3331,8 +3345,11 @@ void ensureNeverFrozen(ObjHeader* object) {
 void shareAny(ObjHeader* obj) {
   auto* container = obj->container();
   if (isShareable(container)) return;
-  RuntimeCheck(container->objectCount() == 1, "Must be a single object container");
+  //RuntimeCheck(container->objectCount() == 1, "Must be a single object container");
   container->makeShared();
+  traverseReferredObjects(obj, [](KRef field) {
+    shareAny(field);
+  });
 }
 
 ScopedRefHolder::ScopedRefHolder(KRef obj): obj_(obj) {

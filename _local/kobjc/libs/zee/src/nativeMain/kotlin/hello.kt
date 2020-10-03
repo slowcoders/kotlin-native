@@ -138,7 +138,7 @@ printTime("runLeakMemoryWithWorkerTerminationTest")
 runIlleagalSharingWithWeakTest()
 printTime("runIlleagalSharingWithWeakTest")
 
-val test_gc_bug_in_worker_thread = false;
+val test_gc_bug_in_worker_thread = true;
 if (test_gc_bug_in_worker_thread) {
     runWorkerBoundReference0Test()
     printTime("runWorkerBoundReference0Test")

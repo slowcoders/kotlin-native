@@ -46,7 +46,7 @@ void CyclicNode::markDamaged() {
 }
 
 void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
-    assert(isLocked());
+    //assert(isLocked());
     RTGC_LOG("addCyclicTest %p\n", obj);
     obj->markNeedCyclicTest();
     obj->getNode()->markSuspectedCyclic();
@@ -61,7 +61,7 @@ void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
 }
 
 void CyclicNode::removeCyclicTest(GCObject* obj) {
-    RuntimeAssert(isLocked(), "GCNode is not locked")
+    //RuntimeAssert(isLocked(), "GCNode is not locked")
     if (!obj->isNeedCyclicTest()) return;
     obj->clearNeedCyclicTest();
     RTGCGlobal::g_cntLocalCyclicTest --;

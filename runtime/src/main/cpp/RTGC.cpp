@@ -38,7 +38,7 @@ int RTGCGlobal::g_cntMemberCyclicTest = 0;
 static pthread_t g_lockThread = NULL;
 static int g_cntLock = 0;
 THREAD_LOCAL_VARIABLE int32_t isHeapLocked = 0;
-static const bool RECURSIVE_LOCK = false;
+static const bool RECURSIVE_LOCK = true;
 static const bool SKIP_REMOVE_ERROR = true;
 
 void GCNode::rtgcLock() {

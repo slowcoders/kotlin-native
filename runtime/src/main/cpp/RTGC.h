@@ -5,6 +5,7 @@
 #include "Common.h"
 #include "TypeInfo.h"
 #include "Atomic.h"
+#include "Porting.h"
 #include <functional>
 #include <utility>
 #include <atomic>
@@ -202,6 +203,12 @@ public:
   static void detectCycles()  RTGC_NO_INLINE;
 };
 
+#define DEBUG_BUCKET 0
+#if DEBUG_BUCKET
+#define BUCKET_LOG(...) konan::consolePrintf(__VA_ARGS__);
+#else
+#define BUCKET_LOG(...)
+#endif
 
 template <class T, int ITEM_COUNT, int BUCKET_COUNT> 
 struct BucketPool {
@@ -209,31 +216,56 @@ struct BucketPool {
     T* _freeItem;
     _Bucket* _next;
     T* _items;
+    #if DEBUG_BUCKET    
+    int cntFreeItem;
+    #endif
 
     void setItems(T* items) {
       this->_items = items;
+      this->_freeItem = items;
+      #if DEBUG_BUCKET    
+      this->cntFreeItem = ITEM_COUNT;
+      #endif
     }
 
     void initBucket() {
       if (GET_NEXT_FREE(_items) == NULL) {
+        BUCKET_LOG("init Bucket %p\n", this);
         T* item = _items;
-        for (int i = ITEM_COUNT; --i > 0; ) {
+        for (int i = ITEM_COUNT; --i > 0; item++) {
           SET_NEXT_FREE(item, item+1);
         }
       }
+      else {
+        #if DEBUG_BUCKET    
+        konan::consolePrintf("reuse Bucket %p\n", this);
+        #endif
+      }
     }
 
-    T* popItem() {
+    T* popItem() RTGC_NO_INLINE {
       T* item = _freeItem;
       if (item != NULL) {
         _freeItem = GET_NEXT_FREE(item);
+        #if DEBUG_BUCKET
+        this->cntFreeItem--;
+        #endif
+      }
+      else {
+        BUCKET_LOG("Bucket empty cnt=%d %p\n", this->cntFreeItem, this);
       }
       return item;
     }
 
     void recycleItem(T* item) {
+      if (_freeItem == NULL) {
+        BUCKET_LOG("Bucket refilled %p\n", this);
+      }
       SET_NEXT_FREE(item, _freeItem);
       _freeItem = item;
+      #if DEBUG_BUCKET
+      this->cntFreeItem++;
+      #endif
     }
   };
 
@@ -241,6 +273,7 @@ struct BucketPool {
   _Bucket _buckets[BUCKET_COUNT];
   _Bucket* _freeBuckets[BUCKET_COUNT];
   std::atomic<int> _cntFreeBucket;
+  std::atomic<int> _nextAllocatorId;
 
   BucketPool() {
     _alocatedItems = new T[ITEM_COUNT*BUCKET_COUNT];
@@ -250,6 +283,10 @@ struct BucketPool {
       _buckets[i].setItems(_alocatedItems + i * ITEM_COUNT);
       _freeBuckets[BUCKET_COUNT-1-i] = _buckets + i;
     }
+  }
+
+  int nextId() {
+    return ++_nextAllocatorId;
   }
 
   static T* GET_NEXT_FREE(T* chain) {
@@ -266,25 +303,32 @@ struct BucketPool {
     return _buckets + idx;
   }
 
-  _Bucket* popBucket() {
+  _Bucket* popBucket() RTGC_NO_INLINE {
     int idx = --_cntFreeBucket;
     RuntimeAssert(idx >= 0, "Inssuficient Buckets");
     _Bucket* bucket = _freeBuckets[idx];
+    BUCKET_LOG("popBucket %d %p\n", idx, bucket);
     bucket->initBucket();
     return bucket;
   }
 
   void recycleBuckets(_Bucket* bucket) {
     bucket->_next = NULL;
-    _freeBuckets[_cntFreeBucket++] = bucket;
+    int idx = _cntFreeBucket++;
+    _freeBuckets[idx] = bucket;
+    BUCKET_LOG("recycleBucket %d %p\n", idx, bucket);
   }
 
   struct LocalAllocator {
     _Bucket* _currBucket;
     BucketPool* _buckets;
+    int _id;
 
     void init(BucketPool* buckets) {
+      this->_id = buckets->nextId();
       this->_buckets = buckets;
+      _currBucket = buckets->popBucket();
+      BUCKET_LOG("int Allocator %d %p\n", this->_id, this);
     }
 
     int getItemIndex(T* item) {
@@ -295,23 +339,28 @@ struct BucketPool {
       return _buckets->_alocatedItems + idx;
     }
 
-    T* allocItem() {
-      _Bucket* prev = _currBucket;
-      T* item = prev->popItem();
+    T* allocItem() RTGC_NO_INLINE {
+      _Bucket* bucket = _currBucket;
+      T* item = bucket->popItem();
       if (item != NULL) return item;
 
-      _Bucket* bucket;
-      for (bucket = prev->_next; bucket != NULL; bucket = bucket->_next) {
+      _Bucket* prev = bucket;
+      bucket = bucket->_next;
+      int cntLocalBucket = 1;
+      for (; bucket != NULL; bucket = bucket->_next) {
+        cntLocalBucket ++;
         if (bucket->_freeItem != NULL) {
           prev->_next = bucket->_next;
-          bucket->_next = _currBucket;
-          _currBucket = bucket;
-          return bucket->popItem();
+          break;
         }
+        prev = bucket;
       }
-
-      bucket = _buckets->popBucket();
+      if (bucket == NULL) {
+        BUCKET_LOG("cntLocalBucket(%d) %d\n", _id, ++cntLocalBucket);
+        bucket = _buckets->popBucket();
+      }
       bucket->_next = _currBucket;
+      _currBucket = bucket;
       return bucket->popItem();
     }
 
@@ -321,6 +370,7 @@ struct BucketPool {
     }
 
     void destroyAlloctor() {
+      BUCKET_LOG("destroyAlloctor(%d) %p\n", _id, this);
       for (_Bucket* bucket = _currBucket; bucket != NULL; ) {
         _Bucket* next = bucket->_next;
         _buckets->recycleBuckets(bucket);
