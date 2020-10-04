@@ -2291,11 +2291,6 @@ void deinitMemory(MemoryState* memoryState) {
 
   atomicAdd(&pendingDeinit, -1);
 
-#if RTGC  
-  memoryState->refChainAllocator.destroyAlloctor();
-  memoryState->cyclicNodeAllocator.destroyAlloctor();
-#endif
-
 #if TRACE_MEMORY
   if (IsStrictMemoryModel && lastMemoryState && allocCount > 0) {
     MEMORY_LOG("*** Memory leaks, leaked %d containers ***\n", allocCount);
@@ -2312,6 +2307,11 @@ void deinitMemory(MemoryState* memoryState) {
   }
 #endif  // USE_GC
 #endif  // TRACE_MEMORY
+
+#if RTGC  
+  memoryState->refChainAllocator.destroyAlloctor();
+  memoryState->cyclicNodeAllocator.destroyAlloctor();
+#endif
 
   PRINT_EVENT(memoryState)
   DEINIT_EVENT(memoryState)

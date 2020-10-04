@@ -18,7 +18,7 @@
 #include "assert.h"
 #include <pthread.h>
 
-THREAD_LOCAL_VARIABLE RTGCMemState* memoryState;
+THREAD_LOCAL_VARIABLE RTGCMemState* rtgcMem;
 
 int RTGCGlobal::cntRefChain = 0;
 int RTGCGlobal::cntCyclicNodes = 0;
@@ -40,6 +40,7 @@ static int g_cntLock = 0;
 THREAD_LOCAL_VARIABLE int32_t isHeapLocked = 0;
 static const bool RECURSIVE_LOCK = true;
 static const bool SKIP_REMOVE_ERROR = true;
+int g_memDebug = false;
 
 void GCNode::rtgcLock() {
     if (RECURSIVE_LOCK) {
@@ -49,11 +50,20 @@ void GCNode::rtgcLock() {
         }
     }
     g_cntLock ++;
+    if (DEBUG_BUCKET && (g_memDebug || g_lockThread != pthread_self())) {
+        if (g_lockThread > (void*)0x70000721c000) {
+            rtgc_trap();
+        }
+        BUCKET_LOG("g_lockThread =%p(%p) ++%d\n", g_lockThread, pthread_self(), g_cntLock)
+    }
 }
 
 void GCNode::rtgcUnlock() {
     if (RECURSIVE_LOCK) {
         RuntimeAssert(pthread_self() == g_lockThread, "unlock in wrong thread");
+    }
+    if (DEBUG_BUCKET && (g_memDebug || g_lockThread != pthread_self())) {
+        BUCKET_LOG("g_lockThread =%p(%p) %d--\n", g_lockThread, pthread_self(), g_cntLock)
     }
     if (--g_cntLock == 0) {
         if (RECURSIVE_LOCK) {
@@ -74,19 +84,19 @@ bool GCNode::isLocked() {
 
 static int dump_recycle_log = 0;//ENABLE_RTGC_LOG;
 static GCRefChain* popFreeChain() {
-    return memoryState->refChainAllocator.allocItem();
+    return rtgcMem->refChainAllocator.allocItem();
 }
 
 static void recycleChain(GCRefChain* expired, const char* type) {
-    memoryState->refChainAllocator.recycleItem(expired);
+    rtgcMem->refChainAllocator.recycleItem(expired);
 }
 
 static int getRefChainIndex(GCRefChain* chain) {
-    return chain == NULL ? 0 : memoryState->refChainAllocator.getItemIndex(chain);
+    return chain == NULL ? 0 : rtgcMem->refChainAllocator.getItemIndex(chain);
 }
 
 GCRefChain* GCRefList::topChain() { 
-    return first_ == 0 ? NULL : memoryState->refChainAllocator.getItem(first_); 
+    return first_ == 0 ? NULL : rtgcMem->refChainAllocator.getItem(first_); 
 }
 
 void GCRefList::push(GCObject* item) {
@@ -237,20 +247,23 @@ KInt Kotlin_native_internal_GC_refCount(KRef __unused, KRef obj) {
 
 
 int CyclicNode::getId() { 
-    return memoryState->cyclicNodeAllocator.getItemIndex(this) + CYCLIC_NODE_ID_START; 
+    return rtgcMem->cyclicNodeAllocator.getItemIndex(this) + CYCLIC_NODE_ID_START; 
 }
 
 CyclicNode* CyclicNode::getNode(int nodeId) {
     if (nodeId < CYCLIC_NODE_ID_START) {
         return NULL;
     }
-    return memoryState->cyclicNodeAllocator.getItem(nodeId - CYCLIC_NODE_ID_START);
+    return rtgcMem->cyclicNodeAllocator.getItem(nodeId - CYCLIC_NODE_ID_START);
 }
 
+static int cntMemory = 0; 
 void GCNode::initMemory(RTGCMemState* memState) {
-    memState->refChainAllocator.init(&g_refBucket);
-    memState->cyclicNodeAllocator.init(&g_cyclicBucket);
-    memoryState = memState;
+    cntMemory ++;
+    g_memDebug = cntMemory > 1;
+    memState->refChainAllocator.init(&g_refBucket, cntMemory);
+    memState->cyclicNodeAllocator.init(&g_cyclicBucket, cntMemory + 1000);
+    rtgcMem = memState;
 }
 
 void RTGCGlobal::validateMemPool() {

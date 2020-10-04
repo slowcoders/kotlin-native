@@ -17,12 +17,12 @@
 #include "assert.h"
 
 
-extern THREAD_LOCAL_VARIABLE RTGCMemState* memoryState;
+extern THREAD_LOCAL_VARIABLE RTGCMemState* rtgcMem;
 
 
 CyclicNode* CyclicNode::create() {
     assert(isLocked());
-    CyclicNode* node = memoryState->cyclicNodeAllocator.allocItem();
+    CyclicNode* node = rtgcMem->cyclicNodeAllocator.allocItem();
     memset(node, 0, sizeof(CyclicNode));
     RTGCGlobal::cntCyclicNodes ++;
     return node;
@@ -32,7 +32,7 @@ void CyclicNode::dealloc() {
     RTGC_LOG("## RTGC deallic node:%d\n", this->getId());
     RuntimeAssert(isLocked(), "GCNode is not locked")
     externalReferrers.clear();
-    memoryState->cyclicNodeAllocator.recycleItem(this);
+    rtgcMem->cyclicNodeAllocator.recycleItem(this);
     RTGCGlobal::cntCyclicNodes --;
 }
 
@@ -40,8 +40,8 @@ void CyclicNode::markDamaged() {
     assert(isLocked());
 
     if (!this->isDamaged()) {
-        this->nextDamaged = memoryState->g_damagedCylicNodes;
-        memoryState->g_damagedCylicNodes = this;
+        this->nextDamaged = rtgcMem->g_damagedCylicNodes;
+        rtgcMem->g_damagedCylicNodes = this;
     }
 }
 
@@ -57,7 +57,7 @@ void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
         RTGCGlobal::g_cntMemberCyclicTest ++;
     }
 
-    memoryState->g_cyclicTestNodes.push(obj);
+    rtgcMem->g_cyclicTestNodes.push(obj);
 }
 
 void CyclicNode::removeCyclicTest(GCObject* obj) {
@@ -67,7 +67,7 @@ void CyclicNode::removeCyclicTest(GCObject* obj) {
     RTGCGlobal::g_cntLocalCyclicTest --;
 
     RTGC_LOG("## RTGC Remove Cyclic Test %p:%d\n", obj, obj->getNodeId());
-    memoryState->g_cyclicTestNodes.remove(obj);
+    rtgcMem->g_cyclicTestNodes.remove(obj);
 }
 
 void CyclicNode::mergeCyclicNode(GCObject* obj, int expiredNodeId) {
@@ -195,14 +195,14 @@ void CyclicNode::detectCyclicNodes(GCObject* tracingObj, GCRefList* tracingList,
 
 
 void CyclicNode::detectCycles() {
-    rtgcLock();
     GCRefList tracingList;
     GCRefList finishedList;
-    RTGCMemState* memState = memoryState;
+    RTGCMemState* memState = rtgcMem;
     if (memState == NULL) {
         RTGC_LOG("## memState == NULL!");
         return;
     }
+    rtgcLock();
     for (GCObject* root = memState->g_cyclicTestNodes.pop(); root != NULL; root = memState->g_cyclicTestNodes.pop()) {
         RTGC_LOG("## RTGC c root: %p, next: %p\n", root, memState->g_cyclicTestNodes.topChain() == NULL ? NULL : memState->g_cyclicTestNodes.topChain()->obj());
         int last_node_id = root->getNodeId();
