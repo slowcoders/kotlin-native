@@ -530,11 +530,11 @@ private:
         if (atomicGet(&aliveMemoryStatesCount) == 0)
           return;
 
-        memoryState = InitMemory(); // Required by ReleaseHeapRef.
+        memoryState = InitMemory(); // Required by ReleaseRef.
       }
 
       processEnqueuedReleaseRefsWith([](ObjHeader* obj) {
-        ReleaseHeapRef(obj);
+        ReleaseRef(obj);
       });
 
       if (hadNoStateInitialized) {
@@ -1881,8 +1881,8 @@ inline bool canBeCyclic(ContainerHeader* container) {
   return true;
 }
 
-inline void addHeapRef(ContainerHeader* container) {
-  MEMORY_LOG("AddHeapRef %p: rc=%d\n", container, container->refCount())
+inline void retainRef(ContainerHeader* container) {
+  MEMORY_LOG("RetainRef %p: rc=%d\n", container, container->refCount())
   UPDATE_ADDREF_STAT(memoryState, container, needAtomicAccess(container), 0)
   switch (container->tag()) {
     case CONTAINER_TAG_STACK:
@@ -1897,13 +1897,13 @@ inline void addHeapRef(ContainerHeader* container) {
   }
 }
 
-inline void addHeapRef(const ObjHeader* header) {
+inline void retainRef(const ObjHeader* header) {
   auto* container = header->container();
   if (container != nullptr)
-    addHeapRef(const_cast<ContainerHeader*>(container));
+    retainRef(const_cast<ContainerHeader*>(container));
 }
 
-inline bool tryAddHeapRef(ContainerHeader* container) {
+inline bool tryRetainRef(ContainerHeader* container) {
   switch (container->tag()) {
     case CONTAINER_TAG_STACK:
       break;
@@ -1916,19 +1916,19 @@ inline bool tryAddHeapRef(ContainerHeader* container) {
       break;
   }
 
-  MEMORY_LOG("AddHeapRef %p: rc=%d\n", container, container->refCount() - 1)
+  MEMORY_LOG("RetainRef %p: rc=%d\n", container, container->refCount() - 1)
   UPDATE_ADDREF_STAT(memoryState, container, needAtomicAccess(container), 0)
   return true;
 }
 
-inline bool tryAddHeapRef(const ObjHeader* header) {
+inline bool tryRetainRef(const ObjHeader* header) {
   auto* container = header->container();
-  return (container != nullptr) ? tryAddHeapRef(container) : true;
+  return (container != nullptr) ? tryRetainRef(container) : true;
 }
 
 template <bool Strict>
-inline void releaseHeapRef(ContainerHeader* container) {
-  MEMORY_LOG("ReleaseHeapRef %p: rc=%d\n", container, container->refCount())
+inline void releaseRef(ContainerHeader* container) {
+  MEMORY_LOG("ReleaseRef %p: rc=%d\n", container, container->refCount())
   UPDATE_RELEASEREF_STAT(memoryState, container, needAtomicAccess(container), canBeCyclic(container), 0)
   if (container->tag() != CONTAINER_TAG_STACK) {
     if (Strict)
@@ -1939,10 +1939,10 @@ inline void releaseHeapRef(ContainerHeader* container) {
 }
 
 template <bool Strict>
-inline void releaseHeapRef(const ObjHeader* header) {
+inline void releaseRef(const ObjHeader* header) {
   auto* container = header->container();
   if (container != nullptr)
-    releaseHeapRef<Strict>(const_cast<ContainerHeader*>(container));
+    releaseRef<Strict>(const_cast<ContainerHeader*>(container));
 }
 
 // We use first slot as place to store frame-local arena container.
@@ -2171,7 +2171,7 @@ ForeignRefManager* initLocalForeignRef(ObjHeader* object) {
 }
 
 ForeignRefManager* initForeignRef(ObjHeader* object) {
-  addHeapRef(object);
+  retainRef(object);
   RTGC_LOG("initForeignRef %p\n", object->container());
 
   if (!IsStrictMemoryModel) return nullptr;
@@ -2203,7 +2203,7 @@ void deinitForeignRef(ObjHeader* object, ForeignRefManager* manager) {
 
   if (IsStrictMemoryModel) {
     if (memoryState != nullptr && isForeignRefAccessible(object, manager)) {
-      releaseHeapRef<true>(object);
+      releaseRef<true>(object);
     } else {
       // Prefer this for (memoryState == nullptr) since otherwise the object may leak:
       // an uninitialized thread did not run any Kotlin code;
@@ -2214,7 +2214,7 @@ void deinitForeignRef(ObjHeader* object, ForeignRefManager* manager) {
 
     manager->releaseRef();
   } else {
-    releaseHeapRef<false>(object);
+    releaseRef<false>(object);
     RuntimeAssert(manager == nullptr, "must be null");
   }
 }
@@ -2340,7 +2340,7 @@ void setStackRef(ObjHeader** location, const ObjHeader* object) {
   MEMORY_LOG("SetStackRef *%p: %p\n", location, object)
   UPDATE_REF_EVENT(memoryState, nullptr, object, location, 1);
   if (!Strict && object != nullptr)
-    addHeapRef(object);
+    retainRef(object);
   *const_cast<const ObjHeader**>(location) = object;
 }
 
@@ -2349,7 +2349,7 @@ void setHeapRef(ObjHeader** location, const ObjHeader* object) {
   MEMORY_LOG("SetHeapRef *%p: %p\n", location, object)
   UPDATE_REF_EVENT(memoryState, nullptr, object, location, 0);
   if (object != nullptr)
-    addHeapRef(const_cast<ObjHeader*>(object));
+    retainRef(const_cast<ObjHeader*>(object));
   *const_cast<const ObjHeader**>(location) = object;
 }
 
@@ -2359,7 +2359,7 @@ void zeroHeapRef(ObjHeader** location) {
   if (reinterpret_cast<uintptr_t>(value) > 1) {
     UPDATE_REF_EVENT(memoryState, value, nullptr, location, 0);
     *location = nullptr;
-    ReleaseHeapRef(value);
+    ReleaseRef(value);
   }
 }
 
@@ -2372,7 +2372,7 @@ void zeroStackRef(ObjHeader** location) {
   } else {
     auto* old = *location;
     *location = nullptr;
-    if (old != nullptr) releaseHeapRef<Strict>(old);
+    if (old != nullptr) releaseRef<Strict>(old);
   }
 }
 
@@ -2387,7 +2387,7 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
 
     if (container != nullptr) {
       if (object->isAcyclic()) {
-        addHeapRef(object);
+        retainRef(object);
       }
       else switch(container->tag()) {
         case CONTAINER_TAG_STACK:
@@ -2403,14 +2403,14 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
           break;      
       }
     }
-    //addHeapRef(object);
+    //retainRef(object);
   }
 
   if (reinterpret_cast<uintptr_t>(old) > 1 && old != owner) {
     ContainerHeader* container = old->container();
     if (container != nullptr) {
       if (old->isAcyclic()) {
-        releaseHeapRef<false/*???*/>(old);
+        releaseRef<false/*???*/>(old);
       }
       else switch(container->tag()) {
         case CONTAINER_TAG_STACK:
@@ -2427,7 +2427,7 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
           break;      
       }
     }
-    //releaseHeapRef<Strict>(old);
+    //releaseRef<Strict>(old);
   }
 
 }
@@ -2466,11 +2466,11 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeade
   ObjHeader* old = *location;
   if (old != object) {
     if (object != nullptr) {
-      addHeapRef(object);
+      retainRef(object);
     }
     *const_cast<const ObjHeader**>(location) = object;
     if (reinterpret_cast<uintptr_t>(old) > 1) {
-      releaseHeapRef<Strict>(old);
+      releaseRef<Strict>(old);
     }
   }
 }
@@ -2486,11 +2486,11 @@ void updateStackRef(ObjHeader** location, const ObjHeader* object) {
      ObjHeader* old = *location;
      if (old != object) {
         if (object != nullptr) {
-          addHeapRef(object);
+          retainRef(object);
         }
         *const_cast<const ObjHeader**>(location) = object;
         if (old != nullptr) {
-           releaseHeapRef<false>(old);
+           releaseRef<false>(old);
         }
      }
   }
@@ -2506,15 +2506,15 @@ void updateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) {
 #if KONAN_NO_THREADS
     ObjHeader* old = *location;
     if (old == nullptr) {
-      addHeapRef(const_cast<ObjHeader*>(object));
+      retainRef(const_cast<ObjHeader*>(object));
       *const_cast<const ObjHeader**>(location) = object;
     }
 #else
-    addHeapRef(const_cast<ObjHeader*>(object));
+    retainRef(const_cast<ObjHeader*>(object));
     auto old = __sync_val_compare_and_swap(location, nullptr, const_cast<ObjHeader*>(object));
     if (old != nullptr) {
       // Failed to store, was not null.
-     ReleaseHeapRef(const_cast<ObjHeader*>(object));
+     ReleaseRef(const_cast<ObjHeader*>(object));
     }
 #endif
     UPDATE_REF_EVENT(memoryState, old, object, location, 0);
@@ -2767,7 +2767,7 @@ void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlo
     ObjHeader* oldValue = *location;
     SetHeapRef(location, newValue);
     if (oldValue != nullptr)
-      ReleaseHeapRef(oldValue);
+      ReleaseRef(oldValue);
   }
   else {
     UpdateHeapRef(location, newValue, owner);
@@ -2833,7 +2833,7 @@ const ObjHeader* leaveFrameAndReturnRef(ObjHeader** start, int param_count, ObjH
   if (res != returnRef) {
     *resultSlot = (ObjHeader*)returnRef;
     if (res != NULL) {
-      releaseHeapRef<Strict>(res);
+      releaseRef<Strict>(res);
     }
     res = returnRef;
   }
@@ -2860,7 +2860,7 @@ const ObjHeader* leaveFrameAndReturnRef(ObjHeader** start, int param_count, ObjH
       current++;
     }
     if (returnRef != NULL) {
-      addHeapRef(returnRef);
+      retainRef(returnRef);
       MEMORY_LOG("*** returns in leave %p\n", returnRef);
     }
   }
@@ -2984,7 +2984,7 @@ KBoolean getTuneGCThreshold() {
 KNativePtr createStablePointer(KRef any) {
   if (any == nullptr) return nullptr;
   MEMORY_LOG("CreateStablePointer for %p rc=%d\n", any, any->container() ? any->container()->refCount() : 0)
-  addHeapRef(any);
+  retainRef(any);
   return reinterpret_cast<KNativePtr>(any);
 }
 
@@ -2992,7 +2992,7 @@ void disposeStablePointer(KNativePtr pointer) {
   if (pointer == nullptr) return;
   KRef any = reinterpret_cast<KRef>(pointer);
   MEMORY_LOG("disposeStablePointer for %p rc=%d\n", any, any->container() ? any->container()->refCount() : 0)
-  ReleaseHeapRef(any);
+  ReleaseRef(any);
 }
 
 OBJ_GETTER(derefStablePointer, KNativePtr pointer) {
@@ -3344,13 +3344,13 @@ void shareAny(ObjHeader* obj) {
 
 ScopedRefHolder::ScopedRefHolder(KRef obj): obj_(obj) {
   if (obj_) {
-    addHeapRef(obj_);
+    retainRef(obj_);
   }
 }
 
 ScopedRefHolder::~ScopedRefHolder() {
   if (obj_) {
-    ReleaseHeapRef(obj_);
+    ReleaseRef(obj_);
   }
 }
 
@@ -3641,15 +3641,15 @@ ArrayHeader* ArenaContainer::PlaceArray(const TypeInfo* type_info, uint32_t coun
 extern "C" {
 
 // Private memory interface.
-bool TryAddHeapRef(const ObjHeader* object) {
-  return tryAddHeapRef(object);
+bool TryRetainRef(const ObjHeader* object) {
+  return tryRetainRef(object);
 }
 
-void ReleaseHeapRefStrict(const ObjHeader* object) {
-  releaseHeapRef<true>(const_cast<ObjHeader*>(object));
+void ReleaseRefStrict(const ObjHeader* object) {
+  releaseRef<true>(const_cast<ObjHeader*>(object));
 }
-void ReleaseHeapRefRelaxed(const ObjHeader* object) {
-  releaseHeapRef<false>(const_cast<ObjHeader*>(object));
+void ReleaseRefRelaxed(const ObjHeader* object) {
+  releaseRef<false>(const_cast<ObjHeader*>(object));
 }
 
 ForeignRefContext InitLocalForeignRef(ObjHeader* object) {

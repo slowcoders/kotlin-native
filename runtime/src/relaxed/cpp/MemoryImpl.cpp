@@ -29,8 +29,8 @@ OBJ_GETTER(InitSharedInstance,
   RETURN_RESULT_OF(InitSharedInstanceRelaxed, location, typeInfo, ctor);
 }
 
-void ReleaseHeapRef(const ObjHeader* object) {
-  ReleaseHeapRefRelaxed(object);
+void ReleaseRef(const ObjHeader* object) {
+  ReleaseRefRelaxed(object);
 }
 
 void ZeroStackRef(ObjHeader** location) {

@@ -502,7 +502,7 @@ internal class Llvm(val context: Context, val llvmModule: LLVMModuleRef) {
     val initInstanceFunction = importModelSpecificRtFunction("InitInstance")
     val initSharedInstanceFunction = importModelSpecificRtFunction("InitSharedInstance")
     val updateHeapRefFunction = importModelSpecificRtFunction("UpdateHeapRef")
-    val releaseHeapRefFunction = importModelSpecificRtFunction("ReleaseHeapRef")
+    val releaseRefFunction = importModelSpecificRtFunction("ReleaseRef")
     val updateStackRefFunction = importModelSpecificRtFunction("UpdateStackRef")
     val updateReturnRefFunction = importModelSpecificRtFunction("UpdateReturnRef")
     val zeroStackRefFunction = importRtFunction("ZeroStackRef")

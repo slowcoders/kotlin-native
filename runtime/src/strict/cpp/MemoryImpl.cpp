@@ -29,8 +29,8 @@ OBJ_GETTER(InitSharedInstance,
   RETURN_RESULT_OF(InitSharedInstanceStrict, location, typeInfo, ctor);
 }
 
-void ReleaseHeapRef(const ObjHeader* object) {
-  ReleaseHeapRefStrict(object);
+void ReleaseRef(const ObjHeader* object) {
+  ReleaseRefStrict(object);
 }
 
 void SetStackRef(ObjHeader** location, const ObjHeader* object) {
