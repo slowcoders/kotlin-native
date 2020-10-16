@@ -257,7 +257,7 @@ internal class StackLocalsManagerImpl(
     private fun clean(stackLocal: StackLocal, refsOnly: Boolean) = with(functionGenerationContext) {
         if (stackLocal.isArray) {
             if (stackLocal.irClass.symbol == context.ir.symbols.array)
-                call(context.llvm.zeroArrayRefsFunction, listOf(stackLocal.objHeaderPtr))
+                call(context.llvm.zeroStackLocalArrayRefsFunction, listOf(stackLocal.objHeaderPtr))
         } else {
             val type = context.llvmDeclarations.forClass(stackLocal.irClass).bodyType
             for (field in context.getLayoutBuilder(stackLocal.irClass).fields) {
@@ -269,7 +269,7 @@ internal class StackLocalsManagerImpl(
                     if (refsOnly)
                         storeStackRef(kNullObjHeaderPtr, fieldPtr)
                     else
-                        call(context.llvm.zeroHeapRefFunction, listOf(fieldPtr))
+                        call(context.llvm.zeroStackRefFunction, listOf(fieldPtr))
                 }
             }
 

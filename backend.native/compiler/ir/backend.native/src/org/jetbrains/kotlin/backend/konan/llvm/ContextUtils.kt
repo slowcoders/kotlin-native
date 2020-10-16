@@ -505,8 +505,8 @@ internal class Llvm(val context: Context, val llvmModule: LLVMModuleRef) {
     val releaseHeapRefFunction = importModelSpecificRtFunction("ReleaseHeapRef")
     val updateStackRefFunction = importModelSpecificRtFunction("UpdateStackRef")
     val updateReturnRefFunction = importModelSpecificRtFunction("UpdateReturnRef")
-    val zeroHeapRefFunction = importRtFunction("ZeroHeapRef")
-    val zeroArrayRefsFunction = importRtFunction("ZeroArrayRefs")
+    val zeroStackRefFunction = importRtFunction("ZeroStackRef")
+    val zeroStackLocalArrayRefsFunction = importRtFunction("ZeroStackLocalArrayRefs")
     val enterFrameFunction = importModelSpecificRtFunction("EnterFrame")
     val leaveFrameFunction = importModelSpecificRtFunction("LeaveFrame")
     // RTGC

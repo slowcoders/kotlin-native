@@ -60,7 +60,7 @@ void GCNode::rtgcLock() {
 
 void GCNode::rtgcUnlock() {
     if (RECURSIVE_LOCK) {
-        RuntimeAssert(pthread_self() == g_lockThread, "unlock in wrong thread");
+        //RuntimeAssert(pthread_self() == g_lockThread, "unlock in wrong thread");
     }
     if (DEBUG_BUCKET && (g_memDebug || g_lockThread != pthread_self())) {
         BUCKET_LOG("g_lockThread =%p(%p) %d--\n", g_lockThread, pthread_self(), g_cntLock)

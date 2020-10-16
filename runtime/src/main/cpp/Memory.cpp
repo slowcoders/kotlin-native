@@ -3780,8 +3780,8 @@ void UpdateReturnRefRelaxed(ObjHeader** returnSlot, const ObjHeader* value) {
   updateReturnRef<false>(returnSlot, value);
 }
 
-void ZeroArrayRefs(ArrayHeader* array) {
-  RTGC_LOG("ZeroArrayRefs: %p\n", array);
+void ZeroStackLocalArrayRefs(ArrayHeader* array) {
+  RTGC_LOG("ZeroStackLocalArrayRefs: %p\n", array);
 
   for (uint32_t index = 0; index < array->count_; ++index) {
     ObjHeader** location = ArrayAddressOfElementAt(array, index);
