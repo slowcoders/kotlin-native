@@ -2612,7 +2612,7 @@ OBJ_GETTER(initInstance,
     return object;
   } catch (...) {
     UpdateReturnRef(OBJ_RESULT, nullptr);
-    ZeroHeapRef(location);
+    ZeroStackRef(location);
     throw;
   }
 #endif
@@ -2629,22 +2629,22 @@ OBJ_GETTER(initSharedInstance,
   }
   ObjHeader* object = AllocInstance(typeInfo, OBJ_RESULT);
   UpdateStackRef(location, object);
-#if KONAN_NO_EXCEPTIONS
-  ctor(object);
-  FreezeSubgraph(object);
-  return object;
-#else
-  try {
+  #if KONAN_NO_EXCEPTIONS
     ctor(object);
-    if (Strict)
-      FreezeSubgraph(object);
+    FreezeSubgraph(object);
     return object;
-  } catch (...) {
-    UpdateReturnRef(OBJ_RESULT, nullptr);
-    ZeroHeapRef(location);
-    throw;
-  }
-#endif  // KONAN_NO_EXCEPTIONS
+  #else
+    try {
+      ctor(object);
+      if (Strict)
+        FreezeSubgraph(object);
+      return object;
+    } catch (...) {
+      UpdateReturnRef(OBJ_RESULT, nullptr);
+      ZeroStackRef(location);
+      throw;
+    }
+  #endif  // KONAN_NO_EXCEPTIONS
 #else  // KONAN_NO_THREADS
   // Search from the top of the stack.
   for (auto it = memoryState->initializingSingletons.rbegin(); it != memoryState->initializingSingletons.rend(); ++it) {
@@ -2664,39 +2664,41 @@ OBJ_GETTER(initSharedInstance,
   }
   ObjHeader* object = AllocInstance(typeInfo, OBJ_RESULT);
   memoryState->initializingSingletons.push_back(std::make_pair(location, object));
-#if KONAN_NO_EXCEPTIONS
-  ctor(object);
-  if (Strict)
-    FreezeSubgraph(object);
-#ifdef RTGC
-  setStackRef<Strict>(location, object);
-#else    
-  UpdateStackRef(location, object);
-#endif  
-  synchronize();
-  memoryState->initializingSingletons.pop_back();
-  return object;
-#else  // KONAN_NO_EXCEPTIONS
-  try {
+  #if KONAN_NO_EXCEPTIONS
     ctor(object);
     if (Strict)
       FreezeSubgraph(object);
-#ifdef RTGC
-    setStackRef<Strict>(location, object);
-#else    
-    UpdateStackRef(location, object);
-#endif
+    #ifdef RTGC
+      setStackRef<Strict>(location, object);
+    #else    
+      UpdateStackRef(location, object);
+    #endif  
     synchronize();
     memoryState->initializingSingletons.pop_back();
     return object;
-  } catch (...) {
-    UpdateReturnRef(OBJ_RESULT, nullptr);
-    zeroHeapRef(location);
-    memoryState->initializingSingletons.pop_back();
-    synchronize();
-    throw;
-  }
-#endif  // KONAN_NO_EXCEPTIONS
+  #else  // KONAN_NO_EXCEPTIONS
+    try {
+      *location = NULL;
+      ctor(object);
+      if (Strict) {
+        FreezeSubgraph(object);
+      }
+      #ifdef RTGC
+        setStackRef<Strict>(location, object);
+      #else    
+        UpdateStackRef(location, object);
+      #endif
+      synchronize();
+      memoryState->initializingSingletons.pop_back();
+      return object;
+    } catch (...) {
+      UpdateReturnRef(OBJ_RESULT, nullptr);
+      zeroStackRef(location);
+      memoryState->initializingSingletons.pop_back();
+      synchronize();
+      throw;
+    }
+  #endif  // KONAN_NO_EXCEPTIONS
 #endif  // KONAN_NO_THREADS
 }
 
@@ -2852,12 +2854,7 @@ const ObjHeader* leaveFrameAndReturnRef(ObjHeader** start, int param_count, ObjH
           returnRef = NULL;
         }
         else {
-          if (__DEBUG) {
-            zeroStackRef<Strict>(current);
-          }
-          else {
-            releaseHeapRef<false>(object);
-          }
+          zeroStackRef<Strict>(current);
         }
       }
       current++;
@@ -2877,19 +2874,12 @@ void leaveFrame(ObjHeader** start, int parameters, int count) {
   if (Strict) {
     currentFrame = frame->previous;
   } else {
-
     ObjHeader** current = start + parameters + kFrameOverlaySlots;
     count -= parameters;
     while (count-- > kFrameOverlaySlots) {
       ObjHeader* object = *current;
       if (object != nullptr) {
-          if (__DEBUG) {
-            zeroStackRef<Strict>(current);
-          }
-          else {
-            releaseHeapRef<false>(object);
-          }
-        //releaseHeapRef<false>(object);
+        zeroStackRef<Strict>(current);
       }
       current++;
     }
@@ -3785,7 +3775,7 @@ void ZeroStackLocalArrayRefs(ArrayHeader* array) {
 
   for (uint32_t index = 0; index < array->count_; ++index) {
     ObjHeader** location = ArrayAddressOfElementAt(array, index);
-    zeroHeapRef(location);
+    zeroStackRef(location);
   }
 }
 

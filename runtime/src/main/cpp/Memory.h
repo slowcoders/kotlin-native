@@ -812,11 +812,11 @@ class ObjHolder {
 class ExceptionObjHolder {
  public:
    explicit ExceptionObjHolder(const ObjHeader* obj) {
-     ::SetHeapRef(&obj_, obj);
+     ::SetStackRef(&obj_, obj);
    }
 
    ~ExceptionObjHolder() {
-     ZeroHeapRef(&obj_);
+     ZeroStackRef(&obj_);
    }
 
    ObjHeader* obj() { return obj_; }
