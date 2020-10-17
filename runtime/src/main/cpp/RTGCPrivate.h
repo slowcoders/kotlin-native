@@ -6,10 +6,12 @@ const static int CNT_REF_CHAIN = 1000*1000;
 
 
 struct RTGCGlobal : GCNode {
-  static int cntRefChain;
-  static int cntCyclicNodes;
-  static int g_cntLocalCyclicTest;
-  static int g_cntMemberCyclicTest;
+  static int g_cntAddRefChain;
+  static int g_cntRemoveRefChain;
+  static int g_cntAddCyclicNode;
+  static int g_cntRemoveCyclicNode;
+  static int g_cntAddCyclicTest;
+  static int g_cntRemoveCyclicTest;
 
   // static CyclicNode* g_freeCyclicNode;
   // static GCRefChain* g_freeRefChain;

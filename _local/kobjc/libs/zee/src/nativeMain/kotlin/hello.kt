@@ -97,10 +97,11 @@ return v;
 
 var t1 = kotlin.system.getTimeMillis();
 fun printTime(test:String) {
+    kotlin.native.internal.GC.collect()
     val t2 = kotlin.system.getTimeMillis();
     println(test + ": " + (t2 - t1) + "ms");
-    t1 = t2;
-kotlin.native.internal.GC.rtgcLog();
+    kotlin.native.internal.GC.rtgcLog();
+    t1 = kotlin.system.getTimeMillis();
 }
 
 fun test(str: String) {

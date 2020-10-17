@@ -2693,7 +2693,7 @@ OBJ_GETTER(initSharedInstance,
       return object;
     } catch (...) {
       UpdateReturnRef(OBJ_RESULT, nullptr);
-      zeroStackRef(location);
+      ZeroStackRef(location);
       memoryState->initializingSingletons.pop_back();
       synchronize();
       throw;
@@ -2793,8 +2793,6 @@ OBJ_GETTER(readHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* 
   unlock(spinlock);
   return value;
 }
-
-static const bool __DEBUG = true;
 
 OBJ_GETTER(readHeapRefNoLock, ObjHeader* object, KInt index) {
   MEMORY_LOG("ReadHeapRefNoLock: %p index %d\n", object, index)
@@ -3775,7 +3773,7 @@ void ZeroStackLocalArrayRefs(ArrayHeader* array) {
 
   for (uint32_t index = 0; index < array->count_; ++index) {
     ObjHeader** location = ArrayAddressOfElementAt(array, index);
-    zeroStackRef(location);
+    ZeroStackRef(location);
   }
 }
 

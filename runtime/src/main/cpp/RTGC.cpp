@@ -20,8 +20,10 @@
 
 THREAD_LOCAL_VARIABLE RTGCMemState* rtgcMem;
 
-int RTGCGlobal::cntRefChain = 0;
-int RTGCGlobal::cntCyclicNodes = 0;
+int RTGCGlobal::g_cntAddRefChain = 0;
+int RTGCGlobal::g_cntRemoveRefChain = 0;
+int RTGCGlobal::g_cntAddCyclicNode = 0;
+int RTGCGlobal::g_cntRemoveCyclicNode = 0;
 
 CyclicNode lastDummy;
 
@@ -32,8 +34,8 @@ CyclicBucket g_cyclicBucket;
 // GCRefChain* RTGCGlobal::g_freeRefChain;
 // CyclicNode* GCNode::g_cyclicNodes = NULL;
 
-int RTGCGlobal::g_cntLocalCyclicTest = 0;
-int RTGCGlobal::g_cntMemberCyclicTest = 0;
+int RTGCGlobal::g_cntAddCyclicTest = 0;
+int RTGCGlobal::g_cntRemoveCyclicTest = 0;
 
 static pthread_t g_lockThread = NULL;
 static int g_cntLock = 0;
@@ -41,6 +43,8 @@ THREAD_LOCAL_VARIABLE int32_t isHeapLocked = 0;
 static const bool RECURSIVE_LOCK = true;
 static const bool SKIP_REMOVE_ERROR = true;
 int g_memDebug = false;
+int g_cntRTGCLock = 0;
+const bool RTGC_STATICS = true;
 
 void GCNode::rtgcLock() {
     if (RECURSIVE_LOCK) {
@@ -50,6 +54,9 @@ void GCNode::rtgcLock() {
         }
     }
     g_cntLock ++;
+    if (RTGC_STATICS) {
+        g_cntRTGCLock ++;
+    }
     if (DEBUG_BUCKET && (g_memDebug || g_lockThread != pthread_self())) {
         if (g_lockThread > (void*)0x70000721c000) {
             rtgc_trap();
@@ -84,10 +91,12 @@ bool GCNode::isLocked() {
 
 static int dump_recycle_log = 0;//ENABLE_RTGC_LOG;
 static GCRefChain* popFreeChain() {
+    RTGCGlobal::g_cntAddRefChain ++;
     return rtgcMem->refChainAllocator.allocItem();
 }
 
 static void recycleChain(GCRefChain* expired, const char* type) {
+    RTGCGlobal::g_cntRemoveRefChain ++;
     rtgcMem->refChainAllocator.recycleItem(expired);
 }
 
@@ -227,10 +236,22 @@ void OnewayNode::dealloc() {
 
 
 void GCNode::dumpGCLog() {
-    printf("** cntRefChain %d\n", RTGCGlobal::cntRefChain);
-    printf("** cntCyclicNodes %d\n", RTGCGlobal::cntCyclicNodes);
-    printf("** cntLocalCyclicTest %d\n", RTGCGlobal::g_cntLocalCyclicTest);
-    printf("** cntMemberCyclicTest %d\n", RTGCGlobal::g_cntMemberCyclicTest);
+    printf("** cntRTGCLock %d%d\n", g_cntRTGCLock);
+    printf("** cntRefChain %d = %d - %d\n", RTGCGlobal::g_cntAddRefChain - RTGCGlobal::g_cntRemoveRefChain,
+        RTGCGlobal::g_cntAddRefChain, RTGCGlobal::g_cntRemoveRefChain);
+    printf("** cntCyclicNode %d = %d - %d\n", RTGCGlobal::g_cntAddCyclicNode - RTGCGlobal::g_cntRemoveCyclicNode,
+        RTGCGlobal::g_cntAddCyclicNode, RTGCGlobal::g_cntRemoveCyclicNode);
+    printf("** cntCyclicTest %d = %d - %d\n", RTGCGlobal::g_cntAddCyclicTest - RTGCGlobal::g_cntRemoveCyclicTest,
+        RTGCGlobal::g_cntAddCyclicTest, RTGCGlobal::g_cntRemoveCyclicTest);
+
+    g_cntRTGCLock = 0;
+    RTGCGlobal::g_cntAddRefChain = RTGCGlobal::g_cntRemoveRefChain = 0;
+    RTGCGlobal::g_cntAddCyclicNode = RTGCGlobal::g_cntRemoveCyclicNode = 0;
+    RTGCGlobal::g_cntAddCyclicTest = RTGCGlobal::g_cntRemoveCyclicTest = 0;
+
+    RTGCGlobal::g_cntRemoveRefChain = 0;
+    RTGCGlobal::g_cntRemoveCyclicNode = 0;
+    RTGCGlobal::g_cntRemoveCyclicTest = 0;
 }
 
 extern "C" {

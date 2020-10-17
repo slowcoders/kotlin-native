@@ -24,7 +24,7 @@ CyclicNode* CyclicNode::create() {
     assert(isLocked());
     CyclicNode* node = rtgcMem->cyclicNodeAllocator.allocItem();
     memset(node, 0, sizeof(CyclicNode));
-    RTGCGlobal::cntCyclicNodes ++;
+    RTGCGlobal::g_cntAddCyclicNode ++;
     return node;
 }
 
@@ -33,7 +33,7 @@ void CyclicNode::dealloc() {
     RuntimeAssert(isLocked(), "GCNode is not locked")
     externalReferrers.clear();
     rtgcMem->cyclicNodeAllocator.recycleItem(this);
-    RTGCGlobal::cntCyclicNodes --;
+    RTGCGlobal::g_cntRemoveCyclicNode ++;
 }
 
 void CyclicNode::markDamaged() {
@@ -50,12 +50,7 @@ void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
     RTGC_LOG("addCyclicTest %p\n", obj);
     obj->markNeedCyclicTest();
     obj->getNode()->markSuspectedCyclic();
-    if (true || isLocalTest) {
-        RTGCGlobal::g_cntLocalCyclicTest ++;
-    }
-    else {
-        RTGCGlobal::g_cntMemberCyclicTest ++;
-    }
+        RTGCGlobal::g_cntAddCyclicTest ++;
 
     rtgcMem->g_cyclicTestNodes.push(obj);
 }
@@ -64,7 +59,7 @@ void CyclicNode::removeCyclicTest(GCObject* obj) {
     //RuntimeAssert(isLocked(), "GCNode is not locked")
     if (!obj->isNeedCyclicTest()) return;
     obj->clearNeedCyclicTest();
-    RTGCGlobal::g_cntLocalCyclicTest --;
+    RTGCGlobal::g_cntRemoveCyclicTest ++;
 
     RTGC_LOG("## RTGC Remove Cyclic Test %p:%d\n", obj, obj->getNodeId());
     rtgcMem->g_cyclicTestNodes.remove(obj);
@@ -114,7 +109,10 @@ void CyclicNode::addCyclicObject(
     }
 
     this->externalReferrers.tryRemove(rookie);
-
+    if (rookieInCyclic) {
+        CyclicNode* oldCyclicNode = (CyclicNode*)oldNode;
+        oldCyclicNode->dealloc();
+    }
 }
 
 
@@ -212,6 +210,7 @@ void CyclicNode::detectCycles() {
             RTGC_LOG("## RTGC skip root: %p\n", root);
             continue;
         }
+        RTGCGlobal::g_cntRemoveCyclicTest ++;
         if (!root->getNode()->isSuspectedCyclic()) {
             RTGC_LOG("## RTGC skip node root: %p\n", root);
             root->clearNeedCyclicTest();
@@ -266,6 +265,6 @@ void CyclicNode::detectCycles() {
     rtgcUnlock();
 
     //GCNode::dumpGCLog();
-    RTGC_LOG("RefChain--: %d\n", RTGCGlobal::cntRefChain);
+    RTGC_LOG("RefChain--: %d\n", RTGCGlobal::g_cntAddRefChain);
 }
 
