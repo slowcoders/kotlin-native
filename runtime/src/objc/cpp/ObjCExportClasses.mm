@@ -88,7 +88,7 @@ static void injectToRuntime();
   candidate->refHolder.initAndAddRef(obj);
 
   if (!obj->permanent()) { // TODO: permanent objects should probably be supported as custom types.
-    if (!obj->container()->shareable()) {
+    if (!obj->container()->shared()) {
       SetAssociatedObject(obj, candidate);
     } else {
       id old = AtomicCompareAndSwapAssociatedObject(obj, nullptr, candidate);

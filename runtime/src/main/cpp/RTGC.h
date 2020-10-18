@@ -27,21 +27,23 @@ typedef struct ContainerHeader GCObject;
 static const int CYCLIC_NODE_ID_START = 2;
 
 #define ENABLE_RTGC_LOG             0
-bool rtgc_trap() NO_INLINE;
+bool rtgc_trap(void* pObj) NO_INLINE;
 
 #if ENABLE_RTGC_LOG
 #define RTGC_LOG(...) konan::consolePrintf(__VA_ARGS__);
-#define RTGC_TRAP(...) if (rtgc_trap()) konan::consolePrintf(__VA_ARGS__);
+#define RTGC_TRAP(...) if (rtgc_trap(NULL)) konan::consolePrintf(__VA_ARGS__);
 #else
 #define RTGC_LOG(...)
 #define RTGC_TRAP(...)
 #endif
+static const bool RTGC_STATISTCS = true;
 
 
 void RTGC_dumpRefInfo(GCObject*) NO_INLINE;
+void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj);
 void RTGC_Error(GCObject* obj) NO_INLINE;
 
-#define RTGC_NO_INLINE  // NO_INLINE
+#define RTGC_NO_INLINE  NO_INLINE
 
 struct RTGCRef {
   uint64_t root: RTGC_ROOT_REF_BITS;
@@ -77,7 +79,7 @@ public:
   uint32_t flags_;
 
   // static GCRefChain* g_refChains;
-  GCRefList() { first_ = 0; }
+  GCRefList() { first_ = 0; flags_ = 0; }
   GCRefChain* topChain();// { return first_ == 0 ? NULL : g_refChains + first_; }
   GCRefChain* find(GCObject* obj);
   GCRefChain* find(int node_id);
@@ -93,6 +95,22 @@ public:
 
 struct CyclicNode;
 struct OnewayNode;
+
+enum LockType {
+  _FreeContainer,
+  _IncrementRC,
+  _IncrementAcyclicRC,
+  _DecrementRC,    
+  _DecrementAcyclicRC,    
+  _AssignRef,
+  _DeassignRef,
+  _UpdateHeapRef,
+  _PopBucket,
+  _RecycleBucket,
+  _DetectCylcles
+};
+
+
 
 struct GCNode {
   friend CyclicNode;  
@@ -113,7 +131,7 @@ public:
   static void initMemory(struct RTGCMemState* state);
 
 
-  static void rtgcLock() RTGC_NO_INLINE;
+  static void rtgcLock(LockType type) RTGC_NO_INLINE;
 
   static void rtgcUnlock() RTGC_NO_INLINE;
 
@@ -241,7 +259,7 @@ struct SharedBucket {
   }
 
   T* popBucket(int id) RTGC_NO_INLINE {
-    GCNode::rtgcLock();
+    GCNode::rtgcLock(_PopBucket);
     T* bucket = g_freeItemQ;
     T* last = bucket;
     for (int i = ITEM_COUNT; --i > 0; ) {
@@ -259,7 +277,7 @@ struct SharedBucket {
 
   void recycleBucket(T* first, int id) {
     if (first == NULL) return;
-    GCNode::rtgcLock();
+    GCNode::rtgcLock(_RecycleBucket);
     T* last = NULL;
     #if DEBUG_BUCKET
     int cntRecycle = 0;

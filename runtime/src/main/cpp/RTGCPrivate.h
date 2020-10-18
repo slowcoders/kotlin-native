@@ -13,9 +13,6 @@ struct RTGCGlobal : GCNode {
   static int g_cntAddCyclicTest;
   static int g_cntRemoveCyclicTest;
 
-  // static CyclicNode* g_freeCyclicNode;
-  // static GCRefChain* g_freeRefChain;
-
   static void validateMemPool();
 
   static void init(RTGCMemState* state);

@@ -206,7 +206,7 @@ class CyclicCollector {
            COLLECTOR_LOG("visit %s%p\n", isAtomicReference(obj) ? "atomic " : "", obj);
            auto* objContainer = obj->container();
            if (objContainer == nullptr) continue;  // Permanent object.
-           RuntimeCheck(objContainer->shareable(), "Must be shareable");
+           RuntimeCheck(objContainer->shared(), "Must be shareable");
            if (visited.count(obj) == 0) {
              visited.insert(obj);
              traverseObjectFields_cyclic(obj, [&toVisit, obj, &sideRefCounts](ObjHeader** location) {
@@ -262,7 +262,7 @@ class CyclicCollector {
            toVisit.pop_front();
            auto* objContainer = obj->container();
            if (objContainer == nullptr) continue;  // Permanent object.
-           RuntimeCheck(objContainer->shareable(), "Must be shareable");
+           RuntimeCheck(objContainer->shared(), "Must be shareable");
            sideRefCounts[obj] = -1;
            visited.insert(obj);
            if (atomicGet(&mutatedAtomics_) != 0) {

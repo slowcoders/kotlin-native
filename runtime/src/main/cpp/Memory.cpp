@@ -21,10 +21,9 @@
 
 // Allow concurrent global cycle collector.
 #define USE_CYCLIC_GC 0
-
 // CycleDetector internally uses static local with runtime initialization,
 // which requires atomics. Atomics are not available on WASM.
-#if RTGC
+#if 1 // RTGC
 #define USE_CYCLE_DETECTOR 0
 #else
 #ifdef KONAN_WASM
@@ -66,6 +65,8 @@
 #if COLLECT_STATISTIC
 #include <algorithm>
 #endif
+
+#define inline //
 
 namespace {
 
@@ -435,7 +436,20 @@ inline bool isPermanentOrFrozen(ContainerHeader* container) {
 }
 
 inline bool isShareable(ContainerHeader* container) {
-    return container == nullptr || container->shareable();
+    return container == nullptr || container->shared();
+}
+
+void shareAny(ObjHeader* obj);
+
+inline bool tryMakeShareable(ContainerHeader* container) {
+    if (container == nullptr || container->shared()) {
+      return true;
+    }
+    if (container->frozen()) {
+      shareAny((ObjHeader*)(container+1));
+      return true;
+    }
+    return false;
 }
 
 void garbageCollect();
@@ -703,9 +717,9 @@ class Container {
     obj->typeInfoOrMeta_ = const_cast<TypeInfo*>(type_info);
     // Take into account typeInfo's immutability for ARC strategy.
     if ((type_info->flags_ & TF_IMMUTABLE) != 0)
-      header_->markFrozen();
-    if ((type_info->flags_ & TF_ACYCLIC) != 0)
-      header_->setColorEvenIfGreen(CONTAINER_TAG_GC_GREEN);
+      header_->freeze();
+    if ((type_info->flags_ & (TF_IMMUTABLE | TF_ACYCLIC)) != 0)
+      header_->markAcyclic();
   }
 };
 
@@ -796,11 +810,11 @@ class ArenaContainer {
 constexpr int kFrameOverlaySlots = sizeof(FrameOverlay) / sizeof(ObjHeader**);
 
 inline bool isFreeable(const ContainerHeader* header) {
-  return header != nullptr && header->tag() != CONTAINER_TAG_STACK;
+  return header != nullptr && !header->isStack();
 }
 
 inline bool isArena(const ContainerHeader* header) {
-  return header != nullptr && header->stack();
+  return header != nullptr && header->isStack();
 }
 
 inline bool isAggregatingFrozenContainer(const ContainerHeader* header) {
@@ -825,7 +839,8 @@ inline container_size_t alignUp(container_size_t size, int alignment) {
 }
 
 inline ContainerHeader* realShareableContainer(ContainerHeader* container) {
-  RuntimeAssert(container->shareable(), "Only makes sense on shareable objects");
+  tryMakeShareable(container);
+  RuntimeAssert(container->shared(), "Only makes sense on shareable objects");
   return reinterpret_cast<ObjHeader*>(container + 1)->container();
 }
 
@@ -944,7 +959,7 @@ inline void unlock(KInt* spinlock) {
 inline bool canFreeze(ContainerHeader* container) {
   if (IsStrictMemoryModel)
     // In strict memory model we ignore permanent, frozen and shared object when recursively freezing.
-    return container != nullptr && !container->shareable();
+    return container != nullptr && !container->shared() && !container->frozen();
   else
     // In relaxed memory model we ignore permanent and frozen object when recursively freezing.
     return container != nullptr && !container->frozen();
@@ -1040,18 +1055,23 @@ void processFinalizerQueue(MemoryState* state) {
 
 
 #ifdef RTGC    
+static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* visited) RTGC_NO_INLINE;
+
 static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* visited) {
+  konan::consolePrintf("hasForeginRefs 0\n");
   GCRefChain* chain = container->getNode()->externalReferrers.topChain();
   if (chain == NULL) {
     RTGC_TRAP("%p is foreign refs %x-%d\n", container, container->tag(), (int)container->refCount());
-    return !isShareable(container);
+    return container->shared();
   }
+  konan::consolePrintf("hasForeginRefs 1\n");
+
   for (; chain != NULL; chain = chain->next()) {
     ContainerHeader* referrer = chain->obj();
-    if (isShareable(referrer)) continue;
+    if (tryMakeShareable(referrer)) continue;
 
-    if (referrer->seen() || !hasForeginRefs(referrer, visited)) {
-      if (!container->seen()) {
+    if (referrer->seen() || !hasForeginRefs(referrer, visited) || !tryMakeShareable(referrer)) {
+      if (!container->shared() && !container->seen()) {
         container->setSeen();
         visited->push_front(container);
       }
@@ -1061,16 +1081,12 @@ static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* vis
       return true;
     }
   }
-  RTGC_TRAP("%p has not foreign refs\n", container);
+  konan::consolePrintf("hasForeginRefs 3\n");
   return false;
 }
 
 bool hasExternalRefs(ContainerHeader* start, ContainerHeaderDeque* visited) {
   ContainerHeaderDeque toVisit;
-  if (start->getNode()->externalReferrers.topChain() != NULL) {
-    RTGC_TRAP("start %p has foreign refs\n", start);
-    //return true;
-  };
 
   RTGC_TRAP("checking foreign refs of %p\n", start);
   start->mark();
@@ -1082,40 +1098,50 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderDeque* visited) {
     auto* container = toVisit.front();
     toVisit.pop_front();
     if (!container->seen()) {
-      hasExternalRefs = hasForeginRefs(container, visited);
-      if (hasExternalRefs) {
-        break;
+      if (container->isAcyclic()) {
+        container->incMemberRefCount<false>();
+        visited->push_front(container);
+      }
+      else {
+        hasExternalRefs = hasForeginRefs(container, visited);
+        if (hasExternalRefs) {
+          break;
+        }
       }
     }
-    traverseContainerReferredObjects(container, [&toVisit, visited](ObjHeader* ref) {
+    konan::consolePrintf("--- 2\n");
+
+    traverseContainerReferredObjects(container, [&toVisit](ObjHeader* ref) {
       auto* child = ref->container();
-      if (!isShareable(child) && (!child->marked())) {
+      if (child != NULL && !child->shared() && (!child->marked())) {
         /// Zee TF_ACYCLIC makes ERRR
-          RTGC_TRAP("push %p toVisit\n", child);
-          if ((ref->type_info()->flags_ & TF_ACYCLIC) != 0) {
-            child->incMemberRefCount<false>();
-            visited->push_front(child);
-          }
-          else {
-            child->mark();
-            toVisit.push_front(child);
-          }
+        RTGC_TRAP("push %p toVisit\n", child);
+        child->mark();
+        toVisit.push_front(child);
       }
     });
   }
   
+  konan::consolePrintf("--- 3\n");
+
   for (auto* it: *visited) {
     it->resetSeen();
     it->unMark();
-    if ((((ObjHeader*)(it + 1))->type_info()->flags_ & TF_ACYCLIC) != 0) {
+    if (it->isAcyclic()) {
       RuntimeAssert(it->getRTGCRef().obj <= it->getRTGCRef().root, "RefCount mismatch");
-      hasExternalRefs |= it->getRTGCRef().obj != it->getRTGCRef().root;
+      if (it->getRTGCRef().obj != it->getRTGCRef().root) {
+        hasExternalRefs |= !tryMakeShareable(it);
+      }
+      it->clearMemberRefCount();
     }
   }
+
+  konan::consolePrintf("--- 4\n");
   for (auto* it: toVisit) {
     it->unMark();
   }
 
+  konan::consolePrintf("--- 5\n");
   return hasExternalRefs;
 }
 #else
@@ -1146,20 +1172,17 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 
 void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container) {
   RTGC_LOG("scheduleDestroyContainer %1\n", container);
-  bool isShared = container->shareable();
+  bool isShared = container->shared();
   OnewayNode* node = container->getLocalOnewayNode();
-  if (isShared) GCNode::rtgcLock();
+  if (isShared) GCNode::rtgcLock(_FreeContainer);
   if (node != NULL) {
     node->dealloc();
   }
-    RTGC_LOG("scheduleDestroyContainer 1 %p\n", container);
   CyclicNode::removeCyclicTest(container);
-    RTGC_LOG("scheduleDestroyContainer 2 %p\n", container);
   if (isShared) GCNode::rtgcUnlock();
 #if USE_GC
   RuntimeAssert(container != nullptr, "Cannot destroy null container");
 
-    RTGC_LOG("scheduleDestroyContainer 3 %p\n", container);
   container->setNextLink(state->finalizerQueue);
   state->finalizerQueue = container;
   state->finalizerQueueSize++;
@@ -1203,8 +1226,14 @@ void freeAggregatingFrozenContainer(ContainerHeader* container) {
 // so better be inlined.
 ALWAYS_INLINE void runDeallocationHooks(ContainerHeader* container) {
   ObjHeader* obj = reinterpret_cast<ObjHeader*>(container + 1);
+  // konan::consolePrintf("## runDeallocationHooks %p %x tag=0x%x objCount(%d)\n", container, *(int64_t*)obj, container->tagBits(), container->objectCount());
+  // if (*(int64_t*)obj < 16) {
+  //   rtgc_trap(obj);    
+  // }
+
   for (uint32_t index = 0; index < container->objectCount(); index++) {
     auto* type_info = obj->type_info();
+    // konan::consolePrintf("## runDeallocationHooks %p objIndex(%d)\n", type_info, index);
     if (type_info == theWorkerBoundReferenceTypeInfo) {
       DisposeWorkerBoundReference(obj);
     }
@@ -1271,7 +1300,9 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
   // And release underlying memory.
   memoryState->gcInProgress --;
   if (isFreeable(container)) {
+#if !RTGC
     container->setColorEvenIfGreen(CONTAINER_TAG_GC_BLACK);
+#endif
     if (!container->buffered()) {
       scheduleDestroyContainer(memoryState, container);
     }
@@ -1367,15 +1398,20 @@ inline bool tryIncrementRC(ContainerHeader* container) {
 #if RTGC
 
 template <bool Atomic>
+inline void incrementAcyclicRC(ContainerHeader* container) {
+  container->incRootCount<Atomic>();
+}
+
+template <bool Atomic>
 inline void incrementRC(ContainerHeader* container) {
-  if (Atomic) GCNode::rtgcLock();
+  if (Atomic) GCNode::rtgcLock(_IncrementRC);
   do {
     RTGCRef ref = container->incRootCount<false>();
     if (ref.root != 1) break;
 
     CyclicNode* cyclic = CyclicNode::getNode(ref.node);
     if (cyclic != NULL) {
-      cyclic->incRootObjectCount<Atomic>();
+      cyclic->incRootObjectCount<false>();
     }
   } while(false);
   if (Atomic) GCNode::rtgcUnlock();
@@ -1383,14 +1419,14 @@ inline void incrementRC(ContainerHeader* container) {
 
 template <bool Atomic, bool UseCycleCollector>
 inline void decrementRC(ContainerHeader* container) {
-  if (Atomic) GCNode::rtgcLock();
+  if (Atomic) GCNode::rtgcLock(_DecrementRC);
   do {
     RTGCRef ref = container->decRootCount<false>();
     if (ref.root != 0) break;
 
     CyclicNode* cyclic = CyclicNode::getNode(ref.node);
     if (cyclic != NULL) {
-      if (0 == cyclic->decRootObjectCount<Atomic>()
+      if (0 == cyclic->decRootObjectCount<false>()
       &&  cyclic->externalReferrers.isEmpty()) {
         freeContainer(container, cyclic->getId());
         cyclic->dealloc();
@@ -1404,13 +1440,24 @@ inline void decrementRC(ContainerHeader* container) {
   if (Atomic) GCNode::rtgcUnlock();
 }
 
+template <bool Atomic>
+inline void decrementAcyclicRC(ContainerHeader* container) {
+  RTGCRef ref = container->decRootCount<Atomic>();
+  if (ref.root == 0) {
+    if (Atomic) GCNode::rtgcLock(_DecrementAcyclicRC);
+    freeContainer(container, -1);
+    if (Atomic) GCNode::rtgcUnlock();
+  }
+}
+
+#if !RTGC
 inline void decrementRC(ContainerHeader* container) {
   if (isShareable(container))
     decrementRC<true, false>(container);
   else
     decrementRC<false, false>(container);
 }
-
+#endif
 
 template <bool Atomic>
 void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner);
@@ -1540,7 +1587,7 @@ inline void decrementRC(ContainerHeader* container) {
     freeContainer(container);
   } else if (UseCycleCollector) { // Possible root.
     RuntimeAssert(container->refCount() > 0, "Must be positive");
-    RuntimeAssert(!Atomic && !container->shareable(), "Cycle collector shalln't be used with shared objects yet");
+    RuntimeAssert(!Atomic && !container->shared(), "Cycle collector shalln't be used with shared objects yet");
     RuntimeAssert(container->objectCount() == 1, "cycle collector shall only work with single object containers");
     // We do not use cycle collector for frozen objects, as we already detected
     // possible cycles during freezing.
@@ -1575,7 +1622,7 @@ inline void decrementRC(ContainerHeader* container) {
   } else if (useCycleCollector && state->toFree != nullptr) {
       RuntimeAssert(IsStrictMemoryModel, "No cycle collector in relaxed mode yet");
       RuntimeAssert(container->refCount() > 0, "Must be positive");
-      RuntimeAssert(!container->shareable(), "Cycle collector shalln't be used with shared objects yet");
+      RuntimeAssert(!container->sharead(), "Cycle collector shalln't be used with shared objects yet");
       RuntimeAssert(container->objectCount() == 1, "cycle collector shall only work with single object containers");
       // We do not use cycle collector for frozen objects, as we already detected
       // possible cycles during freezing.
@@ -1708,6 +1755,8 @@ void scan(ContainerHeader* container);
 
 template <bool useColor>
 void markGray(ContainerHeader* start) {
+#if !RTGC
+
   ContainerHeaderDeque toVisit;
   toVisit.push_front(start);
 
@@ -1738,10 +1787,13 @@ void markGray(ContainerHeader* start) {
       }
     });
   }
+#endif
 }
 
 template <bool useColor>
 void scanBlack(ContainerHeader* start) {
+#if !RTGC
+
   ContainerHeaderDeque toVisit;
   toVisit.push_front(start);
   while (!toVisit.empty()) {
@@ -1772,6 +1824,7 @@ void scanBlack(ContainerHeader* start) {
         }
     });
   }
+#endif
 }
 
 void collectWhite(MemoryState*, ContainerHeader* container);
@@ -1785,6 +1838,7 @@ void collectCycles(MemoryState* state) {
 }
 
 void markRoots(MemoryState* state) {
+#if !RTGC
   for (auto container : *(state->toFree)) {
     if (isMarkedAsRemoved(container))
       continue;
@@ -1803,6 +1857,7 @@ void markRoots(MemoryState* state) {
       }
     }
   }
+#endif
 }
 
 void scanRoots(MemoryState* state) {
@@ -1823,6 +1878,7 @@ void collectRoots(MemoryState* state) {
 }
 
 void scan(ContainerHeader* start) {
+#if !RTGC
   ContainerHeaderDeque toVisit;
   toVisit.push_front(start);
 
@@ -1843,9 +1899,11 @@ void scan(ContainerHeader* start) {
        }
      });
    }
+#endif   
 }
 
 void collectWhite(MemoryState* state, ContainerHeader* start) {
+#if !RTGC
    ContainerHeaderDeque toVisit;
    toVisit.push_back(start);
 
@@ -1868,52 +1926,55 @@ void collectWhite(MemoryState* state, ContainerHeader* start) {
      runDeallocationHooks(container);
      scheduleDestroyContainer(state, container);
   }
+#endif
 }
 #endif
 
 inline bool needAtomicAccess(ContainerHeader* container) {
-  return container->shareable();
+  return container->shared();
 }
 
 inline bool canBeCyclic(ContainerHeader* container) {
+#if !RTGC
   if (container->refCount() == 1) return false;
   if (container->color() == CONTAINER_TAG_GC_GREEN) return false;
+#endif
   return true;
 }
 
-inline void retainRef(ContainerHeader* container) {
+inline void retainRef(const ObjHeader* object) {
+  auto* container = object->container();
+  if (container == nullptr || container->isStack()) {
+    return;
+  }
+
   MEMORY_LOG("RetainRef %p: rc=%d\n", container, container->refCount())
   UPDATE_ADDREF_STAT(memoryState, container, needAtomicAccess(container), 0)
-  switch (container->tag()) {
-    case CONTAINER_TAG_STACK:
-      break;
-    case CONTAINER_TAG_LOCAL:
-      incrementRC</* Atomic = */ false>(container);
-      break;
-    /* case CONTAINER_TAG_FROZEN: case CONTAINER_TAG_SHARED: */
-    default:
-      incrementRC</* Atomic = */ true>(container);
-      break;
+  if (container->shared()) {
+    if (container->isAcyclic()) {
+      incrementAcyclicRC<true>(container);
+    }
+    else { 
+      incrementRC<true>(container);
+    }
+  }
+  else {
+    if (container->isAcyclic()) {
+      incrementAcyclicRC<false>(container);
+    }
+    else { 
+      incrementRC<false>(container);
+    }
   }
 }
 
-inline void retainRef(const ObjHeader* header) {
-  auto* container = header->container();
-  if (container != nullptr)
-    retainRef(const_cast<ContainerHeader*>(container));
-}
 
 inline bool tryRetainRef(ContainerHeader* container) {
-  switch (container->tag()) {
-    case CONTAINER_TAG_STACK:
-      break;
-    case CONTAINER_TAG_LOCAL:
-      if (!tryIncrementRC</* Atomic = */ false>(container)) return false;
-      break;
-    /* case CONTAINER_TAG_FROZEN: case CONTAINER_TAG_SHARED: */
-    default:
-      if (!tryIncrementRC</* Atomic = */ true>(container)) return false;
-      break;
+  if (container->shared()) {
+    if (!tryIncrementRC<true>(container)) return false;
+  }
+  else {
+    if (!tryIncrementRC<false>(container)) return false;
   }
 
   MEMORY_LOG("RetainRef %p: rc=%d\n", container, container->refCount() - 1)
@@ -1927,22 +1988,35 @@ inline bool tryRetainRef(const ObjHeader* header) {
 }
 
 template <bool Strict>
-inline void releaseRef(ContainerHeader* container) {
+inline void releaseRef(const ObjHeader* object) {
+  auto* container = object->container();
+  if (container == nullptr || container->isStack()) {
+    return;
+  }
+
   MEMORY_LOG("ReleaseRef %p: rc=%d\n", container, container->refCount())
   UPDATE_RELEASEREF_STAT(memoryState, container, needAtomicAccess(container), canBeCyclic(container), 0)
-  if (container->tag() != CONTAINER_TAG_STACK) {
-    if (Strict)
-      enqueueDecrementRC</* CanCollect = */ true>(container);
-    else
-      decrementRC(container);
+  if (Strict) {
+    enqueueDecrementRC</* CanCollect = */ true>(container);
+    return;
   }
-}
 
-template <bool Strict>
-inline void releaseRef(const ObjHeader* header) {
-  auto* container = header->container();
-  if (container != nullptr)
-    releaseRef<Strict>(const_cast<ContainerHeader*>(container));
+  if (container->shared()) {
+    if (container->isAcyclic()) {
+      decrementAcyclicRC<true>(container);
+    }
+    else { 
+      decrementRC<true, false>(container);
+    }
+  }
+  else {
+    if (container->isAcyclic()) {
+      decrementAcyclicRC<false>(container);
+    }
+    else { 
+      decrementRC<false, false>(container);
+    }
+  }
 }
 
 // We use first slot as place to store frame-local arena container.
@@ -1982,7 +2056,7 @@ void incrementStack(MemoryState* state) {
       if (obj != nullptr) {
         auto* container = obj->container();
         if (container == nullptr) continue;
-        if (container->shareable()) {
+        if (container->shared()) {
           incrementRC<true>(container);
         } else {
           incrementRC<false>(container);
@@ -1994,6 +2068,7 @@ void incrementStack(MemoryState* state) {
 }
 
 void processDecrements(MemoryState* state) {
+#if !RTGC
   RuntimeAssert(IsStrictMemoryModel, "Only works in strict model now");
   auto* toRelease = state->toRelease;
   state->gcSuspendCount++;
@@ -2002,7 +2077,7 @@ void processDecrements(MemoryState* state) {
      toRelease->pop_back();
      if (isMarkedAsRemoved(container))
        continue;
-     if (container->shareable())
+     if (container->shared())
        container = realShareableContainer(container);
      decrementRC(container);
   }
@@ -2012,6 +2087,7 @@ void processDecrements(MemoryState* state) {
     if (container != nullptr) decrementRC(container);
   });
   state->gcSuspendCount--;
+#endif
 }
 
 void decrementStack(MemoryState* state) {
@@ -2195,7 +2271,7 @@ bool isForeignRefAccessible(ObjHeader* object, ForeignRefManager* manager) {
   }
 
   // Note: getting container and checking it with 'isShareable()' is supposed to be correct even for unowned object.
-  return isShareable(object->container());
+  return tryMakeShareable(object->container());
 }
 
 void deinitForeignRef(ObjHeader* object, ForeignRefManager* manager) {
@@ -2331,7 +2407,7 @@ void resumeMemory(MemoryState* state) {
 }
 
 void makeShareable(ContainerHeader* container) {
-  if (!container->frozen())
+  //if (!container->frozen())
     container->makeShared();
 }
 
@@ -2385,22 +2461,24 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
   if (object != nullptr && object != owner) {
     ContainerHeader* container = object->container();
 
-    if (container != nullptr) {
-      if (object->isAcyclic()) {
-        retainRef(object);
+    if (container != nullptr && !container->isStack()) {
+      if (container->shared()) {
+          if (container->isAcyclic()) {
+            incrementAcyclicRC</* Atomic = */ true>(container);
+          }
+          else { 
+            GCNode::rtgcLock(_AssignRef);
+            incrementMemberRC</* Atomic = */ true>(container, owner->container());
+            GCNode::rtgcUnlock();
+          }
       }
-      else switch(container->tag()) {
-        case CONTAINER_TAG_STACK:
-          break;
-        case CONTAINER_TAG_LOCAL:
-          incrementMemberRC</* Atomic = */ false>(container, owner->container());
-          break;
-        /* case CONTAINER_TAG_FROZEN: case CONTAINER_TAG_SHARED: */
-        default:
-          GCNode::rtgcLock();
-          incrementMemberRC</* Atomic = */ true>(container, owner->container());
-          GCNode::rtgcUnlock();
-          break;      
+      else {
+          if (container->isAcyclic()) {
+            incrementAcyclicRC</* Atomic = */ false>(container);
+          }
+          else { 
+            incrementMemberRC</* Atomic = */ false>(container, owner->container());
+          }
       }
     }
     //retainRef(object);
@@ -2408,23 +2486,25 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
 
   if (reinterpret_cast<uintptr_t>(old) > 1 && old != owner) {
     ContainerHeader* container = old->container();
-    if (container != nullptr) {
-      if (old->isAcyclic()) {
-        releaseRef<false/*???*/>(old);
+    if (container != nullptr && !container->isStack()) {
+      RuntimeAssert(!container->isStack(), "access stack");
+      if (container->shared()) {
+          if (container->isAcyclic()) {
+            decrementAcyclicRC</* Atomic = */ true>(container);
+          }
+          else {
+            GCNode::rtgcLock(_DeassignRef);
+            decrementMemberRC</* Atomic = */ true>(container, owner->container());
+            GCNode::rtgcUnlock();
+          }
       }
-      else switch(container->tag()) {
-        case CONTAINER_TAG_STACK:
-          break;
-        case CONTAINER_TAG_LOCAL:
-          decrementMemberRC</* Atomic = */ false>(container, owner->container());
-          break;
-        /* case CONTAINER_TAG_FROZEN: case CONTAINER_TAG_SHARED: */
-        default:
-          GCNode::rtgcLock();
-          decrementMemberRC</* Atomic = */ true>(container, owner->container());
-          GCNode::rtgcUnlock();
-
-          break;      
+      else {
+          if (container->isAcyclic()) {
+            decrementAcyclicRC</* Atomic = */ false>(container);
+          }
+          else {
+            decrementMemberRC</* Atomic = */ false>(container, owner->container());
+          }
       }
     }
     //releaseRef<Strict>(old);
@@ -2438,17 +2518,16 @@ void shareAny(ObjHeader* obj);
 template <bool Strict>
 void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
   UPDATE_REF_EVENT(memoryState, *location, object, location, owner);
-    RuntimeAssert(owner->container() != nullptr && owner->container()->tag() != CONTAINER_TAG_STACK, "illegal heap ref");
 
   if (owner->local()) {
     // konan::consolePrintf("updateHeapRef on stackLocal Owner");
     UpdateStackRef(location, object);
     return;
   }
-  bool isShared = owner->container()->shareable();
+  bool isShared = owner->container()->shared();
   if (isShared) {
     if (object != NULL) shareAny((ObjHeader*)object);
-    GCNode::rtgcLock();
+    GCNode::rtgcLock(_UpdateHeapRef);
   }
   ObjHeader* old = *location;
   if (old != object) {
@@ -2589,6 +2668,10 @@ OBJ_GETTER(allocArrayInstance, const TypeInfo* type_info, int32_t elements) {
   } else if (!RTGC) {
     makeShareable(container.header());
   }
+  if (type_info == theStringTypeInfo) {
+    rtgc_trap(container.header());
+  }
+
 #endif  // USE_GC
   RETURN_OBJ(container.GetPlace()->obj());
 }
@@ -2602,7 +2685,7 @@ OBJ_GETTER(initInstance,
     RETURN_OBJ(value);
   }
   ObjHeader* object = allocInstance<Strict>(typeInfo, OBJ_RESULT);
-  updateStackRef<Strict>(location, object);
+  updateStackRef<Strict>(location, object);  
 #if KONAN_NO_EXCEPTIONS
   ctor(object);
   return object;
@@ -2680,8 +2763,11 @@ OBJ_GETTER(initSharedInstance,
     try {
       *location = NULL;
       ctor(object);
-      if (Strict) {
+      if (Strict) { // ZZZZZ??? } || RTGC) {
         FreezeSubgraph(object);
+      }
+      if (RTGC_STATISTCS) {
+        RTGC_dumpTypeInfo("initShared", typeInfo, object->container());
       }
       #ifdef RTGC
         setStackRef<Strict>(location, object);
@@ -3021,7 +3107,7 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
   auto state = memoryState;
   auto* container = root->container();
 
-  if (isShareable(container)) {
+  if (tryMakeShareable(container)) {
     // We assume, that frozen/shareable objects can be safely passed and not present
     // in the GC candidate list.
     // TODO: assert for that?
@@ -3041,7 +3127,7 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
     for (auto it = state->toRelease->begin(); it != state->toRelease->end(); ++it) {
       auto released = *it;
       RuntimeAssert(!RTGC, "no kotlin gc");
-      if (!isMarkedAsRemoved(released) && released->local()) {
+      if (!isMarkedAsRemoved(released) && !released->shared()) {
         released->decRefCount<false>();
       }
     }
@@ -3113,7 +3199,9 @@ void freezeAcyclic(ContainerHeader* rootContainer, ContainerHeaderSet* newlyFroz
     queue.pop_front();
     current->unMark();
     current->resetBuffered();
+#if !RTGC
     current->setColorUnlessGreen(CONTAINER_TAG_GC_BLACK);
+#endif
     // Note, that once object is frozen, it could be concurrently accessed, so
     // color and similar attributes shall not be used.
     if (!current->frozen())
@@ -3193,7 +3281,9 @@ void freezeCyclic(ObjHeader* root,
     // Freeze component.
     for (auto* container : component) {
       container->resetBuffered();
+#if !RTGC
       container->setColorUnlessGreen(CONTAINER_TAG_GC_BLACK);
+#endif
       if (!container->frozen())
         newlyFrozen->insert(container);
       // Note, that once object is frozen, it could be concurrently accessed, so
@@ -3274,6 +3364,10 @@ void freezeSubgraph(ObjHeader* root) {
   ContainerHeader* rootContainer = root->container();
   if (isPermanentOrFrozen(rootContainer)) return;
 
+  if (RTGC) {
+    garbageCollect();
+  }
+
   MEMORY_LOG("Run freeze hooks on subgraph of %p\n", root);
 
   // Note: Actual freezing can fail, but these hooks won't be undone, and moreover
@@ -3303,7 +3397,7 @@ void freezeSubgraph(ObjHeader* root) {
   if (!RTGC && hasCycles) {
     freezeCyclic(root, order, &newlyFrozen);
   } else {
-    if (hasCycles) { MEMORY_LOG("freeCycle ignored in RTGC mode."); }
+    if (hasCycles) { MEMORY_LOG("freezeCycle ignored in RTGC mode."); }
     freezeAcyclic(rootContainer, &newlyFrozen);
   }
   MEMORY_LOG("Graph of %p is %s with %d elements\n", root, hasCycles ? "cyclic" : "acyclic", newlyFrozen.size())
@@ -3332,7 +3426,7 @@ void ensureNeverFrozen(ObjHeader* object) {
 
 void shareAny(ObjHeader* obj) {
   auto* container = obj->container();
-  if (isShareable(container)) return;
+  if (container == NULL || container->shared()) return;
   //RuntimeCheck(container->objectCount() == 1, "Must be a single object container");
   container->makeShared();
   traverseReferredObjects(obj, [](KRef field) {
@@ -3572,7 +3666,7 @@ bool ArenaContainer::allocContainer(container_size_t minSize) {
   if (result == nullptr) return false;
   result->next = currentChunk_;
   result->arena = this;
-  result->asHeader()->setRefCountAndFlags(1, CONTAINER_TAG_STACK);
+  result->asHeader()->setRefCountAndFlags(1, CONTAINER_TAG_STACK_OR_PERMANANT);
   currentChunk_ = result;
   current_ = reinterpret_cast<uint8_t*>(result->asHeader() + 1);
   end_ = reinterpret_cast<uint8_t*>(result) + size;

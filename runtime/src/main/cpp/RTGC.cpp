@@ -43,10 +43,9 @@ THREAD_LOCAL_VARIABLE int32_t isHeapLocked = 0;
 static const bool RECURSIVE_LOCK = true;
 static const bool SKIP_REMOVE_ERROR = true;
 int g_memDebug = false;
-int g_cntRTGCLock = 0;
-const bool RTGC_STATICS = true;
+int g_cntRTGCLocks[16];
 
-void GCNode::rtgcLock() {
+void GCNode::rtgcLock(LockType type) {
     if (RECURSIVE_LOCK) {
         pthread_t curr_thread = pthread_self();
         if (curr_thread != g_lockThread) {
@@ -54,13 +53,10 @@ void GCNode::rtgcLock() {
         }
     }
     g_cntLock ++;
-    if (RTGC_STATICS) {
-        g_cntRTGCLock ++;
+    if (RTGC_STATISTCS) {
+        g_cntRTGCLocks[type] ++;
     }
     if (DEBUG_BUCKET && (g_memDebug || g_lockThread != pthread_self())) {
-        if (g_lockThread > (void*)0x70000721c000) {
-            rtgc_trap();
-        }
         BUCKET_LOG("g_lockThread =%p(%p) ++%d\n", g_lockThread, pthread_self(), g_cntLock)
     }
 }
@@ -91,12 +87,12 @@ bool GCNode::isLocked() {
 
 static int dump_recycle_log = 0;//ENABLE_RTGC_LOG;
 static GCRefChain* popFreeChain() {
-    RTGCGlobal::g_cntAddRefChain ++;
+    if (RTGC_STATISTCS) RTGCGlobal::g_cntAddRefChain ++;
     return rtgcMem->refChainAllocator.allocItem();
 }
 
 static void recycleChain(GCRefChain* expired, const char* type) {
-    RTGCGlobal::g_cntRemoveRefChain ++;
+    if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveRefChain ++;
     rtgcMem->refChainAllocator.recycleItem(expired);
 }
 
@@ -227,16 +223,25 @@ void GCRefList::setFirst(GCRefChain* newFirst) {
 }
 
 void OnewayNode::dealloc() {
-    RuntimeAssert(isLocked(), "GCNode is not locked")
+    // RuntimeAssert(isLocked(), "GCNode is not locked")
     if (ENABLE_RTGC_LOG && dump_recycle_log > 0) {//} || node_id % 1000 == 0) {
          RTGC_LOG("OnewayNode::dealloc, top %p\n", externalReferrers.topChain());
     }
     externalReferrers.clear();
 }
 
-
 void GCNode::dumpGCLog() {
-    printf("** cntRTGCLock %d%d\n", g_cntRTGCLock);
+    printf("** RTGCLock FreeContainer %d\n", g_cntRTGCLocks[_FreeContainer]);
+    printf("** RTGCLock IncrementRC %d\n", g_cntRTGCLocks[_IncrementRC]);
+    printf("** RTGCLock IncrementAcyclicRC %d\n", g_cntRTGCLocks[_IncrementAcyclicRC]);
+    printf("** RTGCLock DecrementRC %d\n", g_cntRTGCLocks[_DecrementRC]);
+    printf("** RTGCLock DecrementAcyclicRC %d\n", g_cntRTGCLocks[_DecrementAcyclicRC]);
+    printf("** RTGCLock AssignRef %d\n", g_cntRTGCLocks[_AssignRef]);
+    printf("** RTGCLock DeassignRef %d\n", g_cntRTGCLocks[_DeassignRef]);
+    printf("** RTGCLock UpdateHeapRef %d\n", g_cntRTGCLocks[_UpdateHeapRef]);
+    printf("** RTGCLock PopBucket %d\n", g_cntRTGCLocks[_PopBucket]);
+    printf("** RTGCLock RecycleBucket %d\n", g_cntRTGCLocks[_RecycleBucket]);
+
     printf("** cntRefChain %d = %d - %d\n", RTGCGlobal::g_cntAddRefChain - RTGCGlobal::g_cntRemoveRefChain,
         RTGCGlobal::g_cntAddRefChain, RTGCGlobal::g_cntRemoveRefChain);
     printf("** cntCyclicNode %d = %d - %d\n", RTGCGlobal::g_cntAddCyclicNode - RTGCGlobal::g_cntRemoveCyclicNode,
@@ -244,14 +249,18 @@ void GCNode::dumpGCLog() {
     printf("** cntCyclicTest %d = %d - %d\n", RTGCGlobal::g_cntAddCyclicTest - RTGCGlobal::g_cntRemoveCyclicTest,
         RTGCGlobal::g_cntAddCyclicTest, RTGCGlobal::g_cntRemoveCyclicTest);
 
-    g_cntRTGCLock = 0;
     RTGCGlobal::g_cntAddRefChain = RTGCGlobal::g_cntRemoveRefChain = 0;
     RTGCGlobal::g_cntAddCyclicNode = RTGCGlobal::g_cntRemoveCyclicNode = 0;
     RTGCGlobal::g_cntAddCyclicTest = RTGCGlobal::g_cntRemoveCyclicTest = 0;
-
-    RTGCGlobal::g_cntRemoveRefChain = 0;
-    RTGCGlobal::g_cntRemoveCyclicNode = 0;
-    RTGCGlobal::g_cntRemoveCyclicTest = 0;
+    
+    g_cntRTGCLocks[_FreeContainer] = 0;
+    g_cntRTGCLocks[_IncrementRC] = 0;
+    g_cntRTGCLocks[_DecrementRC] = 0;
+    g_cntRTGCLocks[_AssignRef] = 0;
+    g_cntRTGCLocks[_DeassignRef] = 0;
+    g_cntRTGCLocks[_UpdateHeapRef] = 0;
+    g_cntRTGCLocks[_PopBucket] = 0;
+    g_cntRTGCLocks[_RecycleBucket] = 0;
 }
 
 extern "C" {
@@ -298,7 +307,7 @@ void RTGCGlobal::validateMemPool() {
 
 
 bool enable_rtgc_trap = ENABLE_RTGC_LOG;
-bool rtgc_trap() {
+bool rtgc_trap(void* pObj) {
     return enable_rtgc_trap;
 }
 
@@ -316,7 +325,23 @@ void RTGC_dumpRefInfo(GCObject* obj) {
         ? CreateCStringFromString(typeInfo->relativeName_) : UNKNOWN;
     printf("%s %p:%d rc=%p, tag=%d flags=%x\n", 
         classname, obj, obj->getNodeId(), 
-        (void*)obj->refCount(), (obj->tag() >> 7), obj->getFlags());
+        (void*)obj->refCount(), (obj->tagBits() >> 7), obj->getFlags());
     if (classname != UNKNOWN) konan::free((void*)classname);
-    rtgc_trap();
+    rtgc_trap(NULL);
+}
+
+void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj) {
+    static const char* UNKNOWN = "???";
+    const char* classname = (typeInfo != NULL && typeInfo->relativeName_ != NULL)
+        ? CreateCStringFromString(typeInfo->relativeName_) : UNKNOWN;
+    if (obj == NULL) {
+        printf("%s %s %p \n", msg, classname, obj);
+    }
+    else {
+        printf("%s %s %p:%d rc=%p, tag=%d flags=%x\n", 
+            msg, classname, obj, obj->getNodeId(), 
+            (void*)obj->refCount(), (obj->tagBits()), obj->getFlags());
+    }
+    if (classname != UNKNOWN) konan::free((void*)classname);
+    rtgc_trap(NULL);
 }

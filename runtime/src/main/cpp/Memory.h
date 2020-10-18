@@ -25,34 +25,38 @@
 
 
 typedef enum {
-  // Those bit masks are applied to refCount_ field.
-  // Container is normal thread-local container.
-  CONTAINER_TAG_LOCAL = 0,
   // Container is frozen, could only refer to other frozen objects.
-  // Refcounter update is atomics.
-  CONTAINER_TAG_FROZEN = 1 << 7,  // shareable
-  // Stack container, no need to free, children cleanup still shall be there.
-  CONTAINER_TAG_STACK = 2 << 7,
-  // Atomic container, reference counter is atomically updated.
-  CONTAINER_TAG_SHARED = 3 << 7,  // shareable
-  // Shift to get actual counter.
-  // CONTAINER_TAG_SHIFT = 2 << 7,
-  // not used in RTGC Actual value to increment/decrement container by. Tag is in lower bits.
-  // CONTAINER_TAG_INCREMENT = 1,// << CONTAINER_TAG_SHIFT,
-  // Mask for container type.
-  CONTAINER_TAG_MASK = 3 << 7,
+  CONTAINER_TAG_FROZEN = 1 << 0,
 
-  RTGC_DESTROYED = 4 << 7,
-  NEED_CYCLIC_TEST = 8 << 7,
+  // Atomic container, reference counter is atomically updated.
+  CONTAINER_TAG_SHARED = 1 << 1,
+
+  // 
+  CONTAINER_TAG_ACYCLIC = 1 << 2,
+
+  // no need to free, children cleanup still shall be there.
+  CONTAINER_TAG_STACK_OR_PERMANANT = 1 << 3,
+
+  RTGC_DESTROYED = 1 << 4,
+  NEED_CYCLIC_TEST = 1 << 5,
+
+  CONTAINER_TAG_GC_SEEN     = 1 << 6,
+  CONTAINER_TAG_GC_MARKED   = 1 << 7, // Unused
+  CONTAINER_TAG_GC_BUFFERED = 1 << 8, // Unused
+  // If indeed has more that one object.
+  CONTAINER_TAG_GC_HAS_OBJECT_COUNT = 1 << 9,
+
 
   // Shift to get actual object count, if has it.
-  CONTAINER_TAG_GC_SHIFT     = 7 + 4,
+  CONTAINER_TAG_GC_SHIFT     = 10,
   CONTAINER_TAG_GC_MASK      = (1 << CONTAINER_TAG_GC_SHIFT) - 1,
   CONTAINER_TAG_GC_INCREMENT = 1 << CONTAINER_TAG_GC_SHIFT,
   // Color mask of a container.
-  CONTAINER_TAG_COLOR_SHIFT   = 3,
-  CONTAINER_TAG_GC_COLOR_MASK = (1 << CONTAINER_TAG_COLOR_SHIFT) - 1,
+  //CONTAINER_TAG_COLOR_SHIFT   = 3,
+  //CONTAINER_TAG_GC_COLOR_MASK = (1 << CONTAINER_TAG_COLOR_SHIFT) - 1,
   // Colors.
+
+  /*
   // In use or free.
   CONTAINER_TAG_GC_BLACK  = 0,
   // Possible member of garbage cycle.
@@ -68,12 +72,8 @@ typedef enum {
   CONTAINER_TAG_GC_ORANGE = 5,
   // Candidate cycle awaiting sigma computation.
   CONTAINER_TAG_GC_RED    = 6,
+  */
   // Individual state bits used during GC and freezing.
-  CONTAINER_TAG_GC_MARKED   = 1 << CONTAINER_TAG_COLOR_SHIFT,
-  CONTAINER_TAG_GC_BUFFERED = 1 << (CONTAINER_TAG_COLOR_SHIFT + 1),
-  CONTAINER_TAG_GC_SEEN     = 1 << (CONTAINER_TAG_COLOR_SHIFT + 2),
-  // If indeed has more that one object.
-  CONTAINER_TAG_GC_HAS_OBJECT_COUNT = 1 << (CONTAINER_TAG_COLOR_SHIFT + 3)
   
 } ContainerTag;
 
@@ -106,42 +106,57 @@ private:
 public:  
 
 
-  inline bool local() const {
-      return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_LOCAL;
-  }
+  // inline bool local() const {
+  //     return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_LOCAL;
+  // }
 
   inline bool frozen() const {
-    return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_FROZEN;
+    return (rtNode.flags_ & CONTAINER_TAG_FROZEN) != 0;
   }
 
-  inline void markFrozen() {
-    rtNode.flags_ |= CONTAINER_TAG_FROZEN;
+  inline void markAcyclic() {
+    rtNode.flags_ |= CONTAINER_TAG_ACYCLIC;
   }
 
+  inline bool isAcyclic() const {
+    return (rtNode.flags_ & CONTAINER_TAG_ACYCLIC) != 0;
+  }
+
+  inline bool isStack() const {
+    return (rtNode.flags_ & (CONTAINER_TAG_STACK_OR_PERMANANT)) != 0;
+  }
 
   inline void setRefCountAndFlags(uint32_t refCount, uint16_t flags) {
     ref_.count = refCount; rtNode.flags_ = flags;
   }
 
   inline void freeze() {
-    rtNode.flags_ = (rtNode.flags_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_FROZEN;
+    if (!frozen()) {
+      rtNode.flags_ |= CONTAINER_TAG_FROZEN;
+      if (!isAcyclic() && !isInCyclicNode()) {
+        markAcyclic();
+        if (ref_.rtgc.node != 0) {
+          getNode()->externalReferrers.clear();
+          int64_t cntMember = ref_.rtgc.obj;
+          ref_.rtgc.node = 0;
+          ref_.rtgc.obj = 0;
+          ref_.count += cntMember;
+        }
+      }
+    }
   }
 
   inline void makeShared() {
-      rtNode.flags_ = (rtNode.flags_ & ~CONTAINER_TAG_MASK) | CONTAINER_TAG_SHARED;
+      rtNode.flags_ |= CONTAINER_TAG_SHARED;
   }
 
   inline bool shared() const {
-    return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_SHARED;
+    return (rtNode.flags_ & CONTAINER_TAG_SHARED) != 0;
   }
 
-  inline bool shareable() const {
-      return (rtNode.flags_ & (CONTAINER_TAG_FROZEN & CONTAINER_TAG_SHARED)) != 0;
-  }
-
-  inline bool stack() const {
-    return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_STACK;
-  }
+  // inline bool stack() const {
+  //   return (rtNode.flags_ & CONTAINER_TAG_MASK) == CONTAINER_TAG_STACK;
+  // }
 
   inline int64_t refCount() const {
     return ref_.count & RTGC_REF_COUNT_MASK;
@@ -280,12 +295,15 @@ public:
         __sync_add_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count += RTGC_MEMBER_REF_INCREEMENT;
 #endif
 #if KONAN_ENABLE_ASSERT
-    RuntimeAssert(!isAcyclic(), "Acyclic objct does not have member refCount");
     if (ref_.rtgc.obj == 0) {
       RTGC_dumpRefInfo(this);
       RuntimeAssert(ref_.rtgc.obj != 0, "member ref overflow");
     }
 #endif    
+  }
+
+  inline void clearMemberRefCount() {
+      ref_.rtgc.obj = 0;
   }
 
   template <bool Atomic>
@@ -321,8 +339,6 @@ public:
 #endif    
     return *(RTGCRef*)&value;
   }
-
-  bool isAcyclic();
 
   inline ObjHeader* asObjHeader() {
     return (ObjHeader*)(this + 1);
@@ -372,14 +388,14 @@ public:
   #ifdef KONAN_NO_THREADS
       int value __attribute__((unused))= ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #else
-      int value __attribute__((unused))= shareable() ?
+      int value __attribute__((unused))= shared() ?
          __sync_sub_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #endif
       return refCount();//value >> CONTAINER_TAG_SHIFT;
   }
 
-  inline unsigned tag() const {
-    return rtNode.flags_ & CONTAINER_TAG_MASK;
+  inline unsigned tagBits() const {
+     return rtNode.flags_ & CONTAINER_TAG_GC_MASK;
   }
 
   inline unsigned objectCount() const {
@@ -414,28 +430,31 @@ public:
     return (rtNode.flags_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) == 0;
   }
 
-  inline unsigned color() const {
-    return rtNode.flags_ & CONTAINER_TAG_GC_COLOR_MASK;
-  }
+  // inline unsigned color() const {
+  //   return rtNode.flags_ & CONTAINER_TAG_GC_COLOR_MASK;
+  // }
 
   inline void setColorAssertIfGreen(unsigned color) {
-    if (RTGC) return;
+    #if !RTGC
     RuntimeAssert(this->color() != CONTAINER_TAG_GC_GREEN, "Must not be green");
     setColorEvenIfGreen(color);
+    #endif
   }
 
   inline void setColorEvenIfGreen(unsigned color) {
     // TODO: do we need atomic color update?
-    if (RTGC) return;
+    #if !RTGC
     rtNode.flags_ = (rtNode.flags_ & ~CONTAINER_TAG_GC_COLOR_MASK) | color;
+    #endif
   }
 
   inline void setColorUnlessGreen(unsigned color) {
     // TODO: do we need atomic color update?
-    if (RTGC) return;
+    #if !RTGC
     unsigned objectCount = rtNode.flags_;//objectCount_;
     if ((objectCount & CONTAINER_TAG_GC_COLOR_MASK) != CONTAINER_TAG_GC_GREEN)
         rtNode.flags_ /*objectCount_*/ = (objectCount & ~CONTAINER_TAG_GC_COLOR_MASK) | color;
+    #endif
   }
 
   inline bool buffered() const {
@@ -536,10 +555,6 @@ struct ObjHeader {
     return clearPointerBits(typeInfoOrMeta_, OBJECT_TAG_MASK)->typeInfo_;
   }
 
-  bool isAcyclic() const {
-    return (type_info()->flags_ & (TF_IMMUTABLE | TF_ACYCLIC)) != 0;
-  }
-
   bool has_meta_object() const {
     auto* typeInfoOrMeta = clearPointerBits(typeInfoOrMeta_, OBJECT_TAG_MASK);
     return (typeInfoOrMeta != typeInfoOrMeta->typeInfo_);
@@ -553,7 +568,12 @@ struct ObjHeader {
 
   void setContainer(ContainerHeader* container) {
     meta_object()->container_ = container;
-    typeInfoOrMeta_ = setPointerBits(typeInfoOrMeta_, OBJECT_TAG_NONTRIVIAL_CONTAINER);
+    // if (container->isStack()) {
+    //   typeInfoOrMeta_ = setPointerBits(typeInfoOrMeta_, OBJECT_TAG_PERMANENT_CONTAINER);
+    // }
+    // else {
+      typeInfoOrMeta_ = setPointerBits(typeInfoOrMeta_, OBJECT_TAG_NONTRIVIAL_CONTAINER);
+    // }
   }
 
   ContainerHeader* container() const {
@@ -829,10 +849,6 @@ class ExceptionObjHolder {
 
 class ForeignRefManager;
 typedef ForeignRefManager* ForeignRefContext;
-
-inline bool ContainerHeader::isAcyclic() {
-  return asObjHeader()->isAcyclic();
-}
 
 
 #ifdef RTGC

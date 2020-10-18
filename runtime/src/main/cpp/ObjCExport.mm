@@ -158,7 +158,7 @@ extern "C" id Kotlin_ObjCExport_CreateNSStringFromKString(ObjHeader* str) {
       length:numBytes
       encoding:NSUTF16LittleEndianStringEncoding];
 
-    if (!str->container()->shareable()) {
+    if (!str->container()->shared()) {
       SetAssociatedObject(str, candidate);
     } else {
       id old = AtomicCompareAndSwapAssociatedObject(str, nullptr, candidate);

@@ -24,7 +24,7 @@ CyclicNode* CyclicNode::create() {
     assert(isLocked());
     CyclicNode* node = rtgcMem->cyclicNodeAllocator.allocItem();
     memset(node, 0, sizeof(CyclicNode));
-    RTGCGlobal::g_cntAddCyclicNode ++;
+    if (RTGC_STATISTCS) RTGCGlobal::g_cntAddCyclicNode ++;
     return node;
 }
 
@@ -33,7 +33,7 @@ void CyclicNode::dealloc() {
     RuntimeAssert(isLocked(), "GCNode is not locked")
     externalReferrers.clear();
     rtgcMem->cyclicNodeAllocator.recycleItem(this);
-    RTGCGlobal::g_cntRemoveCyclicNode ++;
+    if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveCyclicNode ++;
 }
 
 void CyclicNode::markDamaged() {
@@ -50,7 +50,7 @@ void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
     RTGC_LOG("addCyclicTest %p\n", obj);
     obj->markNeedCyclicTest();
     obj->getNode()->markSuspectedCyclic();
-        RTGCGlobal::g_cntAddCyclicTest ++;
+    if (RTGC_STATISTCS) RTGCGlobal::g_cntAddCyclicTest ++;
 
     rtgcMem->g_cyclicTestNodes.push(obj);
 }
@@ -59,10 +59,11 @@ void CyclicNode::removeCyclicTest(GCObject* obj) {
     //RuntimeAssert(isLocked(), "GCNode is not locked")
     if (!obj->isNeedCyclicTest()) return;
     obj->clearNeedCyclicTest();
-    RTGCGlobal::g_cntRemoveCyclicTest ++;
+    if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveCyclicTest ++;
 
     RTGC_LOG("## RTGC Remove Cyclic Test %p:%d\n", obj, obj->getNodeId());
-    rtgcMem->g_cyclicTestNodes.remove(obj);
+    /* TODO ZZZZ replace tryRemove => remove */
+    rtgcMem->g_cyclicTestNodes.tryRemove(obj);
 }
 
 void CyclicNode::mergeCyclicNode(GCObject* obj, int expiredNodeId) {
@@ -200,8 +201,12 @@ void CyclicNode::detectCycles() {
         RTGC_LOG("## memState == NULL!");
         return;
     }
-    rtgcLock();
+    rtgcLock(_DetectCylcles);
     for (GCObject* root = memState->g_cyclicTestNodes.pop(); root != NULL; root = memState->g_cyclicTestNodes.pop()) {
+        if (root->isAcyclic()) {
+            root->clearNeedCyclicTest();
+            continue;
+        }
         RTGC_LOG("## RTGC c root: %p, next: %p\n", root, memState->g_cyclicTestNodes.topChain() == NULL ? NULL : memState->g_cyclicTestNodes.topChain()->obj());
         int last_node_id = root->getNodeId();
         GCNode* root_node = root->getNode();
@@ -210,14 +215,13 @@ void CyclicNode::detectCycles() {
             RTGC_LOG("## RTGC skip root: %p\n", root);
             continue;
         }
-        RTGCGlobal::g_cntRemoveCyclicTest ++;
+        root->clearNeedCyclicTest();
+        if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveCyclicTest ++;
         if (!root->getNode()->isSuspectedCyclic()) {
             RTGC_LOG("## RTGC skip node root: %p\n", root);
-            root->clearNeedCyclicTest();
             continue;
         }
-        RTGC_LOG("## RTGC scan root: %p\n", root);
-        root->clearNeedCyclicTest();
+
         detectCyclicNodes(root, &tracingList, &finishedList);
         if (last_node_id != root->getNodeId()) {
             if (last_node_id < CYCLIC_NODE_ID_START) {
