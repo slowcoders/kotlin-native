@@ -1061,7 +1061,7 @@ static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* vis
   konan::consolePrintf("hasForeginRefs 0\n");
   GCRefChain* chain = container->getNode()->externalReferrers.topChain();
   if (chain == NULL) {
-    RTGC_TRAP("%p is foreign refs %x-%d\n", container, container->tag(), (int)container->refCount());
+    RTGC_TRAP("%p is foreign refs %x-%d\n", container, container->tagBits(), (int)container->refCount());
     return container->shared();
   }
   konan::consolePrintf("hasForeginRefs 1\n");
@@ -2487,7 +2487,6 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
   if (reinterpret_cast<uintptr_t>(old) > 1 && old != owner) {
     ContainerHeader* container = old->container();
     if (container != nullptr && !container->isStack()) {
-      RuntimeAssert(!container->isStack(), "access stack");
       if (container->shared()) {
           if (container->isAcyclic()) {
             decrementAcyclicRC</* Atomic = */ true>(container);

@@ -11,7 +11,11 @@
 #include <atomic>
 #include <vector>
 
-#define RTGC 1
+#define RTGC  1
+#define ENABLE_RTGC_LOG   0
+#define RTGC_NO_INLINE    NO_INLINE
+#define DEBUG_RTGC_BUCKET 0
+static const bool RTGC_STATISTCS = true;
 
 typedef struct ContainerHeader GCObject;
 
@@ -26,7 +30,6 @@ typedef struct ContainerHeader GCObject;
 #define RTGC_REF_COUNT_MASK        ((uint64_t)((1LL << RTGC_REF_COUNT_BITS) -1))
 static const int CYCLIC_NODE_ID_START = 2;
 
-#define ENABLE_RTGC_LOG             0
 bool rtgc_trap(void* pObj) NO_INLINE;
 
 #if ENABLE_RTGC_LOG
@@ -36,14 +39,12 @@ bool rtgc_trap(void* pObj) NO_INLINE;
 #define RTGC_LOG(...)
 #define RTGC_TRAP(...)
 #endif
-static const bool RTGC_STATISTCS = true;
 
 
 void RTGC_dumpRefInfo(GCObject*) NO_INLINE;
 void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj);
 void RTGC_Error(GCObject* obj) NO_INLINE;
 
-#define RTGC_NO_INLINE  NO_INLINE
 
 struct RTGCRef {
   uint64_t root: RTGC_ROOT_REF_BITS;
@@ -221,9 +222,8 @@ public:
   static void detectCycles()  RTGC_NO_INLINE;
 };
 
-#define DEBUG_BUCKET 0
 
-#if DEBUG_BUCKET
+#if DEBUG_RTGC_BUCKET
 #define BUCKET_LOG(...) konan::consolePrintf(__VA_ARGS__);
 #else
 #define BUCKET_LOG(...)
@@ -235,7 +235,7 @@ struct SharedBucket {
 
   T* _alocatedItems;
   T* g_freeItemQ;
-  #if DEBUG_BUCKET    
+  #if DEBUG_RTGC_BUCKET    
   int cntFreeItem;
   #endif
 
@@ -245,7 +245,7 @@ struct SharedBucket {
     for (int i = ITEM_COUNT*BUCKET_COUNT-1; --i > 0; item++) {
       SET_NEXT_FREE(item, item+1);
     }
-    #if DEBUG_BUCKET
+    #if DEBUG_RTGC_BUCKET
     this->cntFreeItem = ITEM_COUNT*BUCKET_COUNT;
     #endif
   }
@@ -267,7 +267,7 @@ struct SharedBucket {
     }
     g_freeItemQ = GET_NEXT_FREE(last);
     SET_NEXT_FREE(last, NULL);
-    #if DEBUG_BUCKET
+    #if DEBUG_RTGC_BUCKET
     this->cntFreeItem-= ITEM_COUNT;
     BUCKET_LOG("popBucket[:%d] => %d\n", id, this->cntFreeItem)
     #endif
@@ -279,17 +279,17 @@ struct SharedBucket {
     if (first == NULL) return;
     GCNode::rtgcLock(_RecycleBucket);
     T* last = NULL;
-    #if DEBUG_BUCKET
+    #if DEBUG_RTGC_BUCKET
     int cntRecycle = 0;
     #endif
     for (T* item = first; item != NULL; item = GET_NEXT_FREE(item)) {
       last = item;
-      #if DEBUG_BUCKET
+      #if DEBUG_RTGC_BUCKET
       cntRecycle ++;
       #endif
     }
 
-    #if DEBUG_BUCKET
+    #if DEBUG_RTGC_BUCKET
     this->cntFreeItem += cntRecycle;
     BUCKET_LOG("recycleBucket[:%d] + %d => %d\n", id, cntRecycle, this->cntFreeItem)
     #endif

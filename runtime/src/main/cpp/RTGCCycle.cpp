@@ -30,7 +30,7 @@ CyclicNode* CyclicNode::create() {
 
 void CyclicNode::dealloc() {
     RTGC_LOG("## RTGC deallic node:%d\n", this->getId());
-    RuntimeAssert(isLocked(), "GCNode is not locked")
+    //RuntimeAssert(isLocked(), "GCNode is not locked")
     externalReferrers.clear();
     rtgcMem->cyclicNodeAllocator.recycleItem(this);
     if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveCyclicNode ++;

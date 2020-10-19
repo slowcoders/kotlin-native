@@ -56,7 +56,7 @@ void GCNode::rtgcLock(LockType type) {
     if (RTGC_STATISTCS) {
         g_cntRTGCLocks[type] ++;
     }
-    if (DEBUG_BUCKET && (g_memDebug || g_lockThread != pthread_self())) {
+    if (DEBUG_RTGC_BUCKET && (g_memDebug || g_lockThread != pthread_self())) {
         BUCKET_LOG("g_lockThread =%p(%p) ++%d\n", g_lockThread, pthread_self(), g_cntLock)
     }
 }
@@ -65,7 +65,7 @@ void GCNode::rtgcUnlock() {
     if (RECURSIVE_LOCK) {
         //RuntimeAssert(pthread_self() == g_lockThread, "unlock in wrong thread");
     }
-    if (DEBUG_BUCKET && (g_memDebug || g_lockThread != pthread_self())) {
+    if (DEBUG_RTGC_BUCKET && (g_memDebug || g_lockThread != pthread_self())) {
         BUCKET_LOG("g_lockThread =%p(%p) %d--\n", g_lockThread, pthread_self(), g_cntLock)
     }
     if (--g_cntLock == 0) {

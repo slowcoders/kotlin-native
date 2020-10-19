@@ -78,7 +78,13 @@ internal class FinalSet : FSet(0) {
 
     override fun matches(startIndex: Int, testString: CharSequence,
                          matchResult: MatchResultImpl): Int {
+println("=======")
+println(Regex.Mode.FIND);
+println("mode " + matchResult.mode)
+println("len " + testString.length)
+println("------- 2")
         if (matchResult.mode == Regex.Mode.FIND || startIndex == testString.length) {
+            println("------- 3")
             matchResult.setEnd(0, startIndex)
             return startIndex
         }

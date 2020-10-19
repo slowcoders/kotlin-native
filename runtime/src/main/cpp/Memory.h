@@ -25,24 +25,26 @@
 
 
 typedef enum {
+  CONTAINER_TAG_GC_MARKED   = 1 << 0, // Unused, Reserved for TRACE_STATE
+  CONTAINER_TAG_GC_BUFFERED = 1 << 1, // Unused, Reserved for TRACE_STATE
+
   // Container is frozen, could only refer to other frozen objects.
-  CONTAINER_TAG_FROZEN = 1 << 0,
+  CONTAINER_TAG_FROZEN = 1 << 2,
 
   // Atomic container, reference counter is atomically updated.
-  CONTAINER_TAG_SHARED = 1 << 1,
+  CONTAINER_TAG_SHARED = 1 << 3,
 
   // 
-  CONTAINER_TAG_ACYCLIC = 1 << 2,
+  CONTAINER_TAG_ACYCLIC = 1 << 4,
 
   // no need to free, children cleanup still shall be there.
-  CONTAINER_TAG_STACK_OR_PERMANANT = 1 << 3,
+  CONTAINER_TAG_NOT_ALLOCATED = 1 << 5,
 
-  RTGC_DESTROYED = 1 << 4,
-  NEED_CYCLIC_TEST = 1 << 5,
+  NEED_CYCLIC_TEST = 1 << 6,
 
-  CONTAINER_TAG_GC_SEEN     = 1 << 6,
-  CONTAINER_TAG_GC_MARKED   = 1 << 7, // Unused
-  CONTAINER_TAG_GC_BUFFERED = 1 << 8, // Unused
+  CONTAINER_TAG_STACK_OR_PERMANANT = 1 << 7, // Unused, Reserved
+
+  CONTAINER_TAG_GC_SEEN     = 1 << 8,
   // If indeed has more that one object.
   CONTAINER_TAG_GC_HAS_OBJECT_COUNT = 1 << 9,
 
@@ -138,7 +140,7 @@ public:
         if (ref_.rtgc.node != 0) {
           getNode()->externalReferrers.clear();
           int64_t cntMember = ref_.rtgc.obj;
-          ref_.rtgc.node = 0;
+          //ref_.rtgc.node = 0;
           ref_.rtgc.obj = 0;
           ref_.count += cntMember;
         }
@@ -259,11 +261,11 @@ public:
   }
 
   void markDestroyed() {
-    this->rtNode.flags_ |= RTGC_DESTROYED;
+    this->rtNode.flags_ |= CONTAINER_TAG_NOT_ALLOCATED;
   }
 
   bool isDestroyed() {
-    return (this->rtNode.flags_ & RTGC_DESTROYED) != 0;
+    return (this->rtNode.flags_ & CONTAINER_TAG_NOT_ALLOCATED) != 0;
   }
 
   bool isGarbage() {
