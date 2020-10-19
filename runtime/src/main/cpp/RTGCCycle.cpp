@@ -204,6 +204,7 @@ void CyclicNode::detectCycles() {
     rtgcLock(_DetectCylcles);
     for (GCObject* root = memState->g_cyclicTestNodes.pop(); root != NULL; root = memState->g_cyclicTestNodes.pop()) {
         if (root->isAcyclic()) {
+            RTGC_LOG("## RTGC skip acyclic: %p\n", root);
             root->clearNeedCyclicTest();
             continue;
         }
@@ -215,13 +216,15 @@ void CyclicNode::detectCycles() {
             RTGC_LOG("## RTGC skip root: %p\n", root);
             continue;
         }
-        root->clearNeedCyclicTest();
+
         if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveCyclicTest ++;
         if (!root->getNode()->isSuspectedCyclic()) {
             RTGC_LOG("## RTGC skip node root: %p\n", root);
+            root->clearNeedCyclicTest();
             continue;
         }
 
+        root->clearNeedCyclicTest();
         detectCyclicNodes(root, &tracingList, &finishedList);
         if (last_node_id != root->getNodeId()) {
             if (last_node_id < CYCLIC_NODE_ID_START) {
