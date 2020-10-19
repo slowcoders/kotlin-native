@@ -54,7 +54,7 @@
 // http://researcher.watson.ibm.com/researcher/files/us-bacon/Bacon03Pure.pdf.
 #define USE_GC 1
 // Define to 1 to print all memory operations.
-#define TRACE_MEMORY 0
+#define TRACE_MEMORY 1
 // Define to 1 to print major GC events.
 #define TRACE_GC 0
 // Collect memory manager events statistics.
@@ -3125,6 +3125,9 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
   } else {
     // Now decrement RC of elements in toRelease set for reachibility analysis.
     for (auto it = state->toRelease->begin(); it != state->toRelease->end(); ++it) {
+    #ifdef RTGC
+      RuntimeAssert(!RTGC, "no kotlin gc");
+    #else  
       auto released = *it;
       RuntimeAssert(!RTGC, "no kotlin gc");
       if (!isMarkedAsRemoved(released) && !released->shared()) {

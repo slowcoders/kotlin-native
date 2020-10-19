@@ -108,7 +108,7 @@ fun test(str: String) {
     try {
 printTime("start")
 
-
+/*
 runFreezeStressTest();
 printTime("runFreezeStressTest")
 
@@ -138,6 +138,7 @@ printTime("runLeakMemoryWithWorkerTerminationTest")
 
 runIlleagalSharingWithWeakTest()
 printTime("runIlleagalSharingWithWeakTest")
+//*/
 
 val test_gc_bug_in_worker_thread = true;
 if (test_gc_bug_in_worker_thread) {
@@ -148,6 +149,7 @@ if (test_gc_bug_in_worker_thread) {
     printTime("runAtomicTest")
 }
 
+/*
 runPatternTest()
 printTime("runPatternTest")
 
@@ -185,7 +187,7 @@ printTime("runSortTest")
 
 runTestRunner()
 printTime("runTestRunner")
-
+//*/
 //runTest1()
         //runTest2()
     }
