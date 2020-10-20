@@ -24,6 +24,7 @@ int RTGCGlobal::g_cntAddRefChain = 0;
 int RTGCGlobal::g_cntRemoveRefChain = 0;
 int RTGCGlobal::g_cntAddCyclicNode = 0;
 int RTGCGlobal::g_cntRemoveCyclicNode = 0;
+void* RTGC_debugInstance = NULL;
 
 CyclicNode lastDummy;
 

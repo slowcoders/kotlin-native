@@ -717,7 +717,7 @@ class Container {
     obj->typeInfoOrMeta_ = const_cast<TypeInfo*>(type_info);
     // Take into account typeInfo's immutability for ARC strategy.
     if ((type_info->flags_ & TF_IMMUTABLE) != 0)
-      header_->freeze();
+      header_->freezeRef();
     if ((type_info->flags_ & (TF_IMMUTABLE | TF_ACYCLIC)) != 0)
       header_->markAcyclic();
   }
@@ -948,6 +948,7 @@ inline bool isRefCounted(KConstRef object) {
   return isFreeable(object->container());
 }
 
+#if !RTGC
 inline void lock(KInt* spinlock) {
   while (compareAndSwap(spinlock, 0, 1) != 0) {}
 }
@@ -955,6 +956,7 @@ inline void lock(KInt* spinlock) {
 inline void unlock(KInt* spinlock) {
   RuntimeCheck(compareAndSwap(spinlock, 1, 0) == 1, "Must succeed");
 }
+#endif
 
 inline bool canFreeze(ContainerHeader* container) {
   if (IsStrictMemoryModel)
@@ -1028,7 +1030,7 @@ ContainerHeader* allocAggregatingFrozenContainer(KStdVector<ContainerHeader*>& c
     MEMORY_LOG("Set fictitious frozen container for %p: %p\n", obj, superContainer);
   }
   superContainer->setObjectCount(componentSize);
-  superContainer->freeze();
+  superContainer->freezeRef();
   return superContainer;
 }
 
@@ -1399,7 +1401,7 @@ inline bool tryIncrementRC(ContainerHeader* container) {
 
 template <bool Atomic>
 inline void incrementAcyclicRC(ContainerHeader* container) {
-  container->incRootCount<Atomic>();
+  container->incRefCount<Atomic>();
 }
 
 template <bool Atomic>
@@ -1442,8 +1444,8 @@ inline void decrementRC(ContainerHeader* container) {
 
 template <bool Atomic>
 inline void decrementAcyclicRC(ContainerHeader* container) {
-  RTGCRef ref = container->decRootCount<Atomic>();
-  if (ref.root == 0) {
+  int64_t rc = container->decRefCount<Atomic>();
+  if (rc == 0) {
     if (Atomic) GCNode::rtgcLock(_DecrementAcyclicRC);
     freeContainer(container, -1);
     if (Atomic) GCNode::rtgcUnlock();
@@ -1501,7 +1503,7 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
   GCNode* val_node = container->getNode();
 
   container->decMemberRefCount<Atomic>();
-  MEMORY_LOG("decrementMemberRC %p: rc=%d\n", container, container->refCount());
+  MEMORY_LOG("decrementMemberRC %p: rc=%x\n", container, container->refCount());
 
   if (val_node != owner_node) {
     val_node = container->getNode();
@@ -2803,7 +2805,8 @@ inline int32_t computeCookie() {
 OBJ_GETTER(swapHeapRefLocked,
     ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner, int32_t* cookie) {
   MEMORY_LOG("swapHeapRefLocked: %p, v=%p, o=%p\n", location, newValue, owner);
-  lock(spinlock);
+    GCNode::rtgcLock(_SetHeapRefLocked);
+//lock(spinlock);
   ObjHeader* oldValue = *location;
   bool shallRemember = false;
   if (IsStrictMemoryModel) {
@@ -2835,14 +2838,16 @@ OBJ_GETTER(swapHeapRefLocked,
     // Only remember container if it is not known to this thread (i.e. != expectedValue).
     rememberNewContainer(oldValue->container());
   }
-  unlock(spinlock);
+    GCNode::rtgcUnlock();
+
+  //unlock(spinlock);
 
   return oldValue;
 }
 
 void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner, int32_t* cookie) {
   MEMORY_LOG("setHeapRefLocked: %p, v=%p, o=%p\n", location, newValue, owner);
-  lock(spinlock);
+  GCNode::rtgcLock(_SetHeapRefLocked);
 #if USE_CYCLIC_GC
   if (g_hasCyclicCollector)
     cyclicMutateAtomicRoot(newValue);
@@ -2858,12 +2863,14 @@ void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlo
     UpdateHeapRef(location, newValue, owner);
   }
   *cookie = computeCookie();
-  unlock(spinlock);
+  GCNode::rtgcUnlock();
+  //unlock(spinlock);
 }
 
 OBJ_GETTER(readHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* cookie) {
   MEMORY_LOG("ReadHeapRefLocked: %p\n", location)
-  lock(spinlock);
+  GCNode::rtgcLock(_SetHeapRefLocked);
+//lock(spinlock);
   ObjHeader* value = *location;
   auto realCookie = computeCookie();
   bool shallRemember = *cookie != realCookie;
@@ -2875,7 +2882,8 @@ OBJ_GETTER(readHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* 
     rememberNewContainer(container);
   }
 #endif  // USE_GC
-  unlock(spinlock);
+  GCNode::rtgcUnlock();
+  //unlock(spinlock);
   return value;
 }
 
@@ -2911,7 +2919,7 @@ template <bool Strict>
 const ObjHeader* leaveFrameAndReturnRef(ObjHeader** start, int param_count, ObjHeader** resultSlot, const ObjHeader* returnRef) {
   int parameters = param_count >> 16;
   int count = (int16_t)param_count;
-  MEMORY_LOG("leaveFrameAndReturnRef %p: %d parameters %d locals. returns %p \n", start, parameters, count, returnRef)
+  MEMORY_LOG("leaveFrameAndReturnRef %p: %d parameters %d locals. returns %p(%p:%p) \n", start, parameters, count, returnRef, resultSlot, *resultSlot);
   const ObjHeader* res = *resultSlot;
   if (res != returnRef) {
     *resultSlot = (ObjHeader*)returnRef;
@@ -3206,7 +3214,8 @@ void freezeAcyclic(ContainerHeader* rootContainer, ContainerHeaderSet* newlyFroz
     if (!current->frozen())
       newlyFrozen->insert(current);
     MEMORY_LOG("freezing acyclic %p\n", current)
-    current->freeze();
+    current->freezeRef();
+    current->makeShared();
     traverseContainerReferredObjects(current, [&queue](ObjHeader* obj) {
         ContainerHeader* objContainer = obj->container();
         if (canFreeze(objContainer)) {
@@ -3288,7 +3297,7 @@ void freezeCyclic(ObjHeader* root,
       // Note, that once object is frozen, it could be concurrently accessed, so
       // color and similar attributes shall not be used.
       MEMORY_LOG("freezing Cyclic %p\n", container)
-      container->freeze();
+      container->freezeRef();
       // We set refcount of original container to zero, so that it is seen as such after removal
       // meta-object, where aggregating container is stored.
       container->setRefCount(0);

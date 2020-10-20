@@ -132,7 +132,7 @@ public:
     ref_.count = refCount; rtNode.flags_ = flags;
   }
 
-  inline void freeze() {
+  inline void freezeRef() {
     if (!frozen()) {
       rtNode.flags_ |= CONTAINER_TAG_FROZEN;
       if (!isAcyclic() && !isInCyclicNode()) {

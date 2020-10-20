@@ -44,7 +44,7 @@ bool rtgc_trap(void* pObj) NO_INLINE;
 void RTGC_dumpRefInfo(GCObject*) NO_INLINE;
 void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj);
 void RTGC_Error(GCObject* obj) NO_INLINE;
-
+extern void* RTGC_debugInstance;
 
 struct RTGCRef {
   uint64_t root: RTGC_ROOT_REF_BITS;
@@ -108,7 +108,8 @@ enum LockType {
   _UpdateHeapRef,
   _PopBucket,
   _RecycleBucket,
-  _DetectCylcles
+  _DetectCylcles,
+  _SetHeapRefLocked,
 };
 
 
@@ -191,7 +192,7 @@ public:
   }
 
   void removeSuspectedGarbage(GCObject* obj) {
-      garbageTestList.remove(obj);
+      garbageTestList.tryRemove(obj);
   }
 
   int getRootObjectCount() {
