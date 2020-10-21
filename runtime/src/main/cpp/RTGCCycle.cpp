@@ -63,7 +63,7 @@ void CyclicNode::removeCyclicTest(GCObject* obj) {
 
     RTGC_LOG("## RTGC Remove Cyclic Test %p:%d\n", obj, obj->getNodeId());
     /* TODO ZZZZ replace tryRemove => remove */
-    rtgcMem->g_cyclicTestNodes.tryRemove(obj);
+    rtgcMem->g_cyclicTestNodes.tryRemove(obj, true);
 }
 
 void CyclicNode::mergeCyclicNode(GCObject* obj, int expiredNodeId) {
@@ -101,6 +101,8 @@ void CyclicNode::addCyclicObject(
         }
     }
 
+
+    RTGC_LOG("## RTGC merge external referrers: %p\n", oldNode->externalReferrers.topChain());
     for(GCRefChain* chain = oldNode->externalReferrers.topChain(); chain != NULL; chain = chain->next()) {
         GCObject* referrer = chain->obj();
         if (referrer->getNode() != this) {
@@ -109,7 +111,6 @@ void CyclicNode::addCyclicObject(
         }
     }
 
-    this->externalReferrers.tryRemove(rookie);
     if (rookieInCyclic) {
         CyclicNode* oldCyclicNode = (CyclicNode*)oldNode;
         oldCyclicNode->dealloc();

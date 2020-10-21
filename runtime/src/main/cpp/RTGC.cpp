@@ -175,22 +175,27 @@ GCObject* GCRefList::pop() {
     return obj;
 }
 
-bool GCRefList::tryRemove(GCObject* item) {
+void GCRefList::tryRemove(GCObject* item, bool isUnique) {
     GCRefChain* prev = NULL;
-    for (GCRefChain* chain = topChain(); chain != NULL; chain = chain->next()) {
-        if (chain->obj_ == item) {
-            if (prev == NULL) {
-                first_ = getRefChainIndex(chain->next_);
-            }
-            else {
-                prev->next_ = chain->next_;
-            }
-            recycleChain(chain, "first");
-            return true;
+    GCRefChain* next;
+    for (GCRefChain* chain = topChain(); chain != NULL; chain = next) {
+        next = chain->next();
+        if (chain->obj_ != item) {
+            prev = chain;
+            continue;
         }
-        prev = chain;
+
+        if (prev == NULL) {
+            first_ = getRefChainIndex(chain->next_);
+        }
+        else {
+            prev->next_ = chain->next_;
+        }
+        recycleChain(chain, "first");
+        if (isUnique) {
+            break;
+        }
     }
-    return false;
 }
 
 GCRefChain* GCRefList::find(GCObject* item) {
@@ -292,6 +297,7 @@ static int cntMemory = 0;
 void GCNode::initMemory(RTGCMemState* memState) {
     cntMemory ++;
     g_memDebug = cntMemory > 1;
+    RTGC_LOG("initMemory: %d", cntMemory);
     memState->refChainAllocator.init(&g_refBucket, cntMemory);
     memState->cyclicNodeAllocator.init(&g_cyclicBucket, cntMemory + 1000);
     rtgcMem = memState;

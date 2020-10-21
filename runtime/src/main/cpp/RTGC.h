@@ -13,9 +13,9 @@
 
 #define RTGC  1
 #define ENABLE_RTGC_LOG   0
-#define RTGC_NO_INLINE    NO_INLINE
+#define RTGC_NO_INLINE    // NO_INLINE
 #define DEBUG_RTGC_BUCKET 0
-static const bool RTGC_STATISTCS = true;
+static const bool RTGC_STATISTCS = false;
 
 typedef struct ContainerHeader GCObject;
 
@@ -88,7 +88,7 @@ public:
   void push(GCObject* obj)  RTGC_NO_INLINE;
   void remove(GCObject* obj)  RTGC_NO_INLINE;
   void moveTo(GCObject* retiree, GCRefList* receiver)  RTGC_NO_INLINE;
-  bool tryRemove(GCObject* obj)  RTGC_NO_INLINE;
+  bool tryRemove(GCObject* obj, bool isUnique)  RTGC_NO_INLINE;
   bool isEmpty() { return first_ == 0; }
   void setFirst(GCRefChain* last)  RTGC_NO_INLINE;
   void clear() { setFirst(NULL); }
@@ -192,7 +192,7 @@ public:
   }
 
   void removeSuspectedGarbage(GCObject* obj) {
-      garbageTestList.tryRemove(obj);
+      garbageTestList.tryRemove(obj, true);
   }
 
   int getRootObjectCount() {
