@@ -886,7 +886,12 @@ inline void traverseObjectFields(ObjHeader* obj, func process) {
 void RTGC_traverseObjectFields(ContainerHeader* container, RTGC_FIELD_TRAVERSE_CALLBACK process) {
   traverseObjectFields((ObjHeader*)(container + 1), [process](ObjHeader** location, ObjHeader* unused) {
     ObjHeader* ref = *location;
-    if (ref != nullptr) process(ref->container());
+    if (ref != nullptr) {
+      ContainerHeader* container = ref->container();
+      if (container != NULL) {
+        process(container);
+      }
+    }
   });
 }
 namespace {
