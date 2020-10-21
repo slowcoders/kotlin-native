@@ -88,7 +88,7 @@ public:
   void push(GCObject* obj)  RTGC_NO_INLINE;
   void remove(GCObject* obj)  RTGC_NO_INLINE;
   void moveTo(GCObject* retiree, GCRefList* receiver)  RTGC_NO_INLINE;
-  bool tryRemove(GCObject* obj, bool isUnique)  RTGC_NO_INLINE;
+  void tryRemove(GCObject* obj, bool isUnique)  RTGC_NO_INLINE;
   bool isEmpty() { return first_ == 0; }
   void setFirst(GCRefChain* last)  RTGC_NO_INLINE;
   void clear() { setFirst(NULL); }

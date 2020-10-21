@@ -1,4 +1,59 @@
+FAILURE: Build completed with 21 failures.
+
 1: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:check_stacktrace_format'.
+> Test failed. Actual exit status doesn't match with exit status checker: 134
+  stdout:
+  
+  stderr:
+  Assertion failed: (isLocked()), function markDamaged, file /Users/zeedh/slowcoders/kotlin-native/runtime/src/main/cpp/RTGCCycle.cpp, line 40.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+2: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:cycle_detector'.
+> Test failed. Actual exit status doesn't match with exit status checker: 134
+  stdout:
+  [==========] Running 10 tests from 1 test cases.
+  [----------] Global test environment set-up.
+  [----------] 10 tests from Cycle_detectorKt
+  [ RUN      ] Cycle_detectorKt.noCycles
+  kotlin.NullPointerException
+  
+  stderr:
+  Assertion failed: (isLocked()), function markDamaged, file /Users/zeedh/slowcoders/kotlin-native/runtime/src/main/cpp/RTGCCycle.cpp, line 40.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+3: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:initializers6'.
+> Test failed. Actual exit status doesn't match with exit status checker: 134
+  stdout:
+  Uncaught Kotlin exception: kotlin.AssertionError: Expected <2>, actual <5>.
+  Uncaught Kotlin exception: Uncaught Kotlin exception: kotlin.AssertionError: Expected <2>, actual <4>.kotlin.AssertionError: Expected <2>, actual <3>.
+  
+  
+  stderr:
+  Assertion failed: (isLocked()), function markDamaged, file /Users/zeedh/slowcoders/kotlin-native/runtime/src/main/cpp/RTGCCycle.cpp, line 40.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+4: Task failed with an exception.
 -----------
 * What went wrong:
 Execution failed for task ':backend.native:tests:interop_objc_illegal_sharing'.
@@ -14,7 +69,7 @@ Execution failed for task ':backend.native:tests:interop_objc_illegal_sharing'.
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
-2: Task failed with an exception.
+5: Task failed with an exception.
 -----------
 * What went wrong:
 Execution failed for task ':backend.native:tests:interop_objc_illegal_sharing_with_weak'.
@@ -30,7 +85,52 @@ Execution failed for task ':backend.native:tests:interop_objc_illegal_sharing_wi
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
-3: Task failed with an exception.
+6: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:kt-37572'.
+> Test failed. Actual exit status doesn't match with exit status checker: 134
+  stdout:
+  
+  stderr:
+  Assertion failed: (isLocked()), function markDamaged, file /Users/zeedh/slowcoders/kotlin-native/runtime/src/main/cpp/RTGCCycle.cpp, line 40.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+7: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:lazy2'.
+> Test failed. Actual exit status doesn't match with exit status checker: 134
+  stdout:
+  
+  stderr:
+  Assertion failed: (isLocked()), function markDamaged, file /Users/zeedh/slowcoders/kotlin-native/runtime/src/main/cpp/RTGCCycle.cpp, line 40.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+8: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:lazy3'.
+> Test failed. Actual exit status doesn't match with exit status checker: 134
+  stdout:
+  
+  stderr:
+  Assertion failed: (isLocked()), function markDamaged, file /Users/zeedh/slowcoders/kotlin-native/runtime/src/main/cpp/RTGCCycle.cpp, line 40.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+9: Task failed with an exception.
 -----------
 * What went wrong:
 Execution failed for task ':backend.native:tests:leakMemory'.
@@ -44,7 +144,7 @@ Execution failed for task ':backend.native:tests:leakMemory'.
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
-4: Task failed with an exception.
+10: Task failed with an exception.
 -----------
 * What went wrong:
 Execution failed for task ':backend.native:tests:leakMemoryWithWorkerTermination'.
@@ -58,10 +158,42 @@ Execution failed for task ':backend.native:tests:leakMemoryWithWorkerTermination
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
-5: Task failed with an exception.
+11: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:local_ea_arraysfieldwrite'.
+Execution failed for task ':backend.native:tests:main_exception'.
+> Test failed. Expected exit status: 1, actual: 134
+  stdout:
+  kotlin.Error: Hello!
+  
+  stderr:
+  Assertion failed: (isLocked()), function markDamaged, file /Users/zeedh/slowcoders/kotlin-native/runtime/src/main/cpp/RTGCCycle.cpp, line 40.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+12: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:runtime_basic_assert_failed'.
+> Test failed. Expected exit status: 1, actual: 134
+  stdout:
+  Uncaught Kotlin exception: kotlin.AssertionError: Assertion failed
+  
+  stderr:
+  Assertion failed: (isLocked()), function markDamaged, file /Users/zeedh/slowcoders/kotlin-native/runtime/src/main/cpp/RTGCCycle.cpp, line 40.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+13: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:runtime_worker_random'.
 > Test failed. Actual exit status doesn't match with exit status checker: 139
   stdout:
   
@@ -72,17 +204,32 @@ Execution failed for task ':backend.native:tests:local_ea_arraysfieldwrite'.
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
-6: Task failed with an exception.
+14: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:stdlibTest'.
-> Test /Users/zeedh/slowcoders/kotlin-native/test.output/stdlib/stdlibTest/macos_x64/stdlibTest.kexe exited with 139
+Execution failed for task ':backend.native:tests:stack_trace_inline'.
+> Test failed. Actual exit status doesn't match with exit status checker: 134
+  stdout:
+  
+  stderr:
+  Assertion failed: (isLocked()), function markDamaged, file /Users/zeedh/slowcoders/kotlin-native/runtime/src/main/cpp/RTGCCycle.cpp, line 40.
+
 
 * Try:
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
-7: Task failed with an exception.
+15: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:stdlibTest'.
+> Test /Users/zeedh/slowcoders/kotlin-native/test.output/stdlib/stdlibTest/macos_x64/stdlibTest.kexe exited with 134
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+16: Task failed with an exception.
 -----------
 * What went wrong:
 Execution failed for task ':backend.native:tests:testObjCExport'.
@@ -92,7 +239,7 @@ Execution failed for task ':backend.native:tests:testObjCExport'.
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
-8: Task failed with an exception.
+17: Task failed with an exception.
 -----------
 * What went wrong:
 Execution failed for task ':backend.native:tests:testObjCExportStatic'.
@@ -102,9 +249,76 @@ Execution failed for task ':backend.native:tests:testObjCExportStatic'.
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
-9: Task failed with an exception.
+18: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:testing_stacktrace'.
+> Test failed. Actual exit status doesn't match with exit status checker: 134
+  stdout:
+  ##teamcity[testSuiteStarted name='kotlin.test.tests.Ignored' locationHint='ktest:suite://kotlin.test.tests.Ignored']
+  ##teamcity[testIgnored name='foo']
+  ##teamcity[testSuiteFinished name='kotlin.test.tests.Ignored']
+  ##teamcity[testSuiteStarted name='kotlin.test.tests.Failed' locationHint='ktest:suite://kotlin.test.tests.Failed']
+  ##teamcity[testStarted name='bar' locationHint='ktest:test://kotlin.test.tests.Failed.bar']
+  
+  stderr:
+  Assertion failed: (isLocked()), function markDamaged, file /Users/zeedh/slowcoders/kotlin-native/runtime/src/main/cpp/RTGCCycle.cpp, line 40.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+19: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker11'.
+> Test failed. Actual exit status doesn't match with exit status checker: 134
+  stdout:
+  kotlin.IllegalStateException: Illegal transfer state
+  
+  stderr:
+  Assertion failed: (isLocked()), function markDamaged, file /Users/zeedh/slowcoders/kotlin-native/runtime/src/main/cpp/RTGCCycle.cpp, line 40.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+20: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker2'.
+> Test failed. Actual exit status doesn't match with exit status checker: 134
+  stdout:
+  kotlin.IllegalStateException: Illegal transfer state
+  
+  stderr:
+  Assertion failed: (isLocked()), function markDamaged, file /Users/zeedh/slowcoders/kotlin-native/runtime/src/main/cpp/RTGCCycle.cpp, line 40.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+21: Task failed with an exception.
 -----------
 * What went wrong:
 Execution failed for task ':backend.native:tests:compileKonanWorker_bound_reference0Macos_x64'.
 > Process 'command '/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home/bin/java'' finished with non-zero exit value 1
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+* Get more help at https://help.gradle.org
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 7.0.
+Use '--warning-mode all' to show the individual deprecation warnings.
+See https://docs.gradle.org/6.6.1/userguide/command_line_interface.html#sec:command_line_warnings
+
+BUILD FAILED in 29m 18s
+1300 actionable tasks: 703 executed, 597 up-to-date
+zeedh@DaeHoons-MacBook-Pro kotlin-native % 
+
 
