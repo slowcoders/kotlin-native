@@ -111,10 +111,14 @@ void CyclicNode::addCyclicObject(
         }
     }
 
-    if (rookieInCyclic) {
-        CyclicNode* oldCyclicNode = (CyclicNode*)oldNode;
-        oldCyclicNode->dealloc();
-    }
+    // RTGC_LOG("## RTGC merge external referrers done: %p\n", oldNode->externalReferrers.topChain());
+    this->externalReferrers.tryRemove(rookie, false);
+    // if (rookieInCyclic) {
+    //     CyclicNode* oldCyclicNode = (CyclicNode*)oldNode;
+    //     RTGC_LOG("## RTGC dealloc merged cyclic node: %p\n", oldCyclicNode);
+    //     oldCyclicNode->dealloc();
+    // }
+    RTGC_LOG("## RTGC add cyclic obj done: %p\n", this_id);
 }
 
 
