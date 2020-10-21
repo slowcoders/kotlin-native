@@ -1060,13 +1060,11 @@ void processFinalizerQueue(MemoryState* state) {
 static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* visited) RTGC_NO_INLINE;
 
 static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* visited) {
-  konan::consolePrintf("hasForeginRefs 0\n");
   GCRefChain* chain = container->getNode()->externalReferrers.topChain();
   if (chain == NULL) {
     RTGC_TRAP("%p is foreign refs %x-%d\n", container, container->tagBits(), (int)container->refCount());
     return container->shared();
   }
-  konan::consolePrintf("hasForeginRefs 1\n");
 
   for (; chain != NULL; chain = chain->next()) {
     ContainerHeader* referrer = chain->obj();
@@ -1083,7 +1081,6 @@ static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* vis
       return true;
     }
   }
-  konan::consolePrintf("hasForeginRefs 3\n");
   return false;
 }
 
@@ -1111,7 +1108,6 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderDeque* visited) {
         }
       }
     }
-    konan::consolePrintf("--- 2\n");
 
     traverseContainerReferredObjects(container, [&toVisit](ObjHeader* ref) {
       auto* child = ref->container();
@@ -1124,8 +1120,6 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderDeque* visited) {
     });
   }
   
-  konan::consolePrintf("--- 3\n");
-
   for (auto* it: *visited) {
     it->resetSeen();
     it->unMark();
@@ -1138,12 +1132,10 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderDeque* visited) {
     }
   }
 
-  konan::consolePrintf("--- 4\n");
   for (auto* it: toVisit) {
     it->unMark();
   }
 
-  konan::consolePrintf("--- 5\n");
   return hasExternalRefs;
 }
 #else
@@ -2768,7 +2760,7 @@ OBJ_GETTER(initSharedInstance,
         FreezeSubgraph(object);
       }
       if (RTGC_STATISTCS) {
-        RTGC_dumpTypeInfo("initShared", typeInfo, object->container());
+        //RTGC_dumpTypeInfo("initShared", typeInfo, object->container());
       }
       #ifdef RTGC
         setStackRef<Strict>(location, object);
