@@ -37,7 +37,7 @@ void CyclicNode::dealloc() {
 }
 
 void CyclicNode::markDamaged() {
-    assert(isLocked());
+    //assert(isLocked());
 
     if (!this->isDamaged()) {
         this->nextDamaged = rtgcMem->g_damagedCylicNodes;

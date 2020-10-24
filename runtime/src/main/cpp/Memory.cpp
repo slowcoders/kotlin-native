@@ -2260,7 +2260,7 @@ ForeignRefManager* initForeignRef(ObjHeader* object) {
 }
 
 bool isForeignRefAccessible(ObjHeader* object, ForeignRefManager* manager) {
-  if (!IsStrictMemoryModel) return true;
+  if (!IsStrictMemoryModel && !RTGC) return true;
 
   if (manager == memoryState->foreignRefManager) {
     // Note: it is important that this code neither crashes nor returns false-negative result
@@ -2270,7 +2270,8 @@ bool isForeignRefAccessible(ObjHeader* object, ForeignRefManager* manager) {
   }
 
   // Note: getting container and checking it with 'isShareable()' is supposed to be correct even for unowned object.
-  return tryMakeShareable(object->container());
+  // @zee can not use tryMakeShareable at external thread.
+  return isShareable(object->container());
 }
 
 void deinitForeignRef(ObjHeader* object, ForeignRefManager* manager) {
