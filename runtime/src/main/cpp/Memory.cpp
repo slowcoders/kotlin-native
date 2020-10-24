@@ -2240,7 +2240,7 @@ void garbageCollect() {
 #endif  // USE_GC
 
 ForeignRefManager* initLocalForeignRef(ObjHeader* object) {
-  if (!IsStrictMemoryModel) return nullptr;
+  if (!IsStrictMemoryModel && !RTGC) return nullptr;
 
   return memoryState->foreignRefManager;
 }
@@ -2249,13 +2249,13 @@ ForeignRefManager* initForeignRef(ObjHeader* object) {
   retainRef(object);
   RTGC_LOG("initForeignRef %p\n", object->container());
 
-  if (!IsStrictMemoryModel) return nullptr;
+  if (!IsStrictMemoryModel && !RTGC) return nullptr;
 
   // Note: it is possible to return nullptr for shared object as an optimization,
   // but this will force the implementation to release objects on uninitialized threads
   // which is generally a memory leak. See [deinitForeignRef].
   auto* manager = memoryState->foreignRefManager;
-  manager->addRef();
+  if (!RTGC) manager->addRef();
   return manager;
 }
 
@@ -2291,7 +2291,7 @@ void deinitForeignRef(ObjHeader* object, ForeignRefManager* manager) {
     manager->releaseRef();
   } else {
     releaseRef<false>(object);
-    RuntimeAssert(manager == nullptr, "must be null");
+    RuntimeAssert(RTGC || manager == nullptr, "must be null");
   }
 }
 
