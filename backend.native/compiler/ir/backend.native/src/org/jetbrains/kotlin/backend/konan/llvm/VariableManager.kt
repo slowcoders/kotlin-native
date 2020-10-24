@@ -99,7 +99,7 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
                         if (alterVariable == null) {
                             val slot_addr = createAnonymousSlot(v.second);
                             alterVariable = functionGenerationContext.loadSlot(slot_addr, false);
-                            println("****************** " + alterVariable);
+                            // println("****************** " + alterVariable);
                         }
                         argList[i] = (arg.first to alterVariable)
                     }
