@@ -149,7 +149,11 @@ public:
   }
 
   inline void makeShared() {
-      rtNode.flags_ |= CONTAINER_TAG_SHARED;
+    rtNode.flags_ |= CONTAINER_TAG_SHARED;
+  }
+
+  inline void makeSharedPermanent() {
+    rtNode.flags_ |= CONTAINER_TAG_STACK_OR_PERMANANT;
   }
 
   inline bool shared() const {

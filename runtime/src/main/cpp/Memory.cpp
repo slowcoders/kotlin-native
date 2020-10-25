@@ -2700,9 +2700,13 @@ OBJ_GETTER(initInstance,
 #endif
 }
 
+void runFreezeHooksRecursive(ObjHeader* root);
+void sharePermanentSubgraph(ObjHeader* obj);
+
 template <bool Strict>
 OBJ_GETTER(initSharedInstance,
     ObjHeader** location, const TypeInfo* typeInfo, void (*ctor)(ObjHeader*)) {
+  konan::consolePrintf("initSharedInstance %p %p", location, typeInfo);
 #if KONAN_NO_THREADS
   ObjHeader* value = *location;
   if (value != nullptr) {
@@ -2760,16 +2764,22 @@ OBJ_GETTER(initSharedInstance,
     return object;
   #else  // KONAN_NO_EXCEPTIONS
     try {
-      *location = NULL;
       ctor(object);
       if (Strict) { // ZZZZZ??? } || RTGC) {
         FreezeSubgraph(object);
+      }
+      else if (RTGC) {
+        if (!isPermanentOrFrozen(object->container())) {
+          runFreezeHooksRecursive(object);
+        }
+        sharePermanentSubgraph(object);
       }
       if (RTGC_STATISTCS) {
         //RTGC_dumpTypeInfo("initShared", typeInfo, object->container());
       }
       #ifdef RTGC
-        setStackRef<Strict>(location, object);
+        retainRef(object);
+        *location = object;
       #else    
         UpdateStackRef(location, object);
       #endif
@@ -3437,6 +3447,16 @@ void shareAny(ObjHeader* obj) {
   container->makeShared();
   traverseReferredObjects(obj, [](KRef field) {
     shareAny(field);
+  });
+}
+
+void sharePermanentSubgraph(ObjHeader* obj) {
+  auto* container = obj->container();
+  if (container == NULL || container->isStack()) return;
+  //RuntimeCheck(container->objectCount() == 1, "Must be a single object container");
+  container->makeSharedPermanent();
+  traverseReferredObjects(obj, [](KRef field) {
+    sharePermanentSubgraph(field);
   });
 }
 
