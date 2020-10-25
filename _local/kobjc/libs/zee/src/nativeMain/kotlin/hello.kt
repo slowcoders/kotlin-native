@@ -32,6 +32,7 @@ import runtime.memory.weak1.*;
 import kotlin.test.leakmem.*;
 import test.text.harmony_regex.*;
 import illegal_sharing.*;
+import runtime.basic.initializers6.*;
 
 interface Interface {
     fun iMember(clazz: Interface) : Interface { return clazz; }
@@ -109,8 +110,8 @@ fun test(str: String) {
     try {
 printTime("start")
 
-//testIllegalSharing();
-//printTime("testIllegalSharing")
+testInitializer6();
+printTime("testInitializer6")
 
 runFreezeStressTest();
 printTime("runFreezeStressTest")
