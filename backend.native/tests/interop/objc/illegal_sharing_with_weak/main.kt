@@ -25,4 +25,5 @@ fun run() = withWorker {
         false
     }
     println("After $isAlive")
+    setObject(obj);
 }
