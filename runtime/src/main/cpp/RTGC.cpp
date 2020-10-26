@@ -237,6 +237,7 @@ void OnewayNode::dealloc() {
 }
 
 void GCNode::dumpGCLog() {
+    if (!RTGC_STATISTCS) return;
     printf("** RTGCLock FreeContainer %d\n", g_cntRTGCLocks[_FreeContainer]);
     printf("** RTGCLock IncrementRC %d\n", g_cntRTGCLocks[_IncrementRC]);
     printf("** RTGCLock IncrementAcyclicRC %d\n", g_cntRTGCLocks[_IncrementAcyclicRC]);

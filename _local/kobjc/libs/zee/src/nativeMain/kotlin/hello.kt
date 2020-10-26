@@ -140,8 +140,8 @@ printTime("runLeakMemoryTest")
 runLeakMemoryWithWorkerTerminationTest()
 printTime("runLeakMemoryWithWorkerTerminationTest")
 
-runIlleagalSharingWithWeakTest()
-printTime("runIlleagalSharingWithWeakTest")
+//runIlleagalSharingWithWeakTest()
+//printTime("runIlleagalSharingWithWeakTest")
 
 val test_gc_bug_in_worker_thread = true;
 if (test_gc_bug_in_worker_thread) {

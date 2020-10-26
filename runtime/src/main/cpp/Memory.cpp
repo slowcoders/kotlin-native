@@ -2706,7 +2706,7 @@ void sharePermanentSubgraph(ObjHeader* obj);
 template <bool Strict>
 OBJ_GETTER(initSharedInstance,
     ObjHeader** location, const TypeInfo* typeInfo, void (*ctor)(ObjHeader*)) {
-  konan::consolePrintf("initSharedInstance %p %p", location, typeInfo);
+  //konan::consolePrintf("initSharedInstance %p %p", location, typeInfo);
 #if KONAN_NO_THREADS
   ObjHeader* value = *location;
   if (value != nullptr) {
