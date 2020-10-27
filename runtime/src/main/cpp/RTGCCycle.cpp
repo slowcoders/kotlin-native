@@ -121,6 +121,17 @@ void CyclicNode::addCyclicObject(
     RTGC_LOG("## RTGC add cyclic obj done: %p\n", this_id);
 }
 
+struct TraceInfo {
+    int last_id;
+    GCObject* obj_;
+};
+
+class CyclicDetector {
+    KStdDeque<TraceInfo> tracingList_;
+    GCRefList finishedList_;
+
+    CyclicDetector() {}
+};
 
 void CyclicNode::detectCyclicNodes(GCObject* tracingObj, GCRefList* tracingList, GCRefList* finishedList) {
     GCNode* current_node = tracingObj->getNode();   
@@ -130,11 +141,28 @@ void CyclicNode::detectCyclicNodes(GCObject* tracingObj, GCRefList* tracingList,
     current_node->clearSuspectedCyclic();
 
     tracingList->push(tracingObj);
+    GCRefChain* tracingChain = tracingList->topChain();
     RTGC_LOG("## RTGC tracingList add: %p=%p\n", tracingList->topChain(), tracingObj);
     
     for (GCRefChain* chain = current_node->externalReferrers.topChain(); chain != NULL; chain = chain->next()) {
         GCObject* referrer = chain->obj();
         GCNode* referrer_node = referrer->getNode();
+        while (false && referrer->getMemberRefCount() == 1 && referrer_node->getTraceState() == NOT_TRACED) {
+            /**
+             * current_node 만이 유일한 referrer 인 경우, referrer_node 의 상태는 반드시 NOT_TRACED 이어야 한다.
+             * current_node 만이 순환참조의 진입점이 될 수 있다. (외줄 순환인 경우,referrer 와 tracingObj 가 동일해질 수 있다.)
+             * skip 된 referrer 의 TraceState 는 Reset하지 않다도 된다. 
+             * (순환참조 구성 시에는 Node 가 바뀌고, 아닌 경우 이미 Reset(NOT_TRACED) 상태이기 때문이다.
+             */
+            //RuntimeAssert(referrer_node->getTraceState() == NOT_TRACED, "Something wrong in detectCyclicNodes");
+            removeCyclicTest(referrer);
+            referrer_node->clearSuspectedCyclic();
+            tracingList->push(referrer);
+
+            referrer = referrer_node->externalReferrers.topChain()->obj();
+            referrer_node = referrer->getNode();
+        }
+
         if (ENABLE_RTGC_LOG) RTGCGlobal::validateMemPool();
         switch (referrer_node->getTraceState()) {
         case NOT_TRACED: // 추적되지 않은 참조 노드
@@ -180,8 +208,8 @@ void CyclicNode::detectCyclicNodes(GCObject* tracingObj, GCRefList* tracingList,
             break;
         }    
         case TRACE_FINISHED: // 이미 추적된 참조 노드
-            break;
         default: 
+            // tracingList->trySetFirst(tracingChain);
             break;
         }
     }

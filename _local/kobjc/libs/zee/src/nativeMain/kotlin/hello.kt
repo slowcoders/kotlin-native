@@ -33,6 +33,8 @@ import kotlin.test.leakmem.*;
 import test.text.harmony_regex.*;
 import illegal_sharing.*;
 import runtime.basic.initializers6.*;
+import test.utils.*
+import kotlin.*
 
 interface Interface {
     fun iMember(clazz: Interface) : Interface { return clazz; }
@@ -116,6 +118,8 @@ printTime("testInitializer6")
 runFreezeStressTest();
 printTime("runFreezeStressTest")
 
+testDeepRecusive()
+printTime("testDeepRecusive")
 
 runArray0Test()
 runWeakTest1()
@@ -134,14 +138,20 @@ if (test_ref_count_bug_in_param_side_effect) {
     printTime("runVar1Test")
 }
 
-runLeakMemoryTest()
-printTime("runLeakMemoryTest")
+val test_without_memory_leak_check = false;
+if (test_without_memory_leak_check) {
+    runLeakMemoryTest()
+    printTime("runLeakMemoryTest")
 
-runLeakMemoryWithWorkerTerminationTest()
-printTime("runLeakMemoryWithWorkerTerminationTest")
+    runLeakMemoryWithWorkerTerminationTest()
+    printTime("runLeakMemoryWithWorkerTerminationTest")
+}
 
-//runIlleagalSharingWithWeakTest()
-//printTime("runIlleagalSharingWithWeakTest")
+val test_without_illegal_sharing_check = false;
+if (test_without_illegal_sharing_check) {
+    runIlleagalSharingWithWeakTest()
+    printTime("runIlleagalSharingWithWeakTest")
+}
 
 val test_gc_bug_in_worker_thread = true;
 if (test_gc_bug_in_worker_thread) {

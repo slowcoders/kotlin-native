@@ -308,6 +308,11 @@ public:
 #endif    
   }
 
+  inline int getMemberRefCount() {
+      return ref_.rtgc.obj;
+  }
+
+
   inline void clearMemberRefCount() {
       ref_.rtgc.obj = 0;
   }
