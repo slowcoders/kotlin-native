@@ -2337,7 +2337,7 @@ void deinitMemory(MemoryState* memoryState) {
 #if USE_GC
   bool lastMemoryState = atomicAdd(&aliveMemoryStatesCount, -1) == 0;
   bool checkLeaks __attribute__((unused))= Kotlin_memoryLeakCheckerEnabled() && lastMemoryState;
-  if (lastMemoryState) {
+  if (RTGC || lastMemoryState) {
    garbageCollect(memoryState, true);
 #if USE_CYCLIC_GC
    // If there are other pending deinits (rare situation) - just skip the leak checker.
@@ -2350,10 +2350,12 @@ void deinitMemory(MemoryState* memoryState) {
 #endif  // USE_CYCLIC_GC
   }
   // Actual GC only implemented in strict memory model at the moment.
-  do {
-    GC_LOG("Calling garbageCollect from DeinitMemory()\n")
-    garbageCollect(memoryState, true);
-  } while (memoryState->toRelease->size() > 0 || !memoryState->foreignRefManager->tryReleaseRefOwned());
+  if (!RTGC) {
+    do {
+      GC_LOG("Calling garbageCollect from DeinitMemory()\n")
+      garbageCollect(memoryState, true);
+    } while (memoryState->toRelease->size() > 0 || !memoryState->foreignRefManager->tryReleaseRefOwned());
+  }
   RuntimeAssert(memoryState->toFree->size() == 0, "Some memory have not been released after GC");
   RuntimeAssert(memoryState->toRelease->size() == 0, "Some memory have not been released after GC");
   konanDestructInstance(memoryState->toFree);
@@ -2374,7 +2376,7 @@ void deinitMemory(MemoryState* memoryState) {
   }
 #else
 #if USE_GC
-  if (IsStrictMemoryModel && allocCount > 0 && checkLeaks) {
+  if ((IsStrictMemoryModel || RTGC) && allocCount > 0 && checkLeaks) {
     konan::consoleErrorf(
         "Memory leaks detected, %d objects leaked!\n"
         "Use `Platform.isMemoryLeakCheckerActive = false` to avoid this check.\n", allocCount);
@@ -3455,6 +3457,8 @@ void sharePermanentSubgraph(ObjHeader* obj) {
   if (container == NULL || container->isStack()) return;
   //RuntimeCheck(container->objectCount() == 1, "Must be a single object container");
   container->makeSharedPermanent();
+  atomicAdd(&allocCount, -1);
+
   traverseReferredObjects(obj, [](KRef field) {
     sharePermanentSubgraph(field);
   });
