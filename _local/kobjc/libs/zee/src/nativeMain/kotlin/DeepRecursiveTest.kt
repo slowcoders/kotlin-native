@@ -18,7 +18,7 @@ class DeepRecursiveTest {
 
     @Test
     fun testDeepTreeDepth() {
-        val n = 10_000;//  100_000 -> stackoverflow RTGCCycle::detectCyclec() 
+        val n = 100_000; // -> stackoverflow RTGCCycle::detectCyclec()
         assertEquals(n, depth(deepTree(n)))
     }
 
@@ -40,7 +40,7 @@ class DeepRecursiveTest {
 
     @Test
     fun testDeepTreeOddEvenNodesMutual() {
-        val n = 10_0000 // 50_000 -> stackoverflow RTGCCycle::detectCyclec() 
+        val n = 50_000; // -> stackoverflow RTGCCycle::detectCyclec() 
         val dt = deepTree(n)
         val rec = MutualRec()
         assertEquals(n / 2, rec.even(dt))
