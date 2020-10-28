@@ -212,10 +212,7 @@ public:
 
   GCNode* getNode() {
 #if KONAN_ENABLE_ASSERT
-    if(ref_.rtgc.node == 0) {
-      RTGC_dumpRefInfo(this);
-      RuntimeAssert(ref_.rtgc.node != 0, "node not initialized");
-    }
+    RuntimeAssert(ref_.rtgc.node != 0, "node not initialized");
 #endif    
     if (this->isInCyclicNode()) {
       return CyclicNode::getNode(ref_.rtgc.node);
@@ -301,10 +298,7 @@ public:
         __sync_add_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count += RTGC_MEMBER_REF_INCREEMENT;
 #endif
 #if KONAN_ENABLE_ASSERT
-    if (ref_.rtgc.obj == 0) {
-      RTGC_dumpRefInfo(this);
-      RuntimeAssert(ref_.rtgc.obj != 0, "member ref overflow");
-    }
+    RuntimeAssert(ref_.rtgc.obj != 0, "member ref overflow");
 #endif    
   }
 
@@ -321,10 +315,7 @@ public:
   inline void decMemberRefCount() {
 #if KONAN_ENABLE_ASSERT
     RuntimeAssert(!isAcyclic(), "Acyclic objct does not have member refCount");
-    if (ref_.rtgc.obj == 0) {
-      RTGC_dumpRefInfo(this);
-      RuntimeAssert(ref_.rtgc.obj != 0, "member ref underflow");
-    }
+    RuntimeAssert(ref_.rtgc.obj != 0, "member ref underflow");
 #endif    
 #ifdef KONAN_NO_THREADS
     int64_t value __attribute__((unused))= ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
@@ -343,10 +334,7 @@ public:
        __sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #endif
 #if KONAN_ENABLE_ASSERT
-    if (ref_.rtgc.root == 0 && !isAcyclic()) {
-      RTGC_dumpRefInfo(this);
-      RuntimeAssert(ref_.rtgc.root != 0, "root ref overflow");
-    }
+    RuntimeAssert(ref_.rtgc.root != 0 && !isAcyclic(), "root ref overflow");
 #endif    
     return *(RTGCRef*)&value;
   }
@@ -358,10 +346,7 @@ public:
   template <bool Atomic>
   inline RTGCRef decRootCount() {
 #if KONAN_ENABLE_ASSERT
-    if (ref_.rtgc.root == 0 && !isAcyclic()) {
-      RTGC_dumpRefInfo(this);
-      RuntimeAssert(ref_.rtgc.root != 0, "root ref underflow");
-    }
+  RuntimeAssert(ref_.rtgc.root != 0, "root ref underflow");
 #endif
 #ifdef KONAN_NO_THREADS
     int64_t value __attribute__((unused))= ref_.count -= RTGC_ROOT_REF_INCREEMENT;
@@ -375,10 +360,7 @@ public:
   template <bool Atomic>
   inline int decRefCount() {
 #if KONAN_ENABLE_ASSERT
-    if (ref_.rtgc.root == 0 && !isAcyclic()) {
-      RTGC_dumpRefInfo(this);
-      RuntimeAssert(ref_.rtgc.root != 0, "refCount underflow");
-    }
+    RuntimeAssert(ref_.count != 0, "refCount underflow");
 #endif    
 #ifdef KONAN_NO_THREADS
     int value __attribute__((unused))= ref_.count -= RTGC_ROOT_REF_INCREEMENT;
@@ -390,18 +372,15 @@ public:
   }
 
   inline int decRefCount() {
-#if KONAN_ENABLE_ASSERT
-    if (ref_.rtgc.root == 0 && !isAcyclic()) {
-      RTGC_dumpRefInfo(this);
-      RuntimeAssert(ref_.rtgc.root != 0, "refCount underflow");
-    }
-#endif    
   #ifdef KONAN_NO_THREADS
       int value __attribute__((unused))= ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #else
       int value __attribute__((unused))= shared() ?
          __sync_sub_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #endif
+#if KONAN_ENABLE_ASSERT
+      RuntimeAssert(ref_.count != 0, "refCount underflow");
+#endif    
       return refCount();//value >> CONTAINER_TAG_SHIFT;
   }
 
