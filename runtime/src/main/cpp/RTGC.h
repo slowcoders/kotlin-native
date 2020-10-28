@@ -15,7 +15,7 @@
 #define ENABLE_RTGC_LOG   0
 #define RTGC_NO_INLINE    // NO_INLINE
 #define DEBUG_RTGC_BUCKET 0
-static const bool RTGC_STATISTCS = false;
+static const bool RTGC_STATISTCS = true;
 
 typedef struct ContainerHeader GCObject;
 
@@ -91,6 +91,7 @@ public:
   void tryRemove(GCObject* obj, bool isUnique)  RTGC_NO_INLINE;
   bool isEmpty() { return first_ == 0; }
   void setFirst(GCRefChain* last)  RTGC_NO_INLINE;
+  void trySetFirst(GCRefChain* last)  RTGC_NO_INLINE;
   void clear() { setFirst(NULL); }
 };
 
@@ -116,6 +117,7 @@ enum LockType {
 
 struct GCNode {
   friend CyclicNode;  
+  friend class CyclicNodeDetector;
   GCRefList externalReferrers;
 protected:  
 
@@ -156,14 +158,13 @@ struct OnewayNode : GCNode {
 };
 
 struct CyclicNode : GCNode {
+  friend class CyclicNodeDetector;
 private:  
   int32_t rootObjectCount;
   CyclicNode* nextDamaged;
   GCRefList garbageTestList;
 
-  void addCyclicObject(GCObject* obj)  RTGC_NO_INLINE;
   void mergeCyclicNode(GCObject* obj, int expiredNodeId)  RTGC_NO_INLINE;
-  static void detectCyclicNodes(GCObject* tracingObj, GCRefList* traceList, GCRefList* finishedList)  RTGC_NO_INLINE;
 public:
 
   int getId(); // { return (this - g_cyclicNodes) + CYCLIC_NODE_ID_START; }
