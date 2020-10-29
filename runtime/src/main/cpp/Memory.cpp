@@ -593,7 +593,7 @@ struct MemoryState : RTGCMemState {
   // If collection is in progress.
   int gcInProgress;
   // Objects to be released.
-  ContainerHeaderList* toRelease;
+  KStdDeque<ContainerHeader*>* toRelease;
 
   ForeignRefManager* foreignRefManager;
 
@@ -1072,6 +1072,17 @@ void processFinalizerQueue(MemoryState* state) {
   RTGC_LOG("Processing FinalizerQ");
   while (state->finalizerQueue != nullptr) {
     auto* container = state->finalizerQueue;
+    if (RTGC_LATE_DESTORY) {
+      bool isShared = container->shared();
+      OnewayNode* node = container->getLocalOnewayNode();
+      if (isShared) GCNode::rtgcLock(_FreeContainer);
+      if (node != NULL) {
+        node->dealloc();
+      }
+      CyclicNode::removeCyclicTest(container);
+      if (isShared) GCNode::rtgcUnlock();
+    }
+
     state->finalizerQueue = container->nextLink();
     state->finalizerQueueSize--;
 #if TRACE_MEMORY
@@ -1278,6 +1289,8 @@ ALWAYS_INLINE void runDeallocationHooks(ContainerHeader* container) {
   }
 }
 } // namespace
+void decrementMemberRC_internal(ContainerHeader* deassigned, ContainerHeader* owner);
+
 void freeContainer(ContainerHeader* container, int garbageNodeId) {
   RuntimeAssert(container != nullptr, "this kind of container shalln't be freed");
 
@@ -1287,32 +1300,68 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
   }
 
   RTGC_LOG("## RTGC free container %p(%d)\n", container, garbageNodeId);
-  memoryState->gcInProgress ++;
+  bool isRoot = memoryState->gcInProgress ++ == 0;
+  auto toRelease = memoryState->toRelease;
   runDeallocationHooks(container);
+
   container->markDestroyed();
   if (RTGC && isFreeable(container)) {
-      traverseContainerObjectFields(container, [container, garbageNodeId](ObjHeader** location, ObjHeader* owner) {
-        ObjHeader* old = *location;
-        RTGC_LOG("--- cleaning fields start %p IN %p\n", old, owner->container());
-        if (old != NULL && old->container() != NULL && !old->container()->isDestroyed()) {
-          RTGC_LOG("--- cleaning fields %p in %p(%d)\n", old->container(), owner->container(), garbageNodeId);
-          if (garbageNodeId != 0) {
-            *location = NULL;
-            if (old->container()->getNodeId() == garbageNodeId) {
-              RTGC_LOG("--- cleaning fields in cyclicNode %p (%d)\n", old->container(), garbageNodeId);
-              freeContainer(old->container(), garbageNodeId);
-            }
-            else {
-              RTGC_LOG("--- cleaning fields Node %p (%d)\n", old->container(), garbageNodeId);
-              updateHeapRef_internal(NULL, old, (ObjHeader*)(container + 1));
-            }
-          } else {
-            RTGC_LOG("--- cleaning fields any %p (%d)\n", old->container(), garbageNodeId);
-            UpdateHeapRef(location, NULL, (ObjHeader*)(container + 1));
-          }
+      ContainerHeader* owner = container;
+      while (true) {
+        if (RTGC_LATE_DESTORY && !isRoot) {
+          toRelease->push_back((ContainerHeader*)((char*)owner + 1));
         }
-        RTGC_LOG("--- cleaning fields done %p (%d)\n", old, garbageNodeId);
-      });
+        traverseContainerObjectFields(owner, [garbageNodeId, toRelease](ObjHeader** location, ObjHeader* owner) {
+          ObjHeader* old = *location;
+          if (old == nullptr) return;
+          ContainerHeader* deassigned = old->container();
+          RTGC_LOG("--- cleaning fields start %p IN %p\n", old, owner->container());
+          if (deassigned != NULL && !deassigned->isDestroyed()) {
+            RTGC_LOG("--- cleaning fields %p in %p(%d)\n", deassigned, owner->container(), garbageNodeId);
+            if (garbageNodeId != 0) {
+              *location = NULL;
+              if (deassigned->getNodeId() == garbageNodeId) {
+                RTGC_LOG("--- cleaning fields in cyclicNode %p (%d)\n", deassigned, garbageNodeId);
+                freeContainer(deassigned, garbageNodeId);
+              }
+              else {
+                RTGC_LOG("--- cleaning fields Node %p (%d)\n", deassigned, garbageNodeId);
+                if (RTGC_LATE_DESTORY) {
+                  toRelease->push_back(deassigned);
+                }
+                else {
+                  updateHeapRef_internal(NULL, old, owner);
+                }
+              }
+            } else {
+              RTGC_LOG("--- cleaning fields any %p (%d)\n", deassigned, garbageNodeId);
+              if (RTGC_LATE_DESTORY) {
+                toRelease->push_back(deassigned);
+              }
+              else {
+                UpdateHeapRef(location, NULL, owner);
+              }
+            }
+          }
+          RTGC_LOG("--- cleaning fields done %p (%d)\n", old, garbageNodeId);
+        });
+#if (RTGC_LATE_DESTORY)
+        if (!isRoot) {
+          break;
+        }
+        while (!toRelease->empty()) {
+          ContainerHeader* old = toRelease->front();
+          toRelease->pop_front();
+          if (((int64_t)old & 1) != 0) {
+            owner = (ContainerHeader*)((int64_t)old & ~1);
+            old = toRelease->front();
+            toRelease->pop_front();
+          }
+          decrementMemberRC_internal(old, owner);
+        }
+#endif        
+        break;
+      }
   }
   else {
     // Now let's clean all object's fields in this container.
@@ -1670,6 +1719,7 @@ inline void decrementRC(ContainerHeader* container) {
 
 template <bool CanCollect>
 inline void enqueueDecrementRC(ContainerHeader* container) {
+#if !RTGC  
   auto* state = memoryState;
   if (CanCollect) {
     if (state->toRelease->size() >= state->gcThreshold && state->gcSuspendCount == 0) {
@@ -1678,11 +1728,12 @@ inline void enqueueDecrementRC(ContainerHeader* container) {
     }
   }
   state->toRelease->push_back(container);
+#endif  
 }
 
 inline void initGcThreshold(MemoryState* state, uint32_t gcThreshold) {
   state->gcThreshold = gcThreshold;
-  state->toRelease->reserve(gcThreshold);
+  //state->toRelease->reserve(gcThreshold);
 }
 
 inline void initGcCollectCyclesThreshold(MemoryState* state, uint64_t gcCollectCyclesThreshold) {
@@ -2340,7 +2391,7 @@ MemoryState* initMemory() {
   memoryState->roots = konanConstructInstance<ContainerHeaderList>();
   memoryState->gcInProgress = false;
   memoryState->gcSuspendCount = 0;
-  memoryState->toRelease = konanConstructInstance<ContainerHeaderList>();
+  memoryState->toRelease = konanConstructInstance<KStdDeque<ContainerHeader*>>();
   initGcThreshold(memoryState, kGcThreshold);
   initGcCollectCyclesThreshold(memoryState, kMaxToFreeSizeThreshold);
   memoryState->allocSinceLastGcThreshold = kMaxGcAllocThreshold;
@@ -2485,6 +2536,27 @@ void zeroStackRef(ObjHeader** location) {
 } // namespace
 
 
+void decrementMemberRC_internal(ContainerHeader* deassigned, ContainerHeader* owner) {
+      if (deassigned->shared()) {
+          if (deassigned->isAcyclic()) {
+            decrementAcyclicRC</* Atomic = */ true>(deassigned);
+          }
+          else {
+            GCNode::rtgcLock(_DeassignRef);
+            decrementMemberRC</* Atomic = */ true>(deassigned, owner);
+            GCNode::rtgcUnlock();
+          }
+      }
+      else {
+          if (deassigned->isAcyclic()) {
+            decrementAcyclicRC</* Atomic = */ false>(deassigned);
+          }
+          else {
+            decrementMemberRC</* Atomic = */ false>(deassigned, owner);
+          }
+      }
+}
+
 void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner) {
 
   if (object != nullptr && object != owner) {
@@ -2516,24 +2588,7 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
   if (reinterpret_cast<uintptr_t>(old) > 1 && old != owner) {
     ContainerHeader* container = old->container();
     if (container != nullptr && !container->isStack()) {
-      if (container->shared()) {
-          if (container->isAcyclic()) {
-            decrementAcyclicRC</* Atomic = */ true>(container);
-          }
-          else {
-            GCNode::rtgcLock(_DeassignRef);
-            decrementMemberRC</* Atomic = */ true>(container, owner->container());
-            GCNode::rtgcUnlock();
-          }
-      }
-      else {
-          if (container->isAcyclic()) {
-            decrementAcyclicRC</* Atomic = */ false>(container);
-          }
-          else {
-            decrementMemberRC</* Atomic = */ false>(container, owner->container());
-          }
-      }
+        decrementMemberRC_internal(container, owner->container());
     }
     //releaseRef<Strict>(old);
   }
@@ -3052,7 +3107,7 @@ void startGC() {
   GC_LOG("startGC\n")
   if (memoryState->toFree == nullptr) {
     memoryState->toFree = konanConstructInstance<ContainerHeaderList>();
-    memoryState->toRelease = konanConstructInstance<ContainerHeaderList>();
+    memoryState->toRelease = konanConstructInstance<KStdDeque<ContainerHeader*>>();
     memoryState->roots = konanConstructInstance<ContainerHeaderList>();
     memoryState->gcSuspendCount = 0;
   }
