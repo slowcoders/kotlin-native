@@ -1070,12 +1070,8 @@ void onDestroyContainer(ContainerHeader* container) {
 void processFinalizerQueue(MemoryState* state) {
   // TODO: reuse elements of finalizer queue for new allocations.
   RTGC_LOG("Processing FinalizerQ");
-  if (RTGC_LATE_DESTORY) state->gcInProgress ++;
   while (state->finalizerQueue != nullptr) {
     auto* container = state->finalizerQueue;
-    if (RTGC_LATE_DESTORY) {
-      onDestroyContainer(container);
-    }   
     state->finalizerQueue = container->nextLink();
     state->finalizerQueueSize--;
 #if TRACE_MEMORY
@@ -1085,7 +1081,6 @@ void processFinalizerQueue(MemoryState* state) {
     konanFreeMemory(container);
     atomicAdd(&allocCount, -1);
   }
-  if (RTGC_LATE_DESTORY) state->gcInProgress --;
   RuntimeAssert(state->finalizerQueueSize == 0, "Queue must be empty here");
   RTGC_LOG("Processing FinalizerQ done");
 }
