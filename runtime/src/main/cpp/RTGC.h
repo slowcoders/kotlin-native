@@ -12,6 +12,7 @@
 #include <vector>
 
 #define RTGC  1
+#define RTGC_LATE_DESTORY 1
 #define ENABLE_RTGC_LOG   0
 #define RTGC_NO_INLINE    // NO_INLINE
 #define DEBUG_RTGC_BUCKET 0
@@ -60,11 +61,13 @@ static const int NOT_TRACED = 0;
 static const int IN_TRACING = 1;
 static const int TRACE_FINISHED = 2;
 static const int OUT_OF_SCOPE = 3;
+static const int TRACE_REQUESTED = OUT_OF_SCOPE;
 
 static const int RTGC_TRACE_STATE_MASK = NOT_TRACED | IN_TRACING | TRACE_FINISHED | OUT_OF_SCOPE;
 
 struct GCRefChain {
   friend struct GCRefList;
+  friend class CyclicNodeDetector;
 private:
   GCObject* obj_;
   GCRefChain* next_;

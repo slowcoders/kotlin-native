@@ -112,14 +112,14 @@ fun test(str: String) {
     try {
 printTime("start")
 
+testDeepRecusive()
+printTime("testDeepRecusive")
+
 testInitializer6();
 printTime("testInitializer6")
 
 runFreezeStressTest();
 printTime("runFreezeStressTest")
-
-testDeepRecusive()
-printTime("testDeepRecusive")
 
 runArray0Test()
 runWeakTest1()
