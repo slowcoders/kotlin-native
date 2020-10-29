@@ -348,7 +348,7 @@ void CyclicNodeDetector::detectCyclicNodes2() {
             finishedList.push(tracingObj);
             continue;
         }
-        detectCyclicNodes(tracingObj);
+        traceCyclicNodes(tracingObj);
 
     }
 

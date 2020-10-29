@@ -1072,7 +1072,7 @@ void processFinalizerQueue(MemoryState* state) {
   RTGC_LOG("Processing FinalizerQ");
   while (state->finalizerQueue != nullptr) {
     auto* container = state->finalizerQueue;
-    if (RTGC_LATE_DESTORY) {
+    if (true) {
       bool isShared = container->shared();
       OnewayNode* node = container->getLocalOnewayNode();
       if (isShared) GCNode::rtgcLock(_FreeContainer);
@@ -1207,7 +1207,7 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 
 void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container) {
   RTGC_LOG("scheduleDestroyContainer %1\n", container);
-  if (!RTGC_LATE_DESTORY) {
+  if (false) {
     bool isShared = container->shared();
     OnewayNode* node = container->getLocalOnewayNode();
     if (isShared) GCNode::rtgcLock(_FreeContainer);
@@ -1318,8 +1318,8 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
           RTGC_LOG("--- cleaning fields start %p IN %p\n", old, owner->container());
           if (deassigned != NULL && !deassigned->isDestroyed()) {
             RTGC_LOG("--- cleaning fields %p in %p(%d)\n", deassigned, owner->container(), garbageNodeId);
+            *location = NULL;
             if (garbageNodeId != 0) {
-              *location = NULL;
               if (deassigned->getNodeId() == garbageNodeId) {
                 RTGC_LOG("--- cleaning fields in cyclicNode %p (%d)\n", deassigned, garbageNodeId);
                 freeContainer(deassigned, garbageNodeId);
@@ -1339,7 +1339,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
                 toRelease->push_back(deassigned);
               }
               else {
-                UpdateHeapRef(location, NULL, owner);
+                updateHeapRef_internal(NULL, old, owner);
               }
             }
           }
