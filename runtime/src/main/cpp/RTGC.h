@@ -11,11 +11,11 @@
 #include <atomic>
 #include <vector>
 
-#define RTGC  1
-#define RTGC_LATE_DESTORY 0
-#define ENABLE_RTGC_LOG   0
-#define RTGC_NO_INLINE    // NO_INLINE
-#define DEBUG_RTGC_BUCKET 0
+#define RTGC                1
+#define RTGC_LATE_DESTORY   1
+#define ENABLE_RTGC_LOG     1
+#define RTGC_NO_INLINE      NO_INLINE
+#define DEBUG_RTGC_BUCKET   0
 static const bool RTGC_STATISTCS = true;
 
 typedef struct ContainerHeader GCObject;

@@ -145,6 +145,7 @@ class DeepRecursiveTest {
 
 fun testDeepRecusive() {
     val test = DeepRecursiveTest();
+    test.testBadClass();
     test.testSimpleReturn()
     test.testDeepTreeDepth();
     test.testBinaryTreeDepth();
@@ -152,5 +153,4 @@ fun testDeepRecusive() {
     test.testBinaryTreeOddEvenNodesMutual()
     test.testMutualAndDirectMix()
     test.testEqualToAnythingClass();
-    test.testBadClass();
 }

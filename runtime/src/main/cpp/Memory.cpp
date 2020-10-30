@@ -1079,7 +1079,7 @@ static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* vis
 static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* visited) {
   GCRefChain* chain = container->getNode()->externalReferrers.topChain();
   if (chain == NULL) {
-    RTGC_TRAP("%p is foreign refs %x-%d\n", container, container->tagBits(), (int)container->refCount());
+    RTGC_TRAP("%p is foreign refs %x-%d\n", container, container->getFlags(), (int)container->refCount());
     return container->shared();
   }
 
@@ -1239,7 +1239,7 @@ void freeAggregatingFrozenContainer(ContainerHeader* container) {
 // so better be inlined.
 ALWAYS_INLINE void runDeallocationHooks(ContainerHeader* container) {
   ObjHeader* obj = reinterpret_cast<ObjHeader*>(container + 1);
-  // konan::consolePrintf("## runDeallocationHooks %p %x tag=0x%x objCount(%d)\n", container, *(int64_t*)obj, container->tagBits(), container->objectCount());
+  // konan::consolePrintf("## runDeallocationHooks %p %x tag=0x%x objCount(%d)\n", container, *(int64_t*)obj, container->getFlags(), container->objectCount());
   // if (*(int64_t*)obj < 16) {
   //   rtgc_trap(obj);    
   // }
@@ -1295,7 +1295,12 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
           RTGC_LOG("--- cleaning fields start %p IN %p\n", old, owner->container());
           if (isFreeable(deassigned)) {
             RTGC_LOG("--- cleaning fields %p in %p(%d)\n", deassigned, owner->container(), garbageNodeId);
-            //*location = NULL;
+            /**
+             * TODO. 순환 노드로 분리되지 않은 순환 참조 객체가 있는 경우, 해당 객체가 해제될 때까지 Loop 에 빠진다.
+             * 이를 방지하려면, tracing 중임을 마킹해야 한다.
+             * 현재, 임시로 *location 값을 null 로 설정.
+             */
+            *location = NULL;
             if (garbageNodeId != 0) {
               if (deassigned->getNodeId() == garbageNodeId) {
                 RTGC_LOG("--- cleaning fields in cyclicNode %p (%d)\n", deassigned, garbageNodeId);
@@ -1330,11 +1335,15 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
           ContainerHeader* old = toRelease->front();
           toRelease->pop_front();
           if (((int64_t)old & 1) != 0) {
+            if (toRelease->empty()) break;
+
             owner = (ContainerHeader*)((int64_t)old & ~1);
             old = toRelease->front();
             toRelease->pop_front();
           }
-          decrementMemberRC_internal(old, owner);
+          if (old->freeable()) {
+            decrementMemberRC_internal(old, owner);
+          }
         }
 #endif        
         break;
@@ -2542,6 +2551,8 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
     if (isFreeable(container)) {
       if (container->shared()) {
           if (container->isAcyclic()) {
+            owner->container()->attachNode();
+            container->attachNode();
             incrementAcyclicRC</* Atomic = */ true>(container);
           }
           else { 
@@ -2552,6 +2563,8 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
       }
       else {
           if (container->isAcyclic()) {
+            owner->container()->attachNode();
+            container->attachNode();
             incrementAcyclicRC</* Atomic = */ false>(container);
           }
           else { 
@@ -2559,7 +2572,6 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
           }
       }
     }
-    //retainRef(object);
   }
 
   if (reinterpret_cast<uintptr_t>(old) > 1 && old != owner) {
