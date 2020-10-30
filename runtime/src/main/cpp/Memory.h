@@ -38,11 +38,11 @@ typedef enum {
   CONTAINER_TAG_ACYCLIC = 1 << 4,
 
   // no need to free, children cleanup still shall be there.
-  CONTAINER_TAG_NOT_ALLOCATED = 1 << 5,
+  CONTAINER_TAG_NOT_FREEABLE = 1 << 5,
 
   NEED_CYCLIC_TEST = 1 << 6,
 
-  CONTAINER_TAG_STACK_OR_PERMANANT = 1 << 7, // Unused, Reserved
+  CONTAINER_TAG_STACK_OR_PERMANANT = CONTAINER_TAG_NOT_FREEABLE,//1 << 7, // Unused, Reserved
 
   CONTAINER_TAG_GC_SEEN     = 1 << 8,
   // If indeed has more that one object.
@@ -124,8 +124,8 @@ public:
     return (rtNode.flags_ & CONTAINER_TAG_ACYCLIC) != 0;
   }
 
-  inline bool isStack() const {
-    return (rtNode.flags_ & (CONTAINER_TAG_STACK_OR_PERMANANT)) != 0;
+  inline bool freeable() const {
+    return (rtNode.flags_ & (CONTAINER_TAG_STACK_OR_PERMANANT)) == 0;
   }
 
   inline void setRefCountAndFlags(uint32_t refCount, uint16_t flags) {
@@ -262,11 +262,7 @@ public:
   }
 
   void markDestroyed() {
-    this->rtNode.flags_ |= CONTAINER_TAG_NOT_ALLOCATED;
-  }
-
-  bool isDestroyed() {
-    return (this->rtNode.flags_ & CONTAINER_TAG_NOT_ALLOCATED) != 0;
+    this->rtNode.flags_ |= CONTAINER_TAG_NOT_FREEABLE;
   }
 
   bool isGarbage() {

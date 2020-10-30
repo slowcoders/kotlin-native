@@ -810,12 +810,14 @@ class ArenaContainer {
 constexpr int kFrameOverlaySlots = sizeof(FrameOverlay) / sizeof(ObjHeader**);
 
 inline bool isFreeable(const ContainerHeader* header) {
-  return header != nullptr && !header->isStack();
+  return header != nullptr && header->freeable();
 }
 
+#if !RTGC
 inline bool isArena(const ContainerHeader* header) {
-  return header != nullptr && header->isStack();
+  return header != nullptr && !header->isStack();
 }
+#endif
 
 inline bool isAggregatingFrozenContainer(const ContainerHeader* header) {
   return header != nullptr && header->frozen() && header->objectCount() > 1;
@@ -1041,32 +1043,6 @@ ContainerHeader* allocAggregatingFrozenContainer(KStdVector<ContainerHeader*>& c
 
 
 #if USE_GC
-void onDestroyContainer(ContainerHeader* container) {
-  CyclicNode* node = container->getLocalCyclicNode();
-  int garbageNodeId = node->isGarbage() ? node->getId() : -1;
-  traverseContainerObjectFields(container, [container, garbageNodeId](ObjHeader** location, ObjHeader* owner) {
-    ObjHeader* old = *location;
-    RTGC_LOG("--- cleaning fields start %p IN %p\n", old, owner->container());
-    if (old != NULL && old->container() != NULL && !old->container()->isDestroyed()) {
-      RTGC_LOG("--- cleaning fields %p in %p(%d)\n", old->container(), owner->container(), garbageNodeId);
-      if (garbageNodeId != 0) {
-        *location = NULL;
-        if (old->container()->getNodeId() == garbageNodeId) {
-          RTGC_LOG("--- cleaning fields in cyclicNode %p (%d)\n", old->container(), garbageNodeId);
-          freeContainer(old->container(), garbageNodeId);
-        }
-        else {
-          RTGC_LOG("--- cleaning fields Node %p (%d)\n", old->container(), garbageNodeId);
-          updateHeapRef_internal(NULL, old, (ObjHeader*)(container + 1));
-        }
-      } else {
-        RTGC_LOG("--- cleaning fields any %p (%d)\n", old->container(), garbageNodeId);
-        UpdateHeapRef(location, NULL, (ObjHeader*)(container + 1));
-      }
-    }
-    RTGC_LOG("--- cleaning fields done %p (%d)\n", old, garbageNodeId);
-  });
-}
 void processFinalizerQueue(MemoryState* state) {
   // TODO: reuse elements of finalizer queue for new allocations.
   RTGC_LOG("Processing FinalizerQ");
@@ -1304,8 +1280,9 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
   auto toRelease = memoryState->toRelease;
   runDeallocationHooks(container);
 
-  container->markDestroyed();
-  if (RTGC && isFreeable(container)) {
+  bool doFree = container->freeable();
+  if (RTGC && doFree) {
+      container->markDestroyed();
       ContainerHeader* owner = container;
       while (true) {
         if (RTGC_LATE_DESTORY && !isRoot) {
@@ -1316,9 +1293,9 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
           if (old == nullptr) return;
           ContainerHeader* deassigned = old->container();
           RTGC_LOG("--- cleaning fields start %p IN %p\n", old, owner->container());
-          if (deassigned != NULL && !deassigned->isDestroyed()) {
+          if (isFreeable(deassigned)) {
             RTGC_LOG("--- cleaning fields %p in %p(%d)\n", deassigned, owner->container(), garbageNodeId);
-            *location = NULL;
+            //*location = NULL;
             if (garbageNodeId != 0) {
               if (deassigned->getNodeId() == garbageNodeId) {
                 RTGC_LOG("--- cleaning fields in cyclicNode %p (%d)\n", deassigned, garbageNodeId);
@@ -1374,7 +1351,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
   RTGC_LOG("--- free container check free %p\n", container);
   // And release underlying memory.
   memoryState->gcInProgress --;
-  if (isFreeable(container)) {
+  if (doFree) {
 #if !RTGC
     container->setColorEvenIfGreen(CONTAINER_TAG_GC_BLACK);
 #endif
@@ -2021,7 +1998,7 @@ inline bool canBeCyclic(ContainerHeader* container) {
 
 inline void retainRef(const ObjHeader* object) {
   auto* container = object->container();
-  if (container == nullptr || container->isStack()) {
+  if (!isFreeable(container)) {
     return;
   }
 
@@ -2067,7 +2044,7 @@ inline bool tryRetainRef(const ObjHeader* header) {
 template <bool Strict>
 inline void releaseRef(const ObjHeader* object) {
   auto* container = object->container();
-  if (container == nullptr || container->isStack()) {
+  if (!isFreeable(container)) {
     return;
   }
 
@@ -2562,7 +2539,7 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
   if (object != nullptr && object != owner) {
     ContainerHeader* container = object->container();
 
-    if (container != nullptr && !container->isStack()) {
+    if (isFreeable(container)) {
       if (container->shared()) {
           if (container->isAcyclic()) {
             incrementAcyclicRC</* Atomic = */ true>(container);
@@ -2587,7 +2564,7 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
 
   if (reinterpret_cast<uintptr_t>(old) > 1 && old != owner) {
     ContainerHeader* container = old->container();
-    if (container != nullptr && !container->isStack()) {
+    if (isFreeable(container)) {
         decrementMemberRC_internal(container, owner->container());
     }
     //releaseRef<Strict>(old);
@@ -3536,7 +3513,7 @@ void shareAny(ObjHeader* obj) {
 
 void sharePermanentSubgraph(ObjHeader* obj) {
   auto* container = obj->container();
-  if (container == NULL || container->isStack()) return;
+  if (!isFreeable(container)) return;
   //RuntimeCheck(container->objectCount() == 1, "Must be a single object container");
   container->makeSharedPermanent();
   atomicAdd(&allocCount, -1);
