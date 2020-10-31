@@ -12,7 +12,7 @@
 #include <vector>
 
 #define RTGC                true
-#define RTGC_LATE_DESTORY   true
+#define RTGC_LATE_DESTORY   false
 #define ENABLE_RTGC_LOG     true
 #define RTGC_NO_INLINE      NO_INLINE
 #define DEBUG_RTGC_BUCKET   false
