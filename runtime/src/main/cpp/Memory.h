@@ -212,6 +212,9 @@ public:
 
   GCNode* getNode() {
 #if KONAN_ENABLE_ASSERT
+    if (ref_.rtgc.node == 0) {
+      RTGC_dumpRefInfo0(this);
+    }
     RuntimeAssert(ref_.rtgc.node != 0, "node not initialized");
 #endif    
     if (this->isInCyclicNode()) {

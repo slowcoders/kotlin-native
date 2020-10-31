@@ -295,6 +295,7 @@ CyclicNode* CyclicNode::getNode(int nodeId) {
 }
 
 static int cntMemory = 0; 
+
 void GCNode::initMemory(RTGCMemState* memState) {
     cntMemory ++;
     g_memDebug = cntMemory > 1;
@@ -302,9 +303,10 @@ void GCNode::initMemory(RTGCMemState* memState) {
     memState->refChainAllocator.init(&g_refBucket, cntMemory);
     memState->cyclicNodeAllocator.init(&g_cyclicBucket, cntMemory + 1000);
     rtgcMem = memState;
-    if (cntMemory > 0x10000000) {
+    if (cntMemory < 0) {
         // To make sure RTGC_dumpRefInfo is included in executable binary;
         RTGC_dumpRefInfo(NULL);
+        RTGC_dumpRefInfo0(NULL);
     }
 }
 
@@ -330,17 +332,15 @@ void RTGC_Error(GCObject* obj) {
     ThrowOutOfMemoryError();
 }
 
-void RTGC_dumpRefInfo(GCObject* obj) {
-    static const char* UNKNOWN = "???";
-    const TypeInfo* typeInfo = ((ObjHeader*)(obj+1))->type_info();
-    const char* classname = (typeInfo != NULL && typeInfo->relativeName_ != NULL)
-        ? CreateCStringFromString(typeInfo->relativeName_) : UNKNOWN;
-    printf("%s %p:%d rc=%p, flags=%x\n", 
-        classname, obj, obj->getNodeId(), 
-        (void*)obj->refCount(), obj->getFlags());
-    if (classname != UNKNOWN) konan::free((void*)classname);
-    rtgc_trap(NULL);
+void RTGC_dumpRefInfo0(GCObject* obj) {
+    RTGC_dumpTypeInfo("*", NULL, obj);
 }
+
+void RTGC_dumpRefInfo(GCObject* obj) {
+    const TypeInfo* typeInfo = ((ObjHeader*)(obj+1))->type_info();
+    RTGC_dumpTypeInfo("*", typeInfo, obj);
+}
+
 
 void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj) {
     static const char* UNKNOWN = "???";

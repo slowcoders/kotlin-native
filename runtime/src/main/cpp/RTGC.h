@@ -11,11 +11,11 @@
 #include <atomic>
 #include <vector>
 
-#define RTGC                1
-#define RTGC_LATE_DESTORY   1
-#define ENABLE_RTGC_LOG     1
+#define RTGC                true
+#define RTGC_LATE_DESTORY   true
+#define ENABLE_RTGC_LOG     true
 #define RTGC_NO_INLINE      NO_INLINE
-#define DEBUG_RTGC_BUCKET   0
+#define DEBUG_RTGC_BUCKET   false
 static const bool RTGC_STATISTCS = true;
 
 typedef struct ContainerHeader GCObject;
@@ -42,7 +42,8 @@ bool rtgc_trap(void* pObj) NO_INLINE;
 #endif
 
 
-void RTGC_dumpRefInfo(GCObject*) NO_INLINE;
+void RTGC_dumpRefInfo(GCObject* container) NO_INLINE;
+void RTGC_dumpRefInfo0(GCObject* container) NO_INLINE;
 void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj);
 void RTGC_Error(GCObject* obj) NO_INLINE;
 extern void* RTGC_debugInstance;
@@ -223,7 +224,7 @@ public:
 
   static CyclicNode* create()  RTGC_NO_INLINE;
   static void addCyclicTest(GCObject* node, bool isLocalTest)  RTGC_NO_INLINE;
-  static void removeCyclicTest(GCObject* node)  RTGC_NO_INLINE;
+  static void removeCyclicTest(struct RTGCMemState* rtgcMem, GCObject* node)  RTGC_NO_INLINE;
   static void detectCycles()  RTGC_NO_INLINE;
 };
 

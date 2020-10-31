@@ -54,7 +54,7 @@
 // http://researcher.watson.ibm.com/researcher/files/us-bacon/Bacon03Pure.pdf.
 #define USE_GC 1
 // Define to 1 to print all memory operations.
-#define TRACE_MEMORY 0
+#define TRACE_MEMORY 1
 // Define to 1 to print major GC events.
 #define TRACE_GC 0
 // Collect memory manager events statistics.
@@ -875,18 +875,18 @@ inline void traverseObjectFields(ObjHeader* obj, func process) {
     for (int index = 0; index < typeInfo->objOffsetsCount_; index++) {
       ObjHeader** location = reinterpret_cast<ObjHeader**>(
           reinterpret_cast<uintptr_t>(obj) + typeInfo->objOffsets_[index]);
-      process(location, obj);
+      process(location);
     }
   } else {
     ArrayHeader* array = obj->array();
     for (uint32_t index = 0; index < array->count_; index++) {
-      process(ArrayAddressOfElementAt(array, index), obj);
+      process(ArrayAddressOfElementAt(array, index));
     }
   }
 }
 } // namespce
 void RTGC_traverseObjectFields(ContainerHeader* container, RTGC_FIELD_TRAVERSE_CALLBACK process) {
-  traverseObjectFields((ObjHeader*)(container + 1), [process](ObjHeader** location, ObjHeader* unused) {
+  traverseObjectFields((ObjHeader*)(container + 1), [process](ObjHeader** location) {
     ObjHeader* ref = *location;
     if (ref != nullptr) {
       ContainerHeader* container = ref->container();
@@ -899,7 +899,7 @@ void RTGC_traverseObjectFields(ContainerHeader* container, RTGC_FIELD_TRAVERSE_C
 namespace {
 template <typename func>
 inline void traverseReferredObjects(ObjHeader* obj, func process) {
-  traverseObjectFields(obj, [process](ObjHeader** location, ObjHeader* unused) {
+  traverseObjectFields(obj, [process](ObjHeader** location) {
     ObjHeader* ref = *location;
     if (ref != nullptr) process(ref);
   });
@@ -941,7 +941,7 @@ inline void traverseContainerObjectFields(ContainerHeader* container, func proce
 
 template <typename func>
 inline void traverseContainerReferredObjects(ContainerHeader* container, func process) {
-  traverseContainerObjectFields(container, [process](ObjHeader** location, ObjHeader* owner) {
+  traverseContainerObjectFields(container, [process](ObjHeader** location) {
     ObjHeader* ref = *location;
     if (ref != nullptr) process(ref);
   });
@@ -1048,14 +1048,14 @@ void processFinalizerQueue(MemoryState* state) {
   RTGC_LOG("Processing FinalizerQ");
   while (state->finalizerQueue != nullptr) {
     auto* container = state->finalizerQueue;
-    if (true) {
+    if (false) {
       bool isShared = container->shared();
       OnewayNode* node = container->getLocalOnewayNode();
       if (isShared) GCNode::rtgcLock(_FreeContainer);
       if (node != NULL) {
         node->dealloc();
       }
-      CyclicNode::removeCyclicTest(container);
+      CyclicNode::removeCyclicTest(state, container);
       if (isShared) GCNode::rtgcUnlock();
     }
 
@@ -1183,14 +1183,14 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 
 void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container) {
   RTGC_LOG("scheduleDestroyContainer %1\n", container);
-  if (false) {
+  if (true) {
     bool isShared = container->shared();
     OnewayNode* node = container->getLocalOnewayNode();
     if (isShared) GCNode::rtgcLock(_FreeContainer);
     if (node != NULL) {
       node->dealloc();
     }
-    CyclicNode::removeCyclicTest(container);
+    CyclicNode::removeCyclicTest(state, container);
     if (isShared) GCNode::rtgcUnlock();
   }
 #if USE_GC
@@ -1284,17 +1284,15 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
   if (RTGC && doFree) {
       container->markDestroyed();
       ContainerHeader* owner = container;
+      bool isOwnerPushed = isRoot;
       while (true) {
-        if (RTGC_LATE_DESTORY && !isRoot) {
-          toRelease->push_back((ContainerHeader*)((char*)owner + 1));
-        }
-        traverseContainerObjectFields(owner, [garbageNodeId, toRelease](ObjHeader** location, ObjHeader* owner) {
+        traverseContainerObjectFields(owner, [garbageNodeId, toRelease, &isOwnerPushed, owner](ObjHeader** location) {
           ObjHeader* old = *location;
           if (old == nullptr) return;
           ContainerHeader* deassigned = old->container();
-          RTGC_LOG("--- cleaning fields start %p IN %p\n", old, owner->container());
+          RTGC_LOG("--- cleaning fields start %p IN %p\n", old, owner);
           if (isFreeable(deassigned)) {
-            RTGC_LOG("--- cleaning fields %p in %p(%d)\n", deassigned, owner->container(), garbageNodeId);
+            RTGC_LOG("--- cleaning fields %p in %p(%d)\n", deassigned, owner, garbageNodeId);
             /**
              * TODO. 순환 노드로 분리되지 않은 순환 참조 객체가 있는 경우, 해당 객체가 해제될 때까지 Loop 에 빠진다.
              * 이를 방지하려면, tracing 중임을 마킹해야 한다.
@@ -1309,19 +1307,27 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
               else {
                 RTGC_LOG("--- cleaning fields Node %p (%d)\n", deassigned, garbageNodeId);
                 if (RTGC_LATE_DESTORY) {
+                  if (!isOwnerPushed) {
+                    isOwnerPushed = true;
+                    toRelease->push_back((ContainerHeader*)((char*)owner + 1));
+                  }
                   toRelease->push_back(deassigned);
                 }
                 else {
-                  updateHeapRef_internal(NULL, old, owner);
+                  updateHeapRef_internal(NULL, old, (ObjHeader*)(owner + 1));
                 }
               }
             } else {
               RTGC_LOG("--- cleaning fields any %p (%d)\n", deassigned, garbageNodeId);
               if (RTGC_LATE_DESTORY) {
+                if (!isOwnerPushed) {
+                  isOwnerPushed = true;
+                  toRelease->push_back((ContainerHeader*)((char*)owner + 1));
+                }
                 toRelease->push_back(deassigned);
               }
               else {
-                updateHeapRef_internal(NULL, old, owner);
+                updateHeapRef_internal(NULL, old, (ObjHeader*)(owner + 1));
               }
             }
           }
@@ -1335,11 +1341,8 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
           ContainerHeader* old = toRelease->front();
           toRelease->pop_front();
           if (((int64_t)old & 1) != 0) {
-            if (toRelease->empty()) break;
-
             owner = (ContainerHeader*)((int64_t)old & ~1);
-            old = toRelease->front();
-            toRelease->pop_front();
+            continue;
           }
           if (old->freeable()) {
             decrementMemberRC_internal(old, owner);
@@ -1351,7 +1354,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
   }
   else {
     // Now let's clean all object's fields in this container.
-    traverseContainerObjectFields(container, [](ObjHeader** location, ObjHeader* owner) {
+    traverseContainerObjectFields(container, [](ObjHeader** location) {
           RTGC_LOG("--- cleaning not freeable %p\n", location);
           ZeroHeapRef(location);
     });
@@ -1364,7 +1367,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
 #if !RTGC
     container->setColorEvenIfGreen(CONTAINER_TAG_GC_BLACK);
 #endif
-    if (!container->buffered()) {
+    if (RTGC || !container->buffered()) {
       scheduleDestroyContainer(memoryState, container);
     }
   }
@@ -1557,7 +1560,6 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) RTGC_
 
 template <bool Atomic>
 void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
-  // @zee rootRef 변경으로 인해 Atomic 처리 필요.
   GCNode* owner_node = owner->getNode();
   GCNode* val_node = container->getNode();
 
@@ -1745,7 +1747,7 @@ inline void increaseGcCollectCyclesThreshold(MemoryState* state) {
 
 #if TRACE_MEMORY && USE_GC
 
-const char* colorNames[] = {"BLACK", "GRAY", "WHITE", "PURPLE", "GREEN", "ORANGE", "RED"};
+//const char* colorNames[] = {"BLACK", "GRAY", "WHITE", "PURPLE", "GREEN", "ORANGE", "RED"};
 
 void dumpObject(ObjHeader* ref, int indent) {
   for (int i = 0; i < indent; i++) MEMORY_LOG(" ");
@@ -1766,8 +1768,9 @@ void dumpContainerContent(ContainerHeader* container) {
     return;
   }
   if (isAggregatingFrozenContainer(container)) {
-    MEMORY_LOG("%s aggregating container %p with %d objects rc=%d\n",
-               colorNames[container->color()], container, container->objectCount(), container->refCount());
+    MEMORY_LOG("aggregating container %p with %d objects rc=%d\n",
+               //colorNames[container->color()], 
+               container, container->objectCount(), container->refCount());
     ContainerHeader** subContainer = reinterpret_cast<ContainerHeader**>(container + 1);
     for (uint32_t i = 0; i < container->objectCount(); ++i) {
       ContainerHeader* sub = *subContainer++;
@@ -1775,10 +1778,10 @@ void dumpContainerContent(ContainerHeader* container) {
       dumpContainerContent(sub);
     }
   } else {
-    MEMORY_LOG("%s regular %s%scontainer %p with %d objects rc=%d\n",
-               colorNames[container->color()],
+    MEMORY_LOG("regular %s%scontainer %p with %d objects rc=%d\n",
+               //colorNames[container->color()],
                container->frozen() ? "frozen " : "",
-               container->stack() ? "stack " : "",
+               !container->freeable() ? "!freeable " : "",
                container, container->objectCount(),
                container->refCount());
     ObjHeader* obj = reinterpret_cast<ObjHeader*>(container + 1);
@@ -1792,7 +1795,9 @@ void dumpWorker(const char* prefix, ContainerHeader* header, ContainerHeaderSet*
   if (!isAggregatingFrozenContainer(header)) {
     traverseContainerReferredObjects(header, [prefix, seen](ObjHeader* ref) {
       auto* child = ref->container();
+      #if !RTGC
       RuntimeAssert(!isArena(child), "A reference to local object is encountered");
+      #endif
       if (child != nullptr && (seen->count(child) == 0)) {
         dumpWorker(prefix, child, seen);
       }
@@ -1975,7 +1980,7 @@ void collectWhite(MemoryState* state, ContainerHeader* start) {
      toVisit.pop_front();
      if (container->color() != CONTAINER_TAG_GC_WHITE || container->buffered()) continue;
      container->setColorAssertIfGreen(CONTAINER_TAG_GC_BLACK);
-     traverseContainerObjectFields(container, [&toVisit](ObjHeader** location, ObjHeader* owner) {
+     traverseContainerObjectFields(container, [&toVisit](ObjHeader** location) {
         auto* ref = *location;
         if (ref == nullptr) return;
         auto* childContainer = ref->container();
@@ -2848,7 +2853,7 @@ OBJ_GETTER(initSharedInstance,
         sharePermanentSubgraph(object);
       }
       if (RTGC_STATISTCS) {
-        //RTGC_dumpTypeInfo("initShared", typeInfo, object->container());
+        RTGC_dumpTypeInfo("initShared", typeInfo, object->container());
       }
       #ifdef RTGC
         retainRef(object);

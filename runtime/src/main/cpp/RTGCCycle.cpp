@@ -79,7 +79,7 @@ void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
     rtgcMem->g_cyclicTestNodes.push(obj);
 }
 
-void CyclicNode::removeCyclicTest(GCObject* obj) {
+void CyclicNode::removeCyclicTest(RTGCMemState* rtgcMem, GCObject* obj) {
     //RuntimeAssert(isLocked(), "GCNode is not locked")
     if (!obj->isNeedCyclicTest()) return;
     obj->clearNeedCyclicTest();
@@ -148,7 +148,7 @@ void CyclicNodeDetector::addCyclicObject(
 GCNode* CyclicNodeDetector::markInTracing(GCObject* tracingObj) {
     GCNode* current_node = tracingObj->getNode();
     current_node->setTraceState(IN_TRACING);
-    CyclicNode::removeCyclicTest(tracingObj);
+    CyclicNode::removeCyclicTest(rtgcMem, tracingObj);
     current_node->clearSuspectedCyclic();
 
     tracingList.push(tracingObj);
@@ -161,26 +161,28 @@ void CyclicNodeDetector::traceCyclicNodes(GCObject* tracingObj) {
      * KStdVect<GCRefChain*> tracingList;
      */
     GCNode* current_node = tracingObj->getNode();
-    CyclicNode::removeCyclicTest(tracingObj);
+    CyclicNode::removeCyclicTest(rtgcMem, tracingObj);
     current_node->clearSuspectedCyclic();
     current_node->setTraceState(IN_TRACING);
 
     // int last_node_id =  tracingObj->getNodeId();
 
-    RTGC_LOG("## RTGC tracingList add: %p=%p\n", tracingList.topChain(), tracingObj);
+    RTGC_LOG("## RTGC tracing start %p\n", tracingObj);
     
     for (GCRefChain* chain = current_node->externalReferrers.topChain(); chain != NULL; chain = chain->next()) {
         GCObject* referrer = chain->obj();
-        RTGC_LOG("## Tracing Obj %p %d memberRef=%d isCyclic=%d\n", referrer, referrer->getNodeId(), referrer->getMemberRefCount(), referrer->isInCyclicNode());
+        RTGC_LOG("##    Tracing into %p %d memberRef=%d isCyclic=%d\n", referrer, referrer->getNodeId(), referrer->getMemberRefCount(), referrer->isInCyclicNode());
         GCNode* referrer_node = referrer->getNode();
 
         if (ENABLE_RTGC_LOG) RTGCGlobal::validateMemPool();
         switch (referrer_node->getTraceState()) {
             case NOT_TRACED: // 추적되지 않은 참조 노드
+                RTGC_LOG("##     Push to trace %p\n", referrer);
                 current_node->setTraceState(TRACE_REQUESTED);
                 tracingList.push(referrer);
                 break;
             case TRACE_REQUESTED:
+                RTGC_LOG("##     Recursive trace %p\n", referrer);
                 /**
                  * 이미 TracingList 에 추가된 객체다.
                  * 해당 객체를 통하여 순환참조가 발생할 수 있다. 어쩔 수 없이 recursive 검사.
@@ -189,9 +191,9 @@ void CyclicNodeDetector::traceCyclicNodes(GCObject* tracingObj) {
                 break;
             case IN_TRACING: // 순환 경로 발견
             {
-                RTGC_LOG("## RTGC Cyclic Found %p-%d\n", referrer, referrer->getNodeId());
+                RTGC_LOG("##     Cyclic Found %p-%d\n", referrer, referrer->getNodeId());
                 if (referrer_node == tracingObj->getNode()) {
-                    RTGC_LOG("## RTGC Cyclic inside: %p:%p, %p:%p\n", tracingObj, referrer->getNode(), referrer, referrer->getNode());
+                    RTGC_LOG("##     Cyclic inside: %p:%p, %p:%p\n", tracingObj, referrer->getNode(), referrer, referrer->getNode());
                     break;
                 }
                 CyclicNode* cyclicNode = referrer->isInCyclicNode() ? (CyclicNode*)referrer_node : CyclicNode::create();
@@ -202,7 +204,7 @@ void CyclicNodeDetector::traceCyclicNodes(GCObject* tracingObj) {
                     GCObject* rookie = tracingChain->obj();
                     GCRefChain* next = tracingChain->next();
                     if (rookie->getNode()->getTraceState() == IN_TRACING) {
-                        RTGC_LOG("## RTGC Cyclic add: %d:%d, %p\n", cyclicNode->getId(), cnt++, rookie);
+                        RTGC_LOG("##     Cyclic add: %d:%d, %p\n", cyclicNode->getId(), cnt++, rookie);
                         addCyclicObject(cyclicNode, rookie);
                         if (prev == NULL) {
                             tracingList.setFirst(next);
@@ -216,7 +218,7 @@ void CyclicNodeDetector::traceCyclicNodes(GCObject* tracingObj) {
                     }
                     tracingChain = next;
                 }
-                RTGC_LOG("## RTGC Cyclic add last: %d:%d, %p\n", cyclicNode->getId(), cnt, referrer);
+                RTGC_LOG("##     Cyclic add last: %d:%d, %p\n", cyclicNode->getId(), cnt, referrer);
                 addCyclicObject(cyclicNode, referrer);
                 cyclicNode->setTraceState(IN_TRACING);
                 //tracingList.setFirst(tracingChain);
@@ -228,11 +230,13 @@ void CyclicNodeDetector::traceCyclicNodes(GCObject* tracingObj) {
                 break;
             }    
             case TRACE_FINISHED: // 이미 추적된 참조 노드
+                RTGC_LOG("##     already Traced %p\n", referrer);
             default: 
                 // tracingList.trySetFirst(tracingChain);
                 break;
         }
     }
+    RTGC_LOG("## RTGC tracing 2 %p\n", tracingObj);
 }
 
 void CyclicNodeDetector::detectCyclicNodes2() {
