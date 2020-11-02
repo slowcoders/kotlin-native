@@ -717,7 +717,7 @@ class Container {
     obj->typeInfoOrMeta_ = const_cast<TypeInfo*>(type_info);
     // Take into account typeInfo's immutability for ARC strategy.
     if ((type_info->flags_ & TF_IMMUTABLE) != 0)
-      header_->freezeRef();
+      header_->makeSharedPermanent();
     if ((type_info->flags_ & (TF_IMMUTABLE | TF_ACYCLIC)) != 0)
       header_->markAcyclic();
   }
@@ -1048,7 +1048,7 @@ void processFinalizerQueue(MemoryState* state) {
   RTGC_LOG("Processing FinalizerQ");
   while (state->finalizerQueue != nullptr) {
     auto* container = state->finalizerQueue;
-    if (true) {
+    if (RTGC_LATE_DESTORY) {
       bool isShared = container->shared();
       OnewayNode* node = container->getLocalOnewayNode();
       if (isShared) GCNode::rtgcLock(_FreeContainer);
@@ -1115,7 +1115,7 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderDeque* visited) {
     toVisit.pop_front();
     if (!container->seen()) {
       if (container->isAcyclic()) {
-        container->incMemberRefCount<false>();
+        container->incMemberRefCount<false>(true);
         visited->push_front(container);
       }
       else {
@@ -1183,7 +1183,7 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 
 void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container) {
   RTGC_LOG("scheduleDestroyContainer %1\n", container);
-  if (false) {
+  if (!RTGC_LATE_DESTORY) {
     bool isShared = container->shared();
     OnewayNode* node = container->getLocalOnewayNode();
     if (isShared) GCNode::rtgcLock(_FreeContainer);

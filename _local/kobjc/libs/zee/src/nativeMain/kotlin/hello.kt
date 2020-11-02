@@ -112,8 +112,8 @@ fun test(str: String) {
     try {
 printTime("start")
 
-testDeepRecusive()
-printTime("testDeepRecusive")
+//testDeepRecusive()
+//printTime("testDeepRecusive")
 
 testInitializer6();
 printTime("testInitializer6")

@@ -125,7 +125,8 @@ public:
   }
 
   inline bool freeable() const {
-    return (rtNode.flags_ & (CONTAINER_TAG_STACK_OR_PERMANANT)) == 0;
+    //return (rtNode.flags_ & (CONTAINER_TAG_STACK_OR_PERMANANT)) == 0;
+    return (rtNode.flags_ & (CONTAINER_TAG_STACK_OR_PERMANANT | CONTAINER_TAG_FROZEN | CONTAINER_TAG_SHARED)) != CONTAINER_TAG_STACK_OR_PERMANANT;
   }
 
   inline void setRefCountAndFlags(uint32_t refCount, uint16_t flags) {
@@ -134,10 +135,11 @@ public:
 
   inline void freezeRef() {
     if (!frozen()) {
+      RuntimeAssert(!isNeedCyclicTest(), "garbageCollect() must be executed before freezerRef()");
       rtNode.flags_ |= CONTAINER_TAG_FROZEN;
       if (!isAcyclic() && !isInCyclicNode()) {
         markAcyclic();
-        if (ref_.rtgc.node != 0) {
+        if (ref_.rtgc.obj != 0) {
           getNode()->externalReferrers.clear();
           int64_t cntMember = ref_.rtgc.obj;
           //ref_.rtgc.node = 0;
@@ -153,7 +155,7 @@ public:
   }
 
   inline void makeSharedPermanent() {
-    rtNode.flags_ |= CONTAINER_TAG_STACK_OR_PERMANANT;
+    rtNode.flags_ |= CONTAINER_TAG_STACK_OR_PERMANANT | CONTAINER_TAG_FROZEN | CONTAINER_TAG_SHARED;
   }
 
   inline bool shared() const {
@@ -177,11 +179,16 @@ public:
 #ifdef KONAN_NO_THREADS
     ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #else
+    int64_t value __attribute__((unused));
     if (Atomic)
-      __sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT);
-    else
-      ref_.count += RTGC_ROOT_REF_INCREEMENT;
+       value =__sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT);
+     else
+       value = (ref_.count += RTGC_ROOT_REF_INCREEMENT);
 #endif
+#if KONAN_ENABLE_ASSERT
+  RuntimeAssert(isAcyclic(), "!Acyclic objct");
+    RuntimeAssert(value != 0, "refCount overflow");
+#endif    
   }
 
   template <bool Atomic>
@@ -286,7 +293,7 @@ public:
   }
 
   template <bool Atomic>
-  inline void incMemberRefCount() {
+  inline void incMemberRefCount(bool ignoreAcyclic = false) {
 #ifdef KONAN_NO_THREADS
     ref_.count += RTGC_MEMBER_REF_INCREEMENT;
 #else
@@ -294,7 +301,8 @@ public:
         __sync_add_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count += RTGC_MEMBER_REF_INCREEMENT;
 #endif
 #if KONAN_ENABLE_ASSERT
-    RuntimeAssert(ref_.rtgc.obj != 0, "member ref overflow");
+    RuntimeAssert(ignoreAcyclic || !isAcyclic(), "Acyclic objct does not have member refCount");
+    RuntimeAssert(((RTGCRef*)&value)->obj != 0, "member ref overflow");
 #endif    
   }
 
@@ -330,7 +338,8 @@ public:
        __sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #endif
 #if KONAN_ENABLE_ASSERT
-    RuntimeAssert(ref_.rtgc.root != 0 && !isAcyclic(), "root ref overflow");
+    RuntimeAssert(!isAcyclic(), "Acyclic objct does not have root refCount");
+    RuntimeAssert(((RTGCRef*)&value)->root != 0, "root ref overflow");
 #endif    
     return *(RTGCRef*)&value;
   }
@@ -342,6 +351,7 @@ public:
   template <bool Atomic>
   inline RTGCRef decRootCount() {
 #if KONAN_ENABLE_ASSERT
+  RuntimeAssert(!isAcyclic(), "Acyclic objct does not have root refCount");
   RuntimeAssert(ref_.rtgc.root != 0, "root ref underflow");
 #endif
 #ifdef KONAN_NO_THREADS
@@ -356,6 +366,7 @@ public:
   template <bool Atomic>
   inline int decRefCount() {
 #if KONAN_ENABLE_ASSERT
+  RuntimeAssert(isAcyclic(), "!Acyclic objct");
     RuntimeAssert(ref_.count != 0, "refCount underflow");
 #endif    
 #ifdef KONAN_NO_THREADS
@@ -368,15 +379,16 @@ public:
   }
 
   inline int decRefCount() {
-  #ifdef KONAN_NO_THREADS
+  #if KONAN_ENABLE_ASSERT
+    RuntimeAssert(isAcyclic(), "!Acyclic objct");
+    RuntimeAssert(ref_.count != 0, "refCount underflow");
+#endif    
+#ifdef KONAN_NO_THREADS
       int value __attribute__((unused))= ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #else
       int value __attribute__((unused))= shared() ?
          __sync_sub_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #endif
-#if KONAN_ENABLE_ASSERT
-      RuntimeAssert(ref_.count != 0, "refCount underflow");
-#endif    
       return refCount();//value >> CONTAINER_TAG_SHIFT;
   }
 

@@ -18,8 +18,8 @@
 
 
 extern THREAD_LOCAL_VARIABLE RTGCMemState* rtgcMem;
-static const bool OPT_TRACING = true;
-static const bool DELAY_NODE_DESTROY = true;
+static const bool OPT_TRACING = false;
+static const bool DELAY_NODE_DESTROY = false;
 
 struct TraceInfo {
     int last_id;
