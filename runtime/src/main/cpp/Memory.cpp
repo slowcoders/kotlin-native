@@ -1074,78 +1074,53 @@ void processFinalizerQueue(MemoryState* state) {
 
 
 #ifdef RTGC    
-static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* visited) RTGC_NO_INLINE;
-
-static bool hasForeginRefs(ContainerHeader* container, ContainerHeaderDeque* visited) {
-  GCRefChain* chain = container->getNode()->externalReferrers.topChain();
-  if (chain == NULL) {
-    RTGC_TRAP("%p is foreign refs %x-%d\n", container, container->getFlags(), (int)container->refCount());
-    return container->shared();
-  }
-
-  for (; chain != NULL; chain = chain->next()) {
-    ContainerHeader* referrer = chain->obj();
-    if (tryMakeShareable(referrer)) continue;
-
-    if (referrer->seen() || !hasForeginRefs(referrer, visited) || !tryMakeShareable(referrer)) {
-      if (!container->shared() && !container->seen()) {
-        container->setSeen();
-        visited->push_front(container);
-      }
-    }
-    else {
-      RTGC_TRAP("%p has foreign ref=%p\n", container, referrer);
-      return true;
-    }
-  }
-  return false;
-}
 
 bool hasExternalRefs(ContainerHeader* start, ContainerHeaderDeque* visited) {
-  ContainerHeaderDeque toVisit;
-
   RTGC_TRAP("checking foreign refs of %p\n", start);
-  start->mark();
-  start->setSeen();
-  toVisit.push_back(start);
-  visited->push_front(start);
+
+  ContainerHeaderDeque toVisit;
   bool hasExternalRefs = false;
-  while (!toVisit.empty()) {
-    auto* container = toVisit.front();
-    toVisit.pop_front();
-    if (!container->seen()) {
-      if (container->isAcyclic()) {
-        container->incMemberRefCount<false>(true);
-        visited->push_front(container);
-      }
-      else {
-        hasExternalRefs = hasForeginRefs(container, visited);
-        if (hasExternalRefs) {
-          break;
-        }
-      }
-    }
+  start->mark();
+  toVisit.push_back(start);
+
+  for (size_t idx = 0; idx < toVisit.size(); idx ++) {
+    auto* container = toVisit[idx];
 
     traverseContainerReferredObjects(container, [&toVisit](ObjHeader* ref) {
       auto* child = ref->container();
-      if (child != NULL && !child->shared() && (!child->marked())) {
-        /// Zee TF_ACYCLIC makes ERRR
-        RTGC_TRAP("push %p toVisit\n", child);
+      if (isShareable(child)) return;
+
+      if (child->isAcyclic()) {
+        child->incMemberRefCount<false>(true);
+      }
+      if (!child->marked()) {
+        RTGC_TRAP("** push %p (%d) toVisit\n", child, child->isAcyclic());
         child->mark();
-        toVisit.push_front(child);
+        toVisit.push_back(child);
       }
     });
   }
-  
-  for (auto* it: *visited) {
-    it->resetSeen();
-    it->unMark();
+
+  for (auto* it: toVisit) {
     if (it->isAcyclic()) {
-      RuntimeAssert(it->getRTGCRef().obj <= it->getRTGCRef().root, "RefCount mismatch");
-      if (it->getRTGCRef().obj != it->getRTGCRef().root) {
+      RTGCRef ref = it->getRTGCRef();
+      RuntimeAssert(ref.obj <= ref.root, "RefCount mismatch");
+      if (ref.obj != ref.root && it != start) {
         hasExternalRefs |= !tryMakeShareable(it);
+        RTGC_TRAP("acyclic mismatch %p(%d) %d %d\n", it, hasExternalRefs, it->getRTGCRef().obj, it->getRTGCRef().root);
       }
       it->clearMemberRefCount();
+    }
+    else if (!hasExternalRefs) {
+      GCRefChain* chain = it->getNode()->externalReferrers.topChain();
+      for (; chain != NULL; chain = chain->next()) {
+        ContainerHeader* referrer = chain->obj();
+        if (!referrer->marked() && !tryMakeShareable(referrer)) {
+          RTGC_TRAP("%p has foreign ref=%p\n", it, referrer);
+          hasExternalRefs = true;
+          break;
+        }
+      }
     }
   }
 

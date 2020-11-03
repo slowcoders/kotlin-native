@@ -35,6 +35,7 @@ import illegal_sharing.*;
 import runtime.basic.initializers6.*;
 import test.utils.*
 import kotlin.*
+import runtime.workers.worker2.*;
 import runtime.workers.worker6.*;
 
 interface Interface {
@@ -56,6 +57,9 @@ fun printTime(test:String) {
 fun test(str: String) {
     try {
 printTime("start")
+
+runWorker2Test()
+printTime("runWorker2Test")
 
 
 testWorker6();
