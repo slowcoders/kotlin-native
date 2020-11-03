@@ -21,11 +21,6 @@ extern THREAD_LOCAL_VARIABLE RTGCMemState* rtgcMem;
 static const bool OPT_TRACING = false;
 static const bool DELAY_NODE_DESTROY = false;
 
-struct TraceInfo {
-    int last_id;
-    GCObject* obj_;
-};
-
 class CyclicNodeDetector {
     GCRefList tracingList;
     GCRefList finishedList;
@@ -86,7 +81,7 @@ void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
     rtgcMem->g_cyclicTestNodes.push(obj);
 }
 
-void CyclicNode::removeCyclicTest(GCObject* obj) {
+void CyclicNode::removeCyclicTest(RTGCMemState* rtgcMem, GCObject* obj) {
     //RuntimeAssert(isLocked(), "GCNode is not locked")
     if (!obj->isNeedCyclicTest()) return;
     obj->clearNeedCyclicTest();
@@ -155,17 +150,209 @@ void CyclicNodeDetector::addCyclicObject(
 GCNode* CyclicNodeDetector::markInTracing(GCObject* tracingObj) {
     GCNode* current_node = tracingObj->getNode();
     current_node->setTraceState(IN_TRACING);
-    CyclicNode::removeCyclicTest(tracingObj);
-    current_node->clearSuspectedCyclic();
-
+    if (tracingObj->isNeedCyclicTest()) {
+        tracingObj->clearNeedCyclicTest();
+        current_node->clearSuspectedCyclic();
+    }
     tracingList.push(tracingObj);
     return current_node;
+}
+
+
+void CyclicNodeDetector::traceCyclicNodes(GCObject* tracingObj) {
+    /** TODO
+     * KStdVect<GCRefChain*> tracingList;
+     */
+    GCNode* current_node = tracingObj->getNode();
+    CyclicNode::removeCyclicTest(rtgcMem, tracingObj);
+    current_node->clearSuspectedCyclic();
+    current_node->setTraceState(IN_TRACING);
+
+    // int last_node_id =  tracingObj->getNodeId();
+
+    RTGC_LOG("## RTGC tracing start %p\n", tracingObj);
+    
+    for (GCRefChain* chain = current_node->externalReferrers.topChain(); chain != NULL; chain = chain->next()) {
+        GCObject* referrer = chain->obj();
+        RTGC_LOG("##    Tracing into %p %d memberRef=%d isCyclic=%d\n", referrer, referrer->getNodeId(), referrer->getMemberRefCount(), referrer->isInCyclicNode());
+        GCNode* referrer_node = referrer->getNode();
+
+        if (ENABLE_RTGC_LOG) RTGCGlobal::validateMemPool();
+        switch (referrer_node->getTraceState()) {
+            case NOT_TRACED: // 추적되지 않은 참조 노드
+                RTGC_LOG("##     Push to trace %p\n", referrer);
+                current_node->setTraceState(TRACE_REQUESTED);
+                tracingList.push(referrer);
+                break;
+            case TRACE_REQUESTED:
+                RTGC_LOG("##     Recursive trace %p\n", referrer);
+                /**
+                 * 이미 TracingList 에 추가된 객체다.
+                 * 해당 객체를 통하여 순환참조가 발생할 수 있다. 어쩔 수 없이 recursive 검사.
+                 */
+                traceCyclicNodes(referrer);
+                break;
+            case IN_TRACING: // 순환 경로 발견
+            {
+                RTGC_LOG("##     Cyclic Found %p-%d\n", referrer, referrer->getNodeId());
+                if (referrer_node == tracingObj->getNode()) {
+                    RTGC_LOG("##     Cyclic inside: %p:%p, %p:%p\n", tracingObj, referrer->getNode(), referrer, referrer->getNode());
+                    break;
+                }
+                CyclicNode* cyclicNode = referrer->isInCyclicNode() ? (CyclicNode*)referrer_node : CyclicNode::create();
+                int cnt = 1;
+                GCRefChain* prev = NULL;
+                GCRefChain* tracingChain = tracingList.topChain();
+                while (tracingChain->obj()->getNode() != referrer_node) {
+                    GCObject* rookie = tracingChain->obj();
+                    GCRefChain* next = tracingChain->next();
+                    if (rookie->getNode()->getTraceState() == IN_TRACING) {
+                        RTGC_LOG("##     Cyclic add: %d:%d, %p\n", cyclicNode->getId(), cnt++, rookie);
+                        addCyclicObject(cyclicNode, rookie);
+                        if (prev == NULL) {
+                            tracingList.setFirst(next);
+                        }
+                        else {
+                            prev->next_ = next;
+                        }
+                    }
+                    else {
+                        prev = tracingChain;
+                    }
+                    tracingChain = next;
+                }
+                RTGC_LOG("##     Cyclic add last: %d:%d, %p\n", cyclicNode->getId(), cnt, referrer);
+                addCyclicObject(cyclicNode, referrer);
+                cyclicNode->setTraceState(IN_TRACING);
+                cnt = 1;
+                RTGC_LOG("## rootObjCount of cyclic node: %d -> %d\n", cyclicNode->getId(), cyclicNode->getRootObjectCount());
+                for (GCRefChain* c = cyclicNode->externalReferrers.topChain(); c != NULL; c = c->next()) {
+                    RTGC_LOG("## External Referrer of cyclic node: %d, %d:%p\n", cyclicNode->getId(), ++cnt, c->obj());
+                }
+                break;
+            }    
+            case TRACE_FINISHED: // 이미 추적된 참조 노드
+                RTGC_LOG("##     already Traced %p\n", referrer);
+            default: 
+                // tracingList.trySetFirst(tracingChain);
+                break;
+        }
+    }
+    RTGC_LOG("## RTGC tracing 2 %p\n", tracingObj);
+}
+
+void CyclicNodeDetector::detectCyclicNodes2() {
+
+    while (!tracingList.isEmpty()) {
+        GCObject* tracingObj = tracingList.topChain()->obj();
+        GCNode* current_node = tracingObj->getNode();
+        if (current_node->getTraceState() != TRACE_REQUESTED) {
+            current_node->setTraceState(TRACE_FINISHED);
+            tracingList.pop();
+            finishedList.push(tracingObj);
+            continue;
+        }
+        traceCyclicNodes(tracingObj);
+
+    }
+}
+
+
+void CyclicNode::detectCycles() {
+    CyclicNodeDetector detector;
+    RTGCMemState* memState = rtgcMem;
+    if (memState == NULL) {
+        RTGC_LOG("## memState == NULL!");
+        return;
+    }
+    detector.checkCyclic(&memState->g_cyclicTestNodes);
+
+    //GCNode::dumpGCLog();
+    RTGC_LOG("RefChain--: %d\n", RTGCGlobal::g_cntAddRefChain);
+}
+
+
+void CyclicNodeDetector::checkCyclic(GCRefList* cyclicTestNodes) {
+    GCNode::rtgcLock(_DetectCylcles);
+    for (GCObject* root = cyclicTestNodes->pop(); root != NULL; root = cyclicTestNodes->pop()) {
+        this->checkCyclic(root);
+    }
+    RTGC_LOG("## RTGC 2\n");
+    for (GCObject* obj_; (obj_ = finishedList.pop()) != NULL;) {
+        CyclicNode* cyclic = obj_->getLocalCyclicNode();
+        if ((cyclic != NULL) && cyclic->isGarbage()) {
+            RTGC_LOG("## RTGC Garbage Cycle detected in tracing %d/%d :%p\n", obj_->getNodeId(), cyclic->getId(), obj_);
+            ::freeContainer(obj_, cyclic->getId());
+            cyclic->dealloc();
+        }
+        else {
+            obj_->getNode()->setTraceState(NOT_TRACED);
+            //RTGC_LOG("## RTGC Cycle detected:%d rrc:%d %d\n", cyclic->getId(), cyclic->getRootObjectCount(), cyclic->externalReferrers.topChain() == 0 ? 0 : 1);
+        }
+    }
+
+    GCNode::rtgcUnlock();
+
+    if (DELAY_NODE_DESTROY) {
+        while (!destroyedNodes.empty()) {
+            char* node = destroyedNodes.front();
+            destroyedNodes.pop_front();
+            if (((int64_t)node & 1) == 0) {
+                ((OnewayNode*)node)->dealloc();
+            }
+            else {
+                node -= 1;
+                ((CyclicNode*)node)->dealloc();
+            }
+        }
+    }
+}
+
+void CyclicNodeDetector::checkCyclic(GCObject* root) {
+    if (root->isAcyclic()) {
+        RTGC_LOG("## RTGC skip acyclic: %p\n", root);
+        root->clearNeedCyclicTest();
+        return;
+    }
+    RTGC_LOG("## RTGC c root: %p, next: %p\n", root, rtgcMem->g_cyclicTestNodes.topChain() == NULL ? NULL : rtgcMem->g_cyclicTestNodes.topChain()->obj());
+    assert(root->getNodeId() != 0);
+    if (!root->isNeedCyclicTest()) {
+        RTGC_LOG("## RTGC skip root: %p\n", root);
+        return;
+    }
+
+    if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveCyclicTest ++;
+    if (!root->getNode()->isSuspectedCyclic()) {
+        RTGC_LOG("## RTGC skip node root: %p\n", root);
+        root->clearNeedCyclicTest();
+        return;
+    }
+
+    if (false) {
+        root->getNode()->setTraceState(TRACE_REQUESTED);
+        tracingList.push(root);
+        detectCyclicNodes2();        
+    }
+    else {
+        detectCyclicNodes(root);
+        assert(tracingList.topChain()->obj() == root);
+        assert(tracingList.topChain()->next() == NULL);
+        tracingList.clear();
+    }
+
+    CyclicNode* cyclic = root->getLocalCyclicNode();
+    if ((cyclic != NULL) && cyclic->isGarbage()) {
+        RTGC_LOG("## RTGC Garbage Cycle detected in tracing %d/%d :%p\n", root->getNodeId(), cyclic->getId(), root);
+        ::freeContainer(root, cyclic->getId());
+        cyclic->dealloc();
+    }
 }
 
 void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
 
     GCNode* current_node = markInTracing(tracingObj);
     int last_node_id =  tracingObj->getNodeId();
+
 
     RTGC_LOG("## RTGC tracingList add: %p=%p\n", tracingList.topChain(), tracingObj);
     
@@ -258,205 +445,4 @@ void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
             ((CyclicNode*)current_node)->dealloc();
         }
     }
-}
-
-
-void CyclicNodeDetector::traceCyclicNodes(GCObject* tracingObj) {
-    GCNode* current_node = tracingObj->getNode();
-    CyclicNode::removeCyclicTest(tracingObj);
-    current_node->clearSuspectedCyclic();
-    current_node->setTraceState(IN_TRACING);
-
-    // int last_node_id =  tracingObj->getNodeId();
-
-    RTGC_LOG("## RTGC tracingList add: %p=%p\n", tracingList.topChain(), tracingObj);
-    
-    for (GCRefChain* chain = current_node->externalReferrers.topChain(); chain != NULL; chain = chain->next()) {
-        GCObject* referrer = chain->obj();
-        RTGC_LOG("## Tracing Obj %p %d memberRef=%d isCyclic=%d\n", referrer, referrer->getNodeId(), referrer->getMemberRefCount(), referrer->isInCyclicNode());
-        GCNode* referrer_node = referrer->getNode();
-
-        if (ENABLE_RTGC_LOG) RTGCGlobal::validateMemPool();
-        switch (referrer_node->getTraceState()) {
-            case NOT_TRACED: // 추적되지 않은 참조 노드
-                current_node->setTraceState(TRACE_REQUESTED);
-                tracingList.push(referrer);
-                break;
-            case TRACE_REQUESTED:
-                /**
-                 * 이미 TracingList 에 추가된 객체다.
-                 * 해당 객체를 통하여 순환참조가 발생할 수 있다. 어쩔 수 없이 recursive 검사.
-                 */
-                traceCyclicNodes(referrer);
-                break;
-            case IN_TRACING: // 순환 경로 발견
-            {
-                RTGC_LOG("## RTGC Cyclic Found %p-%d\n", referrer, referrer->getNodeId());
-                if (referrer_node == tracingObj->getNode()) {
-                    RTGC_LOG("## RTGC Cyclic inside: %p:%p, %p:%p\n", tracingObj, referrer->getNode(), referrer, referrer->getNode());
-                    break;
-                }
-                CyclicNode* cyclicNode = referrer->isInCyclicNode() ? (CyclicNode*)referrer_node : CyclicNode::create();
-                int cnt = 1;
-                GCRefChain* prev = NULL;
-                GCRefChain* tracingChain = tracingList.topChain();
-                while (tracingChain->obj()->getNode() != referrer_node) {
-                    GCObject* rookie = tracingChain->obj();
-                    GCRefChain* next = tracingChain->next();
-                    if (rookie->getNode()->getTraceState() == IN_TRACING) {
-                        RTGC_LOG("## RTGC Cyclic add: %d:%d, %p\n", cyclicNode->getId(), cnt++, rookie);
-                        addCyclicObject(cyclicNode, rookie);
-                        if (prev == NULL) {
-                            tracingList.setFirst(next);
-                        }
-                        else {
-                            prev->next_ = next;
-                        }
-                    }
-                    else {
-                        prev = tracingChain;
-                    }
-                    tracingChain = next;
-                }
-                RTGC_LOG("## RTGC Cyclic add last: %d:%d, %p\n", cyclicNode->getId(), cnt, referrer);
-                addCyclicObject(cyclicNode, referrer);
-                cyclicNode->setTraceState(IN_TRACING);
-                //tracingList.setFirst(tracingChain);
-                cnt = 1;
-                RTGC_LOG("## rootObjCount of cyclic node: %d -> %d\n", cyclicNode->getId(), cyclicNode->getRootObjectCount());
-                for (GCRefChain* c = cyclicNode->externalReferrers.topChain(); c != NULL; c = c->next()) {
-                    RTGC_LOG("## External Referrer of cyclic node: %d, %d:%p\n", cyclicNode->getId(), ++cnt, c->obj());
-                }
-                break;
-            }    
-            case TRACE_FINISHED: // 이미 추적된 참조 노드
-            default: 
-                // tracingList.trySetFirst(tracingChain);
-                break;
-        }
-    }
-}
-
-void CyclicNodeDetector::detectCyclicNodes2() {
-
-    while (!tracingList.isEmpty()) {
-        GCObject* tracingObj = tracingList.topChain()->obj();
-        GCNode* current_node = tracingObj->getNode();
-        if (current_node->getTraceState() != TRACE_REQUESTED) {
-            current_node->setTraceState(TRACE_FINISHED);
-            tracingList.pop();
-            finishedList.push(tracingObj);
-            continue;
-        }
-        traceCyclicNodes(tracingObj);
-
-    }
-
-
-    // if (!DELAY_NODE_DESTROY && last_node_id != tracingObj->getNodeId()) {
-    //     if (last_node_id < CYCLIC_NODE_ID_START) {
-    //         RTGC_LOG("## ___ deallic OnewayNode %p\n", current_node->externalReferrers.topChain());
-    //         ((OnewayNode*)current_node)->dealloc();
-    //     }
-    //     else {
-    //         RTGC_LOG("## RTGC deallic CyclicNode %d\n", ((CyclicNode*)current_node)->getId());
-    //         ((CyclicNode*)current_node)->dealloc();
-    //     }
-    // }
-}
-
-
-void CyclicNode::detectCycles() {
-    CyclicNodeDetector detector;
-    RTGCMemState* memState = rtgcMem;
-    if (memState == NULL) {
-        RTGC_LOG("## memState == NULL!");
-        return;
-    }
-    detector.checkCyclic(&memState->g_cyclicTestNodes);
-
-    //GCNode::dumpGCLog();
-    RTGC_LOG("RefChain--: %d\n", RTGCGlobal::g_cntAddRefChain);
-}
-
-
-void CyclicNodeDetector::checkCyclic(GCRefList* cyclicTestNodes) {
-    GCNode::rtgcLock(_DetectCylcles);
-    for (GCObject* root = cyclicTestNodes->pop(); root != NULL; root = cyclicTestNodes->pop()) {
-        this->checkCyclic(root);
-    }
-    GCNode::rtgcUnlock();
-
-    if (DELAY_NODE_DESTROY) {
-        while (!destroyedNodes.empty()) {
-            char* node = destroyedNodes.front();
-            destroyedNodes.pop_front();
-            if (((int64_t)node & 1) == 0) {
-                ((OnewayNode*)node)->dealloc();
-            }
-            else {
-                node -= 1;
-                ((CyclicNode*)node)->dealloc();
-            }
-        }
-    }
-}
-
-void CyclicNodeDetector::checkCyclic(GCObject* root) {
-    if (root->isAcyclic()) {
-        RTGC_LOG("## RTGC skip acyclic: %p\n", root);
-        root->clearNeedCyclicTest();
-        return;
-    }
-    RTGC_LOG("## RTGC c root: %p, next: %p\n", root, rtgcMem->g_cyclicTestNodes.topChain() == NULL ? NULL : rtgcMem->g_cyclicTestNodes.topChain()->obj());
-    assert(root->getNodeId() != 0);
-    if (!root->isNeedCyclicTest()) {
-        RTGC_LOG("## RTGC skip root: %p\n", root);
-        return;
-    }
-
-    if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveCyclicTest ++;
-    if (!root->getNode()->isSuspectedCyclic()) {
-        RTGC_LOG("## RTGC skip node root: %p\n", root);
-        root->clearNeedCyclicTest();
-        return;
-    }
-
-    if (false) {
-        root->getNode()->setTraceState(TRACE_REQUESTED);
-        tracingList.push(root);
-        detectCyclicNodes2();        
-    }
-    else {
-        detectCyclicNodes(root);
-        assert(tracingList.topChain()->obj() == root);
-        assert(tracingList.topChain()->next() == NULL);
-        tracingList.clear();
-    }
-
-    RTGC_LOG("## RTGC 2\n");
-    for (GCObject* obj_ = root; obj_ != NULL; obj_ = finishedList.pop()) {
-        CyclicNode* cyclic = obj_->getLocalCyclicNode();
-        if ((cyclic != NULL) && cyclic->isGarbage()) {
-            RTGC_LOG("## RTGC Garbage Cycle detected in tracing %d/%d :%p\n", obj_->getNodeId(), cyclic->getId(), obj_);
-            ::freeContainer(obj_, cyclic->getId());
-            cyclic->dealloc();
-        }
-        else {
-            obj_->getNode()->setTraceState(NOT_TRACED);
-            //RTGC_LOG("## RTGC Cycle detected:%d rrc:%d %d\n", cyclic->getId(), cyclic->getRootObjectCount(), cyclic->externalReferrers.topChain() == 0 ? 0 : 1);
-        }
-    }
-
-    // CyclicNode* cyclic = root->getLocalCyclicNode();
-    // if (cyclic != NULL) {
-    //     if (cyclic->isGarbage()) {
-    //         RTGC_LOG("## RTGC Garbage Cycle detected %d rrc:%d\n", cyclic->getId(), cyclic->getRootObjectCount());
-    //         ::freeContainer(root, cyclic->getId());
-    //         cyclic->dealloc();
-    //     }
-    //     else {
-    //         RTGC_LOG("## RTGC Cycle detected:%d rrc:%d %d\n", cyclic->getId(), cyclic->getRootObjectCount(), cyclic->externalReferrers.topChain() == 0 ? 0 : 1);
-    //     }
-    // }
 }

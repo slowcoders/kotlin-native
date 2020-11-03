@@ -112,8 +112,22 @@ fun test(str: String) {
     try {
 printTime("start")
 
-//testDeepRecusive()
-//printTime("testDeepRecusive")
+val test_gc_bug_in_worker_thread = true;
+if (test_gc_bug_in_worker_thread) {
+    runWorkerBoundReference0Test()
+    printTime("runWorkerBoundReference0Test")
+
+    runAtomicTest();
+    printTime("runAtomicTest")
+}
+
+
+
+val test_deep_recursive = false;
+if (test_deep_recursive) {
+    testDeepRecusive()
+    printTime("testDeepRecusive")
+}
 
 testInitializer6();
 printTime("testInitializer6")
@@ -151,15 +165,6 @@ val test_without_illegal_sharing_check = false;
 if (test_without_illegal_sharing_check) {
     runIlleagalSharingWithWeakTest()
     printTime("runIlleagalSharingWithWeakTest")
-}
-
-val test_gc_bug_in_worker_thread = true;
-if (test_gc_bug_in_worker_thread) {
-    runWorkerBoundReference0Test()
-    printTime("runWorkerBoundReference0Test")
-
-    runAtomicTest();
-    printTime("runAtomicTest")
 }
 
 runPatternTest()

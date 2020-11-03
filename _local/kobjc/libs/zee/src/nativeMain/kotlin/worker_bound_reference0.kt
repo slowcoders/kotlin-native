@@ -781,6 +781,9 @@ fun testDoubleFreezeWithFreezeBlocker() {
 }
 
 fun runWorkerBoundReference0Test() {
+collectCyclicGarbage()
+collectCyclicGarbageWithAtomicsFrozen()
+
 testGlobal()
 // for Strict mode Only
 // testGlobalDenyAccessOnWorker()
@@ -814,8 +817,6 @@ testDoNotCollectInWorkerFrozen()
 doesNotCollectCyclicGarbageFrozen()
 doesNotCollectCrossThreadCyclicGarbageFrozen()
 doesNotCollectCyclicGarbageWithAtomicsFrozen()
-collectCyclicGarbage()
-collectCyclicGarbageWithAtomicsFrozen()
 doesNotCollectCrossThreadCyclicGarbageWithAtomicsFrozen()
 collectCrossThreadCyclicGarbageWithAtomicsFrozen()
 testDoubleFreeze();

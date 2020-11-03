@@ -25,28 +25,28 @@
 
 
 typedef enum {
-  CONTAINER_TAG_GC_MARKED   = 1 << 0, // Unused, Reserved for TRACE_STATE
-  CONTAINER_TAG_GC_BUFFERED = 1 << 1, // Unused, Reserved for TRACE_STATE
+  CONTAINER_TAG_GC_MARKED   = 0x01, // Unused, Reserved for TRACE_STATE
+  CONTAINER_TAG_GC_BUFFERED = 0x02, // Unused, Reserved for TRACE_STATE
 
   // Container is frozen, could only refer to other frozen objects.
-  CONTAINER_TAG_FROZEN = 1 << 2,
+  CONTAINER_TAG_FROZEN = 0x04,
 
   // Atomic container, reference counter is atomically updated.
-  CONTAINER_TAG_SHARED = 1 << 3,
+  CONTAINER_TAG_SHARED = 0x08,
 
   // 
-  CONTAINER_TAG_ACYCLIC = 1 << 4,
+  CONTAINER_TAG_ACYCLIC = 0x10,
 
   // no need to free, children cleanup still shall be there.
-  CONTAINER_TAG_NOT_FREEABLE = 1 << 5,
+  CONTAINER_TAG_NOT_FREEABLE = 0x20,
 
-  NEED_CYCLIC_TEST = 1 << 6,
+  NEED_CYCLIC_TEST = 0x40,
 
   CONTAINER_TAG_STACK_OR_PERMANANT = CONTAINER_TAG_NOT_FREEABLE,//1 << 7, // Unused, Reserved
 
-  CONTAINER_TAG_GC_SEEN     = 1 << 8,
+  CONTAINER_TAG_GC_SEEN     = 0x100,
   // If indeed has more that one object.
-  CONTAINER_TAG_GC_HAS_OBJECT_COUNT = 1 << 9,
+  CONTAINER_TAG_GC_HAS_OBJECT_COUNT = 0x200,
 
 
   // Shift to get actual object count, if has it.
@@ -219,6 +219,9 @@ public:
 
   GCNode* getNode() {
 #if KONAN_ENABLE_ASSERT
+    if (ref_.rtgc.node == 0) {
+      RTGC_dumpRefInfo0(this);
+    }
     RuntimeAssert(ref_.rtgc.node != 0, "node not initialized");
 #endif    
     if (this->isInCyclicNode()) {
@@ -393,9 +396,6 @@ public:
       return refCount();//value >> CONTAINER_TAG_SHIFT;
   }
 
-  inline unsigned tagBits() const {
-     return rtNode.flags_ & CONTAINER_TAG_GC_MASK;
-  }
 
   inline unsigned objectCount() const {
     return (rtNode.flags_ & CONTAINER_TAG_GC_HAS_OBJECT_COUNT) != 0 ?
