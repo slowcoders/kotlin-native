@@ -322,7 +322,6 @@ void CyclicNodeDetector::checkCyclic(GCObject* root) {
     //     return;
     // }
 
-    if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveCyclicTest ++;
     if (!root->getNode()->isSuspectedCyclic()) {
         RTGC_LOG("## RTGC skip node root: %p\n", root);
         root->clearNeedCyclicTest();

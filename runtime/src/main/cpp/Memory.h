@@ -90,6 +90,7 @@ typedef enum {
 typedef uint32_t container_size_t;
 #include "RTGC.h"
 
+const bool IS_SHARED_PERMANENT_NEVER_FREEABLE = true;
 
 // Header of all container objects. Contains reference counter.
 struct ContainerHeader {
@@ -125,8 +126,7 @@ public:
   }
 
   inline bool freeable() const {
-    //return (rtNode.flags_ & (CONTAINER_TAG_STACK_OR_PERMANANT)) == 0;
-    return (rtNode.flags_ & (CONTAINER_TAG_STACK_OR_PERMANANT | CONTAINER_TAG_FROZEN | CONTAINER_TAG_SHARED)) != CONTAINER_TAG_STACK_OR_PERMANANT;
+    return (rtNode.flags_ & (CONTAINER_TAG_STACK_OR_PERMANANT)) == 0;
   }
 
   inline void setRefCountAndFlags(uint32_t refCount, uint16_t flags) {
@@ -155,7 +155,20 @@ public:
   }
 
   inline void makeSharedPermanent() {
-    rtNode.flags_ |= CONTAINER_TAG_STACK_OR_PERMANANT | CONTAINER_TAG_FROZEN | CONTAINER_TAG_SHARED;
+    int flags = CONTAINER_TAG_FROZEN | CONTAINER_TAG_SHARED;
+    if (IS_SHARED_PERMANENT_NEVER_FREEABLE) {
+      if (isNeedCyclicTest()) {
+        clearNeedCyclicTest();
+      }
+      flags |= CONTAINER_TAG_STACK_OR_PERMANANT | CONTAINER_TAG_ACYCLIC;
+    }
+    else {
+      RuntimeAssert(!isNeedCyclicTest(), "garbageCollect() must be executed before makeSharedPermanent()");
+      if (!isInCyclicNode()) {
+        flags |= CONTAINER_TAG_ACYCLIC;
+      }
+    }
+    rtNode.flags_ |= flags;
   }
 
   inline bool shared() const {
@@ -275,7 +288,6 @@ public:
 
   void markDestroyed() {
     this->rtNode.flags_ |= CONTAINER_TAG_NOT_FREEABLE;
-    this->rtNode.flags_ &= ~(CONTAINER_TAG_FROZEN | CONTAINER_TAG_SHARED);
   }
 
   bool isGarbage() {

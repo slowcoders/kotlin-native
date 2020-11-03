@@ -717,7 +717,7 @@ class Container {
     obj->typeInfoOrMeta_ = const_cast<TypeInfo*>(type_info);
     // Take into account typeInfo's immutability for ARC strategy.
     if ((type_info->flags_ & TF_IMMUTABLE) != 0)
-      header_->makeSharedPermanent();
+      header_->freezeRef();
     if ((type_info->flags_ & (TF_IMMUTABLE | TF_ACYCLIC)) != 0)
       header_->markAcyclic();
   }
@@ -2841,13 +2841,16 @@ OBJ_GETTER(initSharedInstance,
         FreezeSubgraph(object);
       }
       else if (RTGC) {
+        if (!IS_SHARED_PERMANENT_NEVER_FREEABLE) {
+          garbageCollect();
+        }
         if (!isPermanentOrFrozen(object->container())) {
           runFreezeHooksRecursive(object);
         }
         sharePermanentSubgraph(object);
       }
       if (RTGC_STATISTCS) {
-        RTGC_dumpTypeInfo("initShared", typeInfo, object->container());
+        //RTGC_dumpTypeInfo("initShared", typeInfo, object->container());
       }
       #ifdef RTGC
         retainRef(object);
