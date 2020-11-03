@@ -13,9 +13,7 @@ val bWorkerUnlocker = AtomicInt(0)
 object A {
     init {
         // Must be called by aWorker only.
-        println("### AAAA");
         assertEquals(aWorkerId.value, Worker.current.id)
-        println("### AAAA---");
         // Only allow b workers to run, when a worker has started initialization.
         bWorkerUnlocker.increment()
         // Only proceed with initialization, when all b workers have started executing.
@@ -29,17 +27,13 @@ object A {
 
 fun produceA(): String {
     // Must've been called by aWorker only.
-    println("### A");
     assertEquals(aWorkerId.value, Worker.current.id)
-    println("### A--");
     return "A"
 }
 
 fun produceB(): String {
     // Must've been called by aWorker only.
-    println("### B");
     assertEquals(aWorkerId.value, Worker.current.id)
-    println("### B--");
     // Also check that it's ok to get A.a while initializing A.b.
     return "B+${A.a}"
 }

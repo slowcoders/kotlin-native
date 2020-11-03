@@ -1,11 +1,25 @@
-2: Task failed with an exception.
+FAILURE: Build completed with 10 failures.
+
+1: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:leakMemory'.
-> Test failed. Actual exit status doesn't match with exit status checker: 0
+Execution failed for task ':backend.native:tests:check_stacktrace_format'.
+> Test failed. Actual exit status doesn't match with exit status checker: 134
   stdout:
   
   stderr:
+  Memory leaks detected, 13 objects leaked!
+  Use `Platform.isMemoryLeakCheckerActive = false` to avoid this check.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+2: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:cycle_detector'.
 
 
 * Try:
@@ -15,11 +29,13 @@ Run with --stacktrace option to get the stack trace. Run with --info or --debug 
 3: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:leakMemoryWithWorkerTermination'.
-> Test failed. Actual exit status doesn't match with exit status checker: 0
+Execution failed for task ':backend.native:tests:kt-37572'.
+> Test failed. Actual exit status doesn't match with exit status checker: 134
   stdout:
   
   stderr:
+  Memory leaks detected, 13 objects leaked!
+  Use `Platform.isMemoryLeakCheckerActive = false` to avoid this check.
 
 
 * Try:
@@ -29,8 +45,8 @@ Run with --stacktrace option to get the stack trace. Run with --info or --debug 
 4: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:stdlibTest'.
-> Test /Users/zeedh/slowcoders/kotlin-native/test.output/stdlib/stdlibTest/macos_x64/stdlibTest.kexe exited with 139
+Execution failed for task ':runtime:wasm32Runtime'.
+> Process 'command '/Users/zeedh/.konan/dependencies/clang-llvm-apple-8.0.0-darwin-macos/bin/clang++'' finished with non-zero exit value 1
 
 * Try:
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
@@ -39,8 +55,14 @@ Run with --stacktrace option to get the stack trace. Run with --info or --debug 
 5: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:testObjCExport'.
-> Execution of swiftTestExecutable failed with exit code: 132 
+Execution failed for task ':backend.native:tests:stack_trace_inline'.
+> Test failed. Actual exit status doesn't match with exit status checker: 134
+  stdout:
+  
+  stderr:
+  Memory leaks detected, 13 objects leaked!
+  Use `Platform.isMemoryLeakCheckerActive = false` to avoid this check.
+
 
 * Try:
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
@@ -49,8 +71,8 @@ Run with --stacktrace option to get the stack trace. Run with --info or --debug 
 6: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:testObjCExportStatic'.
-> Execution of swiftTestExecutable failed with exit code: 132 
+Execution failed for task ':backend.native:tests:testObjCExport'.
+> Execution of swiftTestExecutable failed with exit code: 139 
 
 * Try:
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
@@ -59,34 +81,8 @@ Run with --stacktrace option to get the stack trace. Run with --info or --debug 
 7: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:worker11'.
-> Test failed. Actual exit status doesn't match with exit status checker: 1
-  stdout:
-  kotlin.IllegalStateException: Illegal transfer state
-      at 0   localTest.kexe                      0x000000010e3e98d7 kfun:kotlin.Throwable#<init>(kotlin.String?){} + 23
-      at 1   localTest.kexe                      0x000000010e3e7275 kfun:kotlin.Exception#<init>(kotlin.String?){} + 21
-      at 2   localTest.kexe                      0x000000010e3e7155 kfun:kotlin.RuntimeException#<init>(kotlin.String?){} + 21
-      at 3   localTest.kexe                      0x000000010e3e72d5 kfun:kotlin.IllegalStateException#<init>(kotlin.String?){} + 21
-      at 4   localTest.kexe                      0x000000010e3fe9a6 ThrowWorkerInvalidState + 54
-      at 5   localTest.kexe                      0x000000010e5774b3 Kotlin_Worker_executeInternal + 195
-      at 6   localTest.kexe                      0x000000010e3fece9 kfun:kotlin.native.concurrent#executeImpl(kotlin.native.concurrent.Worker;kotlin.native.concurrent.TransferMode;kotlin.Function0<kotlin.Any?>;kotlinx.cinterop.CPointer<kotlinx.cinterop.CFunction<*>>){}kotlin.native.concurrent.Future<kotlin.Any?> + 57
-      at 7   localTest.kexe                      0x000000010e525620 kfun:runtime.workers.worker11#runTest0(){} + 512
-      at 8   localTest.kexe                      0x000000010e527551 kfun:runtime.workers.worker11.$runTest0$FUNCTION_REFERENCE$686.invoke#internal + 17
-      at 9   localTest.kexe                      0x000000010e527577 kfun:runtime.workers.worker11.$runTest0$FUNCTION_REFERENCE$686.$<bridge-UNN>invoke(){}#internal + 23
-      at 10  localTest.kexe                      0x000000010e415042 kfun:kotlin.native.internal.test.TopLevelSuite.TestCase#run(){} + 354
-      at 11  localTest.kexe                      0x000000010e411ed5 kfun:kotlin.native.internal.test.TestRunner.run#internal + 1029
-      at 12  localTest.kexe                      0x000000010e41269b kfun:kotlin.native.internal.test.TestRunner.runIteration#internal + 1227
-      at 13  localTest.kexe                      0x000000010e412a79 kfun:kotlin.native.internal.test.TestRunner#run(){}kotlin.Int + 361
-      at 14  localTest.kexe                      0x000000010e40da08 kfun:kotlin.native.internal.test#testLauncherEntryPoint(kotlin.Array<kotlin.String>){}kotlin.Int + 152
-      at 15  localTest.kexe                      0x000000010e40d961 kfun:kotlin.native.internal.test#main(kotlin.Array<kotlin.String>){} + 17
-      at 16  localTest.kexe                      0x000000010e40da7f Konan_start + 47
-      at 17  localTest.kexe                      0x000000010e5621c4 Konan_run_start + 68
-      at 18  localTest.kexe                      0x000000010e56215b Konan_main + 27
-      at 19  libdyld.dylib                       0x00007fff67cf4cc9 start + 1
-      at 20  ???                                 0x0000000000000003 0x0 + 3
-  
-  stderr:
-
+Execution failed for task ':backend.native:tests:testObjCExportStatic'.
+> Execution of swiftTestExecutable failed with exit code: 139 
 
 * Try:
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
@@ -95,30 +91,30 @@ Run with --stacktrace option to get the stack trace. Run with --info or --debug 
 8: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:worker2'.
+Execution failed for task ':backend.native:tests:worker11'.
 > Test failed. Actual exit status doesn't match with exit status checker: 1
   stdout:
   kotlin.IllegalStateException: Illegal transfer state
-      at 0   localTest.kexe                      0x000000010cc628d7 kfun:kotlin.Throwable#<init>(kotlin.String?){} + 23
-      at 1   localTest.kexe                      0x000000010cc60275 kfun:kotlin.Exception#<init>(kotlin.String?){} + 21
-      at 2   localTest.kexe                      0x000000010cc60155 kfun:kotlin.RuntimeException#<init>(kotlin.String?){} + 21
-      at 3   localTest.kexe                      0x000000010cc602d5 kfun:kotlin.IllegalStateException#<init>(kotlin.String?){} + 21
-      at 4   localTest.kexe                      0x000000010cc779a6 ThrowWorkerInvalidState + 54
-      at 5   localTest.kexe                      0x000000010cdf04b3 Kotlin_Worker_executeInternal + 195
-      at 6   localTest.kexe                      0x000000010cc77ce9 kfun:kotlin.native.concurrent#executeImpl(kotlin.native.concurrent.Worker;kotlin.native.concurrent.TransferMode;kotlin.Function0<kotlin.Any?>;kotlinx.cinterop.CPointer<kotlinx.cinterop.CFunction<*>>){}kotlin.native.concurrent.Future<kotlin.Any?> + 57
-      at 7   localTest.kexe                      0x000000010cda0fd9 kfun:runtime.workers.worker2#runTest(){} + 521
-      at 8   localTest.kexe                      0x000000010cda18d1 kfun:runtime.workers.worker2.$runTest$FUNCTION_REFERENCE$690.invoke#internal + 17
-      at 9   localTest.kexe                      0x000000010cda18f7 kfun:runtime.workers.worker2.$runTest$FUNCTION_REFERENCE$690.$<bridge-UNN>invoke(){}#internal + 23
-      at 10  localTest.kexe                      0x000000010cc8e042 kfun:kotlin.native.internal.test.TopLevelSuite.TestCase#run(){} + 354
-      at 11  localTest.kexe                      0x000000010cc8aed5 kfun:kotlin.native.internal.test.TestRunner.run#internal + 1029
-      at 12  localTest.kexe                      0x000000010cc8b69b kfun:kotlin.native.internal.test.TestRunner.runIteration#internal + 1227
-      at 13  localTest.kexe                      0x000000010cc8ba79 kfun:kotlin.native.internal.test.TestRunner#run(){}kotlin.Int + 361
-      at 14  localTest.kexe                      0x000000010cc86a08 kfun:kotlin.native.internal.test#testLauncherEntryPoint(kotlin.Array<kotlin.String>){}kotlin.Int + 152
-      at 15  localTest.kexe                      0x000000010cc86961 kfun:kotlin.native.internal.test#main(kotlin.Array<kotlin.String>){} + 17
-      at 16  localTest.kexe                      0x000000010cc86a7f Konan_start + 47
-      at 17  localTest.kexe                      0x000000010cddb1c4 Konan_run_start + 68
-      at 18  localTest.kexe                      0x000000010cddb15b Konan_main + 27
-      at 19  libdyld.dylib                       0x00007fff67cf4cc9 start + 1
+      at 0   localTest.kexe                      0x0000000106f45a57 kfun:kotlin.Throwable#<init>(kotlin.String?){} + 23
+      at 1   localTest.kexe                      0x0000000106f433f5 kfun:kotlin.Exception#<init>(kotlin.String?){} + 21
+      at 2   localTest.kexe                      0x0000000106f432d5 kfun:kotlin.RuntimeException#<init>(kotlin.String?){} + 21
+      at 3   localTest.kexe                      0x0000000106f43455 kfun:kotlin.IllegalStateException#<init>(kotlin.String?){} + 21
+      at 4   localTest.kexe                      0x0000000106f5ab26 ThrowWorkerInvalidState + 54
+      at 5   localTest.kexe                      0x00000001070d41e3 Kotlin_Worker_executeInternal + 195
+      at 6   localTest.kexe                      0x0000000106f5ae69 kfun:kotlin.native.concurrent#executeImpl(kotlin.native.concurrent.Worker;kotlin.native.concurrent.TransferMode;kotlin.Function0<kotlin.Any?>;kotlinx.cinterop.CPointer<kotlinx.cinterop.CFunction<*>>){}kotlin.native.concurrent.Future<kotlin.Any?> + 57
+      at 7   localTest.kexe                      0x0000000107081510 kfun:runtime.workers.worker11#runTest0(){} + 512
+      at 8   localTest.kexe                      0x0000000107083441 kfun:runtime.workers.worker11.$runTest0$FUNCTION_REFERENCE$686.invoke#internal + 17
+      at 9   localTest.kexe                      0x0000000107083467 kfun:runtime.workers.worker11.$runTest0$FUNCTION_REFERENCE$686.$<bridge-UNN>invoke(){}#internal + 23
+      at 10  localTest.kexe                      0x0000000106f711c2 kfun:kotlin.native.internal.test.TopLevelSuite.TestCase#run(){} + 354
+      at 11  localTest.kexe                      0x0000000106f6e055 kfun:kotlin.native.internal.test.TestRunner.run#internal + 1029
+      at 12  localTest.kexe                      0x0000000106f6e81b kfun:kotlin.native.internal.test.TestRunner.runIteration#internal + 1227
+      at 13  localTest.kexe                      0x0000000106f6ebf9 kfun:kotlin.native.internal.test.TestRunner#run(){}kotlin.Int + 361
+      at 14  localTest.kexe                      0x0000000106f69b88 kfun:kotlin.native.internal.test#testLauncherEntryPoint(kotlin.Array<kotlin.String>){}kotlin.Int + 152
+      at 15  localTest.kexe                      0x0000000106f69ae1 kfun:kotlin.native.internal.test#main(kotlin.Array<kotlin.String>){} + 17
+      at 16  localTest.kexe                      0x0000000106f69bff Konan_start + 47
+      at 17  localTest.kexe                      0x00000001070bdff4 Konan_run_start + 68
+      at 18  localTest.kexe                      0x00000001070bdf8b Konan_main + 27
+      at 19  libdyld.dylib                       0x00007fff6ed17cc9 start + 1
       at 20  ???                                 0x0000000000000003 0x0 + 3
   
   stderr:
@@ -131,8 +127,62 @@ Run with --stacktrace option to get the stack trace. Run with --info or --debug 
 9: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:compileKonanWorker_bound_reference0Macos_x64'.
-> Process 'command '/Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/bin/java'' finished with non-zero exit value 1
+Execution failed for task ':backend.native:tests:worker2'.
+> Test failed. Actual exit status doesn't match with exit status checker: 1
+  stdout:
+  kotlin.IllegalStateException: Illegal transfer state
+      at 0   localTest.kexe                      0x0000000107a46a57 kfun:kotlin.Throwable#<init>(kotlin.String?){} + 23
+      at 1   localTest.kexe                      0x0000000107a443f5 kfun:kotlin.Exception#<init>(kotlin.String?){} + 21
+      at 2   localTest.kexe                      0x0000000107a442d5 kfun:kotlin.RuntimeException#<init>(kotlin.String?){} + 21
+      at 3   localTest.kexe                      0x0000000107a44455 kfun:kotlin.IllegalStateException#<init>(kotlin.String?){} + 21
+      at 4   localTest.kexe                      0x0000000107a5bb26 ThrowWorkerInvalidState + 54
+      at 5   localTest.kexe                      0x0000000107bd51e3 Kotlin_Worker_executeInternal + 195
+      at 6   localTest.kexe                      0x0000000107a5be69 kfun:kotlin.native.concurrent#executeImpl(kotlin.native.concurrent.Worker;kotlin.native.concurrent.TransferMode;kotlin.Function0<kotlin.Any?>;kotlinx.cinterop.CPointer<kotlinx.cinterop.CFunction<*>>){}kotlin.native.concurrent.Future<kotlin.Any?> + 57
+      at 7   localTest.kexe                      0x0000000107b84ec9 kfun:runtime.workers.worker2#runTest(){} + 521
+      at 8   localTest.kexe                      0x0000000107b857c1 kfun:runtime.workers.worker2.$runTest$FUNCTION_REFERENCE$690.invoke#internal + 17
+      at 9   localTest.kexe                      0x0000000107b857e7 kfun:runtime.workers.worker2.$runTest$FUNCTION_REFERENCE$690.$<bridge-UNN>invoke(){}#internal + 23
+      at 10  localTest.kexe                      0x0000000107a721c2 kfun:kotlin.native.internal.test.TopLevelSuite.TestCase#run(){} + 354
+      at 11  localTest.kexe                      0x0000000107a6f055 kfun:kotlin.native.internal.test.TestRunner.run#internal + 1029
+      at 12  localTest.kexe                      0x0000000107a6f81b kfun:kotlin.native.internal.test.TestRunner.runIteration#internal + 1227
+      at 13  localTest.kexe                      0x0000000107a6fbf9 kfun:kotlin.native.internal.test.TestRunner#run(){}kotlin.Int + 361
+      at 14  localTest.kexe                      0x0000000107a6ab88 kfun:kotlin.native.internal.test#testLauncherEntryPoint(kotlin.Array<kotlin.String>){}kotlin.Int + 152
+      at 15  localTest.kexe                      0x0000000107a6aae1 kfun:kotlin.native.internal.test#main(kotlin.Array<kotlin.String>){} + 17
+      at 16  localTest.kexe                      0x0000000107a6abff Konan_start + 47
+      at 17  localTest.kexe                      0x0000000107bbeff4 Konan_run_start + 68
+      at 18  localTest.kexe                      0x0000000107bbef8b Konan_main + 27
+      at 19  libdyld.dylib                       0x00007fff6ed17cc9 start + 1
+      at 20  ???                                 0x0000000000000003 0x0 + 3
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+10: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker6'.
+> Test failed. Expected output: Got 42
+  OK
+  , actual output: Got 42
+  OK
+  Uncaught Kotlin exception: kotlin.AssertionError: Expected an exception of kotlin.native.IncorrectDereferenceException to be thrown, but was completed successfully.
+      at 0   localTest.kexe                      0x00000001076fca57 kfun:kotlin.Throwable#<init>(kotlin.String?){} + 23
+      at 1   localTest.kexe                      0x00000001076fa575 kfun:kotlin.Error#<init>(kotlin.String?){} + 21
+      at 2   localTest.kexe                      0x00000001076fa7e0 kfun:kotlin.AssertionError#<init>(kotlin.Any?){} + 96
+      at 3   localTest.kexe                      0x00000001076f09a6 kfun:kotlin.test.DefaultAsserter#fail(kotlin.String?){}kotlin.Nothing + 118
+      at 4   localTest.kexe                      0x000000010772aa20 kfun:kotlin.test#checkResultIsFailure(kotlin.reflect.KClass<0:0>;kotlin.String?;kotlin.Result<kotlin.Unit>){0§<kotlin.Throwable>}0:0 + 944
+      at 5   localTest.kexe                      0x000000010783f933 kfun:runtime.workers.worker6.runTest2$<anonymous>_3#internal + 259
+      at 6   localTest.kexe                      0x000000010783fb21 kfun:runtime.workers.worker6.$runTest2$<anonymous>_3$FUNCTION_REFERENCE$711.invoke#internal + 17
+      at 7   localTest.kexe                      0x000000010783fb47 kfun:runtime.workers.worker6.$runTest2$<anonymous>_3$FUNCTION_REFERENCE$711.$<bridge-UNN>invoke(){}#internal + 23
+      at 8   localTest.kexe                      0x0000000107711b9f WorkerLaunchpad + 79
+      at 9   localTest.kexe                      0x0000000107888510 _ZN6Worker19processQueueElementEb + 896
+      at 10  localTest.kexe                      0x000000010788817d _ZN12_GLOBAL__N_113workerRoutineEPv + 45
+      at 11  libsystem_pthread.dylib             0x00007fff6ef1c109 _pthread_start + 148
+      at 12  libsystem_pthread.dylib             0x00007fff6ef17b8b thread_start + 15
+
 
 * Try:
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
@@ -144,6 +194,8 @@ Deprecated Gradle features were used in this build, making it incompatible with 
 Use '--warning-mode all' to show the individual deprecation warnings.
 See https://docs.gradle.org/6.6.1/userguide/command_line_interface.html#sec:command_line_warnings
 
-BUILD FAILED in 4h 25m 49s
-1302 actionable tasks: 792 executed, 510 up-to-date
+BUILD FAILED in 39m 11s
+1295 actionable tasks: 746 executed, 549 up-to-date
 zeedh@zee-david kotlin-native % 
+
+

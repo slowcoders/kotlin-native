@@ -4332,7 +4332,7 @@ if (isAppleTarget(project)) {
 
 /**
  * Creates tasks to build and execute Harmony regex tests with GTEST logger.
- */
+ *
 KotlinNativeTestKt.createTest(project, 'harmonyRegexTest', KonanGTest) { task ->
     task.enabled = (project.testTarget != 'wasm32') // Uses exceptions.
     task.useFilter = false

@@ -1,8 +1,3 @@
-/*
- * Copyright 2010-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
- * that can be found in the LICENSE file.
- */
-
 package runtime.workers.worker6
 
 import kotlin.test.*
@@ -30,9 +25,15 @@ val int2 = 77
         executeAfter(0, {
             assertFailsWith<IncorrectDereferenceException> {
                 int1++
+                println("This line should not be printed.")
             }
             assertEquals(2, int1)
             assertEquals(77, int2)
         }.freeze())
     }
+}
+
+fun testWorker6() {
+   runTest1();
+   runTest2();
 }

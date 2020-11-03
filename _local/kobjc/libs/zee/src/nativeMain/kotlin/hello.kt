@@ -35,69 +35,14 @@ import illegal_sharing.*;
 import runtime.basic.initializers6.*;
 import test.utils.*
 import kotlin.*
+import runtime.workers.worker6.*;
 
 interface Interface {
     fun iMember(clazz: Interface) : Interface { return clazz; }
     fun test2(ifc: Interface?) : Interface? { return null; }
 }
-
-
 fun Any?.asAny(): Any? = this
 
-@Suppress("CONFLICTING_OVERLOADS")
-class MutablePairImpl(first: Int, second: Int) : NSObject(), MutablePairProtocol {
-    private var elements = intArrayOf(first, second)
-
-    override fun first() = elements.first()
-    override fun second() = elements.last()
-
-    override fun update(index: Int, add: Int) {
-        elements[index] += add
-    }
-
-    override fun update(index: Int, sub: Int) {
-        elements[index] -= sub
-    }
-
-    constructor() : this(123, 321)
-}
-
-
-fun runArray0Test() {
-    // Create instances of all array types.
-    val byteArray = ByteArray(5)
-    println(byteArray.size.toString())
-
-    val charArray = CharArray(6)
-    println(charArray.size.toString())
-
-    val shortArray = ShortArray(7)
-    println(shortArray.size.toString())
-
-    val intArray = IntArray(8)
-    println(intArray.size.toString())
-
-    val longArray = LongArray(9)
-    println(longArray.size.toString())
-
-    val floatArray = FloatArray(10)
-    println(floatArray.size.toString())
-
-    val doubleArray = FloatArray(11)
-    println(doubleArray.size.toString())
-
-    val booleanArray = BooleanArray(12)
-    println(booleanArray.size.toString())
-
-    val stringArray = Array<String>(13, { i -> ""})
-    println(stringArray.size.toString())
-}
-
-fun testTypes() : MutablePairProtocol {
-val v = MutablePairImpl(1, 2).asAny();
-val v2 = v  as MutablePairProtocol;
-return v;
-}
 
 var t1 = kotlin.system.getTimeMillis();
 fun printTime(test:String) {
@@ -111,6 +56,11 @@ fun printTime(test:String) {
 fun test(str: String) {
     try {
 printTime("start")
+
+
+testWorker6();
+printTime("testWorker6")
+
 
 val test_gc_bug_in_worker_thread = true;
 if (test_gc_bug_in_worker_thread) {
@@ -135,7 +85,6 @@ printTime("testInitializer6")
 runFreezeStressTest();
 printTime("runFreezeStressTest")
 
-runArray0Test()
 runWeakTest1()
 runWeakTest2()
 printTime("runWeakTest1,2")
@@ -178,9 +127,6 @@ printTime("runPattern2Test")
 
 testObjCSmoke();
 printTime("testObjCSmoke")
-
-testTypes();
-printTime("testTypes")
 
 
 runHashSet0Test();

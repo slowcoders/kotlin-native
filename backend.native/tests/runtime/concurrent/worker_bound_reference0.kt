@@ -43,10 +43,8 @@ fun testGlobalDenyAccessOnWorker() {
     val worker = Worker.start()
     val future = worker.execute(TransferMode.SAFE, {}) {
         val local = global2
-        if (Platform.memoryModel == MemoryModel.STRICT) { // @zee ++
-            assertFailsWith<IncorrectDereferenceException> {
-                local.value
-            }
+        assertFailsWith<IncorrectDereferenceException> {
+            local.value
         }
         assertEquals(null, local.valueOrNull)
         Unit
@@ -197,10 +195,8 @@ fun testLocalDenyAccessOnWorkerFrozen() {
 
     val worker = Worker.start()
     val future = worker.execute(TransferMode.SAFE, { local }) { local ->
-        if (Platform.memoryModel == MemoryModel.STRICT) { // @zee ++
-            assertFailsWith<IncorrectDereferenceException> {
-                local.value
-            }
+        assertFailsWith<IncorrectDereferenceException> {
+            local.value
         }
         assertEquals(null, local.valueOrNull)
         Unit
@@ -288,10 +284,8 @@ fun testLocalDenyAccessOnMainThreadFrozen() {
     }
 
     val value = future.result
-    if (Platform.memoryModel == MemoryModel.STRICT) { // @zee ++
-        assertFailsWith<IncorrectDereferenceException> {
-            value.value
-        }
+    assertFailsWith<IncorrectDereferenceException> {
+        value.value
     }
     assertEquals(null, value.valueOrNull)
 
@@ -729,10 +723,8 @@ fun concurrentAccessFrozen() {
             while (workerUnlocker.value < 1) {
             }
 
-            if (Platform.memoryModel == MemoryModel.STRICT) { // @zee ++
-                assertFailsWith<IncorrectDereferenceException> {
-                    ref.value
-                }
+            assertFailsWith<IncorrectDereferenceException> {
+                ref.value
             }
             Unit
         }
@@ -759,10 +751,8 @@ fun testExceptionMessageFrozen() {
     val ownerName = worker.name
     val messagePattern = Regex("illegal attempt to access non-shared runtime\\.concurrent\\.worker_bound_reference0\\.A@[a-f0-9]+ bound to `$ownerName` from `${Worker.current.name}`")
 
-    if (Platform.memoryModel == MemoryModel.STRICT) { // @zee ++
-        val exception = assertFailsWith<IncorrectDereferenceException> {
-            value.value
-        }
+    val exception = assertFailsWith<IncorrectDereferenceException> {
+        value.value
     }
     assertTrue(messagePattern matches exception.message!!)
 

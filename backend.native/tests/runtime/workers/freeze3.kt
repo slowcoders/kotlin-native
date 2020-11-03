@@ -22,15 +22,10 @@ val topLevelInline: ULong = 0xc3a5c85c97cb3127U
 
 @Test fun runTest1() {
     assertEquals(1, AnObject.x)
-    if (Platform.memoryModel == MemoryModel.STRICT) {
-        assertFailsWith<InvalidMutabilityException> {
-            AnObject.x++
-        }
-        assertEquals(1, AnObject.x)
-    } else {
+    assertFailsWith<InvalidMutabilityException> {
         AnObject.x++
-        assertEquals(2, AnObject.x)
     }
+    assertEquals(1, AnObject.x)
 
     Mutable.x++
     assertEquals(3, Mutable.x)
