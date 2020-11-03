@@ -66,6 +66,25 @@ static const int TRACE_REQUESTED = OUT_OF_SCOPE;
 
 static const int RTGC_TRACE_STATE_MASK = NOT_TRACED | IN_TRACING | TRACE_FINISHED | OUT_OF_SCOPE;
 
+const static int CNT_CYCLIC_NODE = 1000*1000;
+const static int CNT_REF_CHAIN = 1000*1000;
+
+
+struct RTGCGlobal {
+  static int g_cntAddRefChain;
+  static int g_cntRemoveRefChain;
+  static int g_cntAddCyclicNode;
+  static int g_cntRemoveCyclicNode;
+  static int g_cntAddCyclicTest;
+  static int g_cntRemoveCyclicTest;
+
+  static void validateMemPool();
+
+  static void init(struct RTGCMemState* state);
+};
+
+
+
 struct GCRefChain {
   friend struct GCRefList;
   friend class CyclicNodeDetector;

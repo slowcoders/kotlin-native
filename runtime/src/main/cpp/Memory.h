@@ -260,6 +260,7 @@ public:
   }
 
   void markNeedCyclicTest() {
+    if (RTGC_STATISTCS && !isNeedCyclicTest()) RTGCGlobal::g_cntAddCyclicTest ++;
     this->rtNode.flags_ |= NEED_CYCLIC_TEST;
   }
 
@@ -268,6 +269,7 @@ public:
   }
 
   void clearNeedCyclicTest() {
+    if (RTGC_STATISTCS && isNeedCyclicTest()) RTGCGlobal::g_cntRemoveCyclicTest ++;
     this->rtNode.flags_ &= ~NEED_CYCLIC_TEST;
   }
 

@@ -76,7 +76,6 @@ void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
     RTGC_LOG("addCyclicTest %p\n", obj);
     obj->markNeedCyclicTest();
     obj->getNode()->markSuspectedCyclic();
-    if (RTGC_STATISTCS) RTGCGlobal::g_cntAddCyclicTest ++;
 
     rtgcMem->g_cyclicTestNodes.push(obj);
 }
@@ -85,7 +84,6 @@ void CyclicNode::removeCyclicTest(RTGCMemState* rtgcMem, GCObject* obj) {
     //RuntimeAssert(isLocked(), "GCNode is not locked")
     if (!obj->isNeedCyclicTest()) return;
     obj->clearNeedCyclicTest();
-    if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveCyclicTest ++;
 
     RTGC_LOG("## RTGC Remove Cyclic Test %p:%d\n", obj, obj->getNodeId());
     /* TODO ZZZZ replace tryRemove => remove */
@@ -278,18 +276,16 @@ void CyclicNodeDetector::checkCyclic(GCRefList* cyclicTestNodes) {
         this->checkCyclic(root);
     }
     RTGC_LOG("## RTGC 2\n");
-    if (DELAY_NODE_DESTROY) {
-        for (GCObject* obj_; (obj_ = finishedList.pop()) != NULL;) {
-            CyclicNode* cyclic = obj_->getLocalCyclicNode();
-            if ((cyclic != NULL) && cyclic->isGarbage()) {
-                RTGC_LOG("## RTGC Garbage Cycle detected in tracing %d/%d :%p\n", obj_->getNodeId(), cyclic->getId(), obj_);
-                ::freeContainer(obj_, cyclic->getId());
-                cyclic->dealloc();
-            }
-            else {
-                obj_->getNode()->setTraceState(NOT_TRACED);
-                //RTGC_LOG("## RTGC Cycle detected:%d rrc:%d %d\n", cyclic->getId(), cyclic->getRootObjectCount(), cyclic->externalReferrers.topChain() == 0 ? 0 : 1);
-            }
+    for (GCObject* obj_; (obj_ = finishedList.pop()) != NULL;) {
+        CyclicNode* cyclic = obj_->getLocalCyclicNode();
+        if ((cyclic != NULL) && cyclic->isGarbage()) {
+            RTGC_LOG("## RTGC Garbage Cycle detected in tracing %d/%d :%p\n", obj_->getNodeId(), cyclic->getId(), obj_);
+            ::freeContainer(obj_, cyclic->getId());
+            cyclic->dealloc();
+        }
+        else {
+            obj_->getNode()->setTraceState(NOT_TRACED);
+            //RTGC_LOG("## RTGC Cycle detected:%d rrc:%d %d\n", cyclic->getId(), cyclic->getRootObjectCount(), cyclic->externalReferrers.topChain() == 0 ? 0 : 1);
         }
     }
 
@@ -342,33 +338,9 @@ void CyclicNodeDetector::checkCyclic(GCObject* root) {
         tracingList.clear();
     }
 
-    if (!DELAY_NODE_DESTROY) {
-        for (GCObject* obj_ = root; obj_ != NULL; obj_ = finishedList.pop()) {
-            CyclicNode* cyclic = obj_->getLocalCyclicNode();
-            if ((cyclic != NULL) && cyclic->isGarbage()) {
-                RTGC_LOG("## RTGC Garbage Cycle detected in tracing %d/%d :%p\n", obj_->getNodeId(), cyclic->getId(), obj_);
-                ::freeContainer(obj_, cyclic->getId());
-                cyclic->dealloc();
-            }
-            else {
-                obj_->getNode()->setTraceState(NOT_TRACED);
-            }
-        }
-    }
-    else {
-        RuntimeAssert(root->getNode()->getTraceState() != TRACE_FINISHED, "Root trace finished");
-        root->getNode()->setTraceState(TRACE_FINISHED);
-        finishedList.push(root);
-        // for (GCObject* obj_ = root; obj_ != NULL; obj_ = finishedList.pop()) {
-        //     RuntimeAssert(obj_->getNode()->getTraceState() == TRACE_FINISHED, "Not trace finished");
-        // }
-        // CyclicNode* cyclic = root->getLocalCyclicNode();
-        // if ((cyclic != NULL) && cyclic->isGarbage()) {
-        //     RTGC_LOG("## RTGC Garbage Cycle detected in tracing %d/%d :%p\n", root->getNodeId(), cyclic->getId(), root);
-        //     ::freeContainer(root, cyclic->getId());
-        //     cyclic->dealloc();
-        // }
-    }
+    RuntimeAssert(root->getNode()->getTraceState() != TRACE_FINISHED, "Root trace finished");
+    root->getNode()->setTraceState(TRACE_FINISHED);
+    finishedList.push(root);
 }
 
 void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
