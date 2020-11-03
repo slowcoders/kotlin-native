@@ -422,7 +422,7 @@ void CyclicNodeDetector::checkCyclic(GCObject* root) {
         return;
     }
 
-    if (true) {
+    if (false) {
         root->getNode()->setTraceState(TRACE_REQUESTED);
         tracingList.push(root);
         detectCyclicNodes2();        

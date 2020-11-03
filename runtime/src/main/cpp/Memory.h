@@ -270,6 +270,7 @@ public:
 
   void markDestroyed() {
     this->rtNode.flags_ |= CONTAINER_TAG_NOT_FREEABLE;
+    this->rtNode.flags_ &= ~(CONTAINER_TAG_FROZEN | CONTAINER_TAG_SHARED);
   }
 
   bool isGarbage() {

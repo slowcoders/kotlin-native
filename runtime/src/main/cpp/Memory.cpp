@@ -1292,9 +1292,8 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
           ObjHeader* old = *location;
           if (old == nullptr) return;
           ContainerHeader* deassigned = old->container();
-          RTGC_LOG("--- cleaning fields start %p IN %p\n", old, owner->container());
+          RTGC_LOG("--- cleaning fields start %p(%p) IN %p(%d)\n", deassigned, old, owner->container(), garbageNodeId);
           if (isFreeable(deassigned)) {
-            RTGC_LOG("--- cleaning fields %p in %p(%d)\n", deassigned, owner->container(), garbageNodeId);
             //*location = NULL;
             if (garbageNodeId != 0) {
               if (deassigned->getNodeId() == garbageNodeId) {
