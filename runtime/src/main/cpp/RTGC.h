@@ -13,8 +13,8 @@
 
 #define RTGC                true
 #define RTGC_LATE_DESTORY   false
-#define ENABLE_RTGC_LOG     true
-#define RTGC_NO_INLINE      NO_INLINE
+#define ENABLE_RTGC_LOG     false
+#define RTGC_NO_INLINE      //NO_INLINE
 #define DEBUG_RTGC_BUCKET   false
 static const bool RTGC_STATISTCS = true;
 
