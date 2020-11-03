@@ -18,8 +18,7 @@
 
 
 extern THREAD_LOCAL_VARIABLE RTGCMemState* rtgcMem;
-static const bool OPT_TRACING = false;
-static const bool DELAY_NODE_DESTROY = false;
+static const bool DELAY_NODE_DESTROY = true;
 
 class CyclicNodeDetector {
     GCRefList tracingList;
@@ -138,7 +137,7 @@ void CyclicNodeDetector::addCyclicObject(
     // RTGC_LOG("## RTGC merge external referrers done: %p\n", oldNode->externalReferrers.topChain());
     targetNode->externalReferrers.tryRemove(rookie, false);
     if (DELAY_NODE_DESTROY) {
-        destroyedNodes.push_front((char*)oldNode + (rookieInCyclic ? 1 : 0));
+        destroyedNodes.push_back((char*)oldNode + (rookieInCyclic ? 1 : 0));
     }
 
     RTGC_LOG("## RTGC add cyclic obj done: %p\n", this_id);
@@ -276,6 +275,23 @@ void CyclicNodeDetector::checkCyclic(GCRefList* cyclicTestNodes) {
         this->checkCyclic(root);
     }
     RTGC_LOG("## RTGC 2\n");
+    while (DELAY_NODE_DESTROY && !destroyedNodes.empty()) {
+        /**
+         * 주의) Cyclic Garbage 처리 전에, destroyedNode 를 처리해야 한다.
+         * OnewayNode 는 실제로 GCObject의 일부이므로,
+         * Cyclic Garbage 삭제시 OnewayNode 가 함께 삭제되는 문제가 발생한다.
+         */
+        char* node = destroyedNodes.back();
+        destroyedNodes.pop_back();
+        if (((int64_t)node & 1) == 0) {
+            ((OnewayNode*)node)->dealloc();
+        }
+        else {
+            node -= 1;
+            ((CyclicNode*)node)->dealloc();
+        }
+    }
+
     for (GCObject* obj_; (obj_ = finishedList.pop()) != NULL;) {
         CyclicNode* cyclic = obj_->getLocalCyclicNode();
         if ((cyclic != NULL) && cyclic->isGarbage()) {
@@ -291,19 +307,6 @@ void CyclicNodeDetector::checkCyclic(GCRefList* cyclicTestNodes) {
 
     GCNode::rtgcUnlock();
 
-    if (DELAY_NODE_DESTROY) {
-        while (!destroyedNodes.empty()) {
-            char* node = destroyedNodes.front();
-            destroyedNodes.pop_front();
-            if (((int64_t)node & 1) == 0) {
-                ((OnewayNode*)node)->dealloc();
-            }
-            else {
-                node -= 1;
-                ((CyclicNode*)node)->dealloc();
-            }
-        }
-    }
 }
 
 void CyclicNodeDetector::checkCyclic(GCObject* root) {
@@ -347,6 +350,7 @@ void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
 
     GCNode* current_node = markInTracing(tracingObj);
     int last_node_id =  tracingObj->getNodeId();
+    const bool OPT_TRACING = false;
 
 
     RTGC_LOG("## RTGC tracingList add: %p=%p\n", tracingList.topChain(), tracingObj);
