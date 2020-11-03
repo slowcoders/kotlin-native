@@ -485,7 +485,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     }
 
     fun checkMainThread(exceptionHandler: ExceptionHandler) {
-        if (context.memoryModel == MemoryModel.STRICT)
+        if (RTGC || context.memoryModel == MemoryModel.STRICT)
             call(context.llvm.checkMainThread, emptyList(), Lifetime.IRRELEVANT, exceptionHandler)
     }
 
