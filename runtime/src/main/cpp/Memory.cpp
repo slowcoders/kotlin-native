@@ -2756,7 +2756,12 @@ OBJ_GETTER(initInstance,
 #endif
 }
 
-void runFreezeHooksRecursive(ObjHeader* root);
+#if RTGC
+  KRef runFreezeHooksRecursive(ObjHeader* root, KStdUnorderedSet<KRef>& newlyFrozen);
+#else
+  void runFreezeHooksRecursive(ObjHeader* root);
+#endif
+
 void sharePermanentSubgraph(ObjHeader* obj);
 
 template <bool Strict>
@@ -2829,7 +2834,8 @@ OBJ_GETTER(initSharedInstance,
           garbageCollect();
         }
         if (!isPermanentOrFrozen(object->container())) {
-          runFreezeHooksRecursive(object);
+          KStdUnorderedSet<KRef> newlyFrozen;
+          runFreezeHooksRecursive(object, newlyFrozen);
         }
         sharePermanentSubgraph(object);
       }
@@ -3275,12 +3281,12 @@ void freezeAcyclic(ContainerHeader* rootContainer, ContainerHeaderSet* newlyFroz
     current->resetBuffered();
 #if !RTGC
     current->setColorUnlessGreen(CONTAINER_TAG_GC_BLACK);
-#endif
     // Note, that once object is frozen, it could be concurrently accessed, so
     // color and similar attributes shall not be used.
     if (!current->frozen())
       newlyFrozen->insert(current);
     MEMORY_LOG("freezing acyclic %p\n", current)
+#endif
     current->freezeRef();
     current->makeShared();
     traverseContainerReferredObjects(current, [&queue](ObjHeader* obj) {
@@ -3388,18 +3394,28 @@ void runFreezeHooks(ObjHeader* obj) {
   }
 }
 
+#ifdef RTGC
+KRef runFreezeHooksRecursive(ObjHeader* root, KStdUnorderedSet<KRef>& seen) {
+#else
 void runFreezeHooksRecursive(ObjHeader* root) {
   KStdUnorderedSet<KRef> seen;
+#endif
   KStdVector<KRef> toVisit;
   seen.insert(root);
   toVisit.push_back(root);
   while (!toVisit.empty()) {
     KRef obj = toVisit.back();
     toVisit.pop_back();
+    if (RTGC && obj->has_meta_object() && (obj->meta_object()->flags_ & MF_NEVER_FROZEN) != 0) {
+      return obj;
+    }
 
     runFreezeHooks(obj);
 
     traverseReferredObjects(obj, [&seen, &toVisit](ObjHeader* field) {
+      /**
+       * runFreezeHooks() 수행 도중 side-effect 방지를 위해 mark() 대신에 seen set 를 이용(?!?)
+       */
       auto wasNotSeenYet = seen.insert(field).second;
       // Only iterating on unseen objects which containers will get frozen by freezeCyclic or freezeAcyclic.
       if (wasNotSeenYet && canFreeze(field->container())) {
@@ -3407,6 +3423,7 @@ void runFreezeHooksRecursive(ObjHeader* root) {
       }
     });
   }
+  return nullptr;
 }
 
 /**
@@ -3437,7 +3454,10 @@ void freezeSubgraph(ObjHeader* root) {
   // First check that passed object graph has no cycles.
   // If there are cycles - run graph condensation on cyclic graphs using Kosoraju-Sharir.
   ContainerHeader* rootContainer = root->container();
-  if (isPermanentOrFrozen(rootContainer)) return;
+  if (isPermanentOrFrozen(rootContainer)) {
+    shareAny(root);
+    return;
+  }
 
   if (RTGC) {
     garbageCollect();
@@ -3447,9 +3467,12 @@ void freezeSubgraph(ObjHeader* root) {
 
   // Note: Actual freezing can fail, but these hooks won't be undone, and moreover
   // these hooks will run again on a repeated freezing attempt.
-  runFreezeHooksRecursive(root);
 
-  MEMORY_LOG("Freeze subgraph of %p\n", root)
+#if RTGC
+  KStdUnorderedSet<KRef> newlyFrozen;
+  KRef firstBlocker = runFreezeHooksRecursive(root, newlyFrozen);
+#else
+  runFreezeHooksRecursive(root);
 
   #if USE_GC && !RTGC
     auto state = memoryState;
@@ -3463,18 +3486,26 @@ void freezeSubgraph(ObjHeader* root) {
     root : nullptr;
   KStdVector<ContainerHeader*> order;
   depthFirstTraversal(rootContainer, &hasCycles, &firstBlocker, &order);
+#endif
+  MEMORY_LOG("Freeze subgraph of %p\n", root)
   if (firstBlocker != nullptr) {
     MEMORY_LOG("See freeze blocker for %p: %p\n", root, firstBlocker)
     ThrowFreezingException(root, firstBlocker);
   }
-  ContainerHeaderSet newlyFrozen;
   // Now unmark all marked objects, and freeze them, if no cycles detected.
-  if (!RTGC && hasCycles) {
+#if RTGC
+  for (auto* e: newlyFrozen) {
+    e->container()->freezeRef();
+    e->container()->makeShared();
+  }
+#else  
+  ContainerHeaderSet newlyFrozen;
+  if (hasCycles) {
     freezeCyclic(root, order, &newlyFrozen);
-  } else {
-    if (hasCycles) { MEMORY_LOG("freezeCycle ignored in RTGC mode."); }
+  } else  {
     freezeAcyclic(rootContainer, &newlyFrozen);
   }
+#endif  
   MEMORY_LOG("Graph of %p is %s with %d elements\n", root, hasCycles ? "cyclic" : "acyclic", newlyFrozen.size())
 
 #if USE_GC && !RTGC
