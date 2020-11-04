@@ -415,7 +415,6 @@ func testCharExtensions() throws {
 }
 
 func testLambda() throws {
-    ValuesKt.print("testLambda ====")
     try assertEquals(actual: ValuesKt.sumLambda(3, 4), expected: 7)
 
     var blockRuns = 0
@@ -487,7 +486,6 @@ func testInterfaceExtension() throws {
 }
 
 func testClassInstances() throws {
-    ValuesKt.print("22 ====")
     try assertEquals(actual: OpenClassI().iFun(), expected: "OpenClassI::iFun")
     try assertEquals(actual: DefaultInterfaceExt().iFun(), expected: "I::iFun")
     try assertEquals(actual: FinalClassExtOpen().iFun(), expected: "FinalClassExtOpen::iFun")
@@ -495,20 +493,16 @@ func testClassInstances() throws {
     try assertEquals(actual: MultiExtClass().piFun() as! Int, expected: 42)
     try assertEquals(actual: ConstrClass(i: 1, s: "str", a: "Any").iFun(), expected: "OpenClassI::iFun")
     try assertEquals(actual: ExtConstrClass(i: 123).iFun(), expected: "ExtConstrClass::iFun::123-String-AnyS")
-    ValuesKt.print("22 // ====")
 }
 
 func testEnum() throws {
-    ValuesKt.print("22-1 ====")
     try assertEquals(actual: ValuesKt.passEnum(), expected: Enumeration.answer)
     try assertEquals(actual: ValuesKt.passEnum().enumValue, expected: 42)
     try assertEquals(actual: ValuesKt.passEnum().name, expected: "ANSWER")
     ValuesKt.receiveEnum(e: 1)
-    ValuesKt.print("22-1 //====")
 }
 
 func testDataClass() throws {
-    ValuesKt.print("23 ====")
     let f = "1"
     let s = "2"
     let t = "3"
@@ -533,7 +527,6 @@ func testDataClass() throws {
 }
 
 func testCompanionObj() throws {
-    ValuesKt.print("24 ====")
     try assertEquals(actual: WithCompanionAndObject.Companion().str, expected: "String")
     try assertEquals(actual: ValuesKt.getCompanionObject().str, expected: "String")
 
@@ -545,7 +538,6 @@ func testCompanionObj() throws {
 }
 
 func testInlineClasses() throws {
-    ValuesKt.print("25 ====")
     let ic1: Int32 = 42
     let ic1N = ValuesKt.box(ic1: 17)
     let ic2 = "foo"
@@ -580,7 +572,6 @@ class TestSharedIImpl : NSObject, I {
 }
 
 func testShared() throws {
-    ValuesKt.print("25 ====")
     func assertFrozen(_ obj: AnyObject) throws {
         try assertTrue(ValuesKt.isFrozen(obj: obj), "isFrozen(\(obj))")
     }
@@ -608,7 +599,6 @@ class PureSwiftKotlinInterfaceImpl : I {
 }
 
 func testPureSwiftClasses() throws {
-    ValuesKt.print("27 ====")
     let pureSwiftClass = PureSwiftClass()
     try assertTrue(ValuesKt.same(pureSwiftClass) as? AnyObject === pureSwiftClass)
 
@@ -617,7 +607,6 @@ func testPureSwiftClasses() throws {
 }
 
 func testNames() throws {
-    ValuesKt.print("28 ====")
     try assertEquals(actual: ValuesKt.PROPERTY_NAME_MUST_NOT_BE_ALTERED_BY_SWIFT, expected: 111)
     try assertEquals(actual: Deeply.NestedType().thirtyTwo, expected: 32)
     try assertEquals(actual: WithGenericDeeplyNestedType<AnyObject>().thirtyThree, expected: 33)
@@ -633,7 +622,6 @@ class Base123 : Base23, ExtendedBase1 {
 }
 
 func testSwiftOverride() throws {
-    ValuesKt.print("29 ====")
     let impl = Base123()
     try assertEquals(actual: ValuesKt.call(base1: impl, value: 1), expected: 1)
     try assertEquals(actual: ValuesKt.call(extendedBase1: impl, value: 2), expected: 2)
@@ -649,7 +637,6 @@ class TransformIntToLongCallingSuper : TransformIntToLong {
 }
 
 func testKotlinOverride() throws {
-    ValuesKt.print("30 ====")
     try assertEquals(actual: TransformInheritingDefault<NSNumber>().map(value: 1) as! Int32, expected: 1)
     try assertEquals(actual: TransformIntToDecimalString().map(value: 2), expected: "2")
     try assertEquals(actual: TransformIntToDecimalString().map(intValue: 3), expected: "3")
@@ -659,7 +646,6 @@ func testKotlinOverride() throws {
 
 // See https://github.com/JetBrains/kotlin-native/issues/2945
 func testGH2945() throws {
-    ValuesKt.print("31 ====")
     let gh2945 = GH2945(errno: 1)
     try assertEquals(actual: 1, expected: gh2945.errno)
     gh2945.errno = 2
@@ -679,7 +665,6 @@ func testGH2959() throws {
 }
 
 func testKClass() throws {
-    ValuesKt.print("32 ====")
   let test = TestKClass()
 
   let testKClass = test.getKotlinClass(clazz: TestKClass.self)!
@@ -710,7 +695,6 @@ func testSR10177Workaround() throws {
 }
 
 func testClashes() throws {
-    ValuesKt.print("33 ====")
     let test = TestClashesImpl()
     let test1: TestClashes1 = test
     let test2: TestClashes2 = test
@@ -721,7 +705,6 @@ func testClashes() throws {
 }
 
 func testInvalidIdentifiers() throws {
-    ValuesKt.print("34 ====")
     let test = TestInvalidIdentifiers()
 
     try assertTrue(TestInvalidIdentifiers._Foo() is TestInvalidIdentifiers._Foo)
@@ -779,7 +762,6 @@ func testWeakRefs() throws {
 }
 
 func testWeakRefs0(frozen: Bool) throws {
-    ValuesKt.print("35 ====")
     func getObj(test: TestWeakRefs) -> AnyObject {
         return autoreleasepool { test.getObj() as AnyObject }
     }
@@ -856,7 +838,6 @@ func testWeakRefs0(frozen: Bool) throws {
     }
 
     func test4() throws {
-    ValuesKt.print("40 ====")
         class Holder {
             static weak var ref1: AnyObject? = nil
             static weak var ref2: AnyObject? = nil
@@ -874,7 +855,6 @@ func testWeakRefs0(frozen: Bool) throws {
         Holder.ref1 = nil
         Holder.ref2 = nil
 
-    ValuesKt.print("40-1 ====")
         var test = TestWeakRefs(frozen: frozen)
 
         autoreleasepool {
@@ -891,18 +871,15 @@ func testWeakRefs0(frozen: Bool) throws {
             Holder.ref2 = obj2
         }
 
-    ValuesKt.print("40-2 ====")
         try assertFalse(Holder.ref1 === nil)
         try assertFalse(Holder.ref2 === nil)
         try assertEquals(actual: Holder.deinitialized, expected: 0)
-    ValuesKt.print("40-3 ====")
 
         ValuesKt.gc()
 
         try assertTrue(Holder.ref1 === nil)
         try assertTrue(Holder.ref2 === nil)
         try assertEquals(actual: Holder.deinitialized, expected: 2)
-    ValuesKt.print("40-e ====")
     }
 
     try test1()

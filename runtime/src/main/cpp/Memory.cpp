@@ -461,16 +461,16 @@ class ForeignRefManager {
  public:
   static ForeignRefManager* create() {
     ForeignRefManager* result = konanConstructInstance<ForeignRefManager>();
-    result->addRef();
+    if (!RTGC) result->addRef();
     return result;
   }
 
   void addRef() {
-    atomicAdd(&refCount, 1);
+    if (!RTGC) atomicAdd(&refCount, 1);
   }
 
   void releaseRef() {
-    if (atomicAdd(&this->refCount, -1) == 0) {
+    if (!RTGC && atomicAdd(&this->refCount, -1) == 0) {
       // So the owning MemoryState has abandoned [this].
       // Leaving the queued work items would result in memory leak.
       // Luckily current thread has exclusive access to [this],
@@ -482,7 +482,7 @@ class ForeignRefManager {
   }
 
   bool tryReleaseRefOwned() {
-    if (atomicAdd(&this->refCount, -1) == 0) {
+    if (!RTGC && atomicAdd(&this->refCount, -1) == 0) {
       if (this->releaseList != nullptr) {
         // There are no more holders of [this] to process the enqueued work items in [releaseRef].
         // Revert the reference counter back and notify the caller to process and then retry:
@@ -518,7 +518,12 @@ class ForeignRefManager {
     }
 
     while (toProcess != nullptr) {
-      process(toProcess->obj);
+      if (RTGC) {
+        ReleaseRef(toProcess->obj);
+      }
+      else {
+        process(toProcess->obj);
+      }
       ListNode* next = toProcess->next;
       konanDestructInstance(toProcess);
       toProcess = next;
@@ -536,7 +541,7 @@ private:
   ListNode* volatile releaseList;
 
   void processAbandoned() {
-    if (this->releaseList != nullptr) {
+    if (!RTGC && this->releaseList != nullptr) {
       bool hadNoStateInitialized = (memoryState == nullptr);
 
       if (hadNoStateInitialized) {
@@ -1250,7 +1255,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
     return;
   }
 
-  RTGC_LOG("## RTGC free container %p(%d)\n", container, garbageNodeId);
+  RTGC_LOG("## RTGC free container %p(%d) %p\n", container, garbageNodeId, memoryState);
   bool isRoot = memoryState->gcInProgress ++ == 0;
   auto toRelease = memoryState->toRelease;
   runDeallocationHooks(container);
@@ -2156,7 +2161,11 @@ void garbageCollect(MemoryState* state, bool force) {
 #endif  // TRACE_GC
   state->allocSinceLastGc = 0;
 
-  if (!IsStrictMemoryModel) {
+  if (RTGC || !IsStrictMemoryModel) {
+    RTGC_LOG("garbageCollect %p::%p\n", state, memoryState);
+    state->foreignRefManager->processEnqueuedReleaseRefsWith([](ObjHeader* obj) {
+        ReleaseRef(obj);
+      });
     CyclicNode::detectCycles();
     // GCNode::dumpGCLog();    
     // In relaxed model we just process finalizer queue and be done with it.
@@ -2313,9 +2322,9 @@ bool isForeignRefAccessible(ObjHeader* object, ForeignRefManager* manager) {
 }
 
 void deinitForeignRef(ObjHeader* object, ForeignRefManager* manager) {
-  RTGC_LOG("deinitForeignRef %p\n", object->container());
+  RTGC_LOG("deinitForeignRef %p canAccess=%d\n", memoryState, (memoryState != nullptr && isForeignRefAccessible(object, manager)));
 
-  if (IsStrictMemoryModel) {
+  if (RTGC || IsStrictMemoryModel) {
     if (memoryState != nullptr && isForeignRefAccessible(object, manager)) {
       releaseRef<true>(object);
     } else {
@@ -2329,7 +2338,7 @@ void deinitForeignRef(ObjHeader* object, ForeignRefManager* manager) {
     manager->releaseRef();
   } else {
     releaseRef<false>(object);
-    RuntimeAssert(RTGC || manager == nullptr, "must be null");
+    RuntimeAssert(manager == nullptr, "must be null");
   }
 }
 
