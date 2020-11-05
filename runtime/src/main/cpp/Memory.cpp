@@ -3453,6 +3453,8 @@ void freezeSubgraph(ObjHeader* root) {
   if (root == nullptr) return;
   // First check that passed object graph has no cycles.
   // If there are cycles - run graph condensation on cyclic graphs using Kosoraju-Sharir.
+  MEMORY_LOG("freeze requested %p\n", root);
+
   ContainerHeader* rootContainer = root->container();
   if (isPermanentOrFrozen(rootContainer)) {
     shareAny(root);
@@ -3492,7 +3494,6 @@ void freezeSubgraph(ObjHeader* root) {
     MEMORY_LOG("See freeze blocker for %p: %p\n", root, firstBlocker)
     ThrowFreezingException(root, firstBlocker);
   }
-  // Now unmark all marked objects, and freeze them, if no cycles detected.
 #if RTGC
   for (auto* e: newlyFrozen) {
     e->container()->freezeRef();
@@ -3500,6 +3501,7 @@ void freezeSubgraph(ObjHeader* root) {
   }
 #else  
   ContainerHeaderSet newlyFrozen;
+  // Now unmark all marked objects, and freeze them, if no cycles detected.
   if (hasCycles) {
     freezeCyclic(root, order, &newlyFrozen);
   } else  {

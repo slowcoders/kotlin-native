@@ -263,9 +263,6 @@ void CyclicNode::detectCycles() {
         return;
     }
     detector.checkCyclic(&memState->g_cyclicTestNodes);
-
-    //GCNode::dumpGCLog();
-    RTGC_LOG("RefChain--: %d\n", RTGCGlobal::g_cntAddRefChain);
 }
 
 
