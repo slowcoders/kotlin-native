@@ -43,7 +43,8 @@ typedef enum {
   NEED_CYCLIC_TEST = 0x40,
 
   CONTAINER_TAG_STACK_OR_PERMANANT = CONTAINER_TAG_NOT_FREEABLE,//1 << 7, // Unused, Reserved
-
+  CONTAINER_TAG_FREEZING    = 0x80,
+  
   CONTAINER_TAG_GC_SEEN     = 0x100,
   // If indeed has more that one object.
   CONTAINER_TAG_GC_HAS_OBJECT_COUNT = 0x200,
@@ -117,6 +118,10 @@ public:
     return (rtNode.flags_ & CONTAINER_TAG_FROZEN) != 0;
   }
 
+  inline bool frozen_or_freezing() const {
+    return (rtNode.flags_ & (CONTAINER_TAG_FROZEN | CONTAINER_TAG_FREEZING)) != 0;
+  }
+
   inline void markAcyclic() {
     rtNode.flags_ |= CONTAINER_TAG_ACYCLIC;
   }
@@ -136,6 +141,7 @@ public:
   inline void freezeRef() {
     if (!frozen()) {
       RuntimeAssert(!isNeedCyclicTest(), "garbageCollect() must be executed before freezerRef()");
+      clearFreezing();
       rtNode.flags_ |= CONTAINER_TAG_FROZEN;
       if (!isAcyclic() && !isInCyclicNode()) {
         markAcyclic();
@@ -152,6 +158,14 @@ public:
 
   inline void makeShared() {
     rtNode.flags_ |= CONTAINER_TAG_SHARED;
+  }
+
+  inline void markFreezing() {
+    rtNode.flags_ |= CONTAINER_TAG_FREEZING;
+  }
+
+  inline void clearFreezing() {
+    rtNode.flags_ &= ~CONTAINER_TAG_FREEZING;
   }
 
   inline void makeSharedPermanent() {

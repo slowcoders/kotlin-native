@@ -347,10 +347,10 @@ void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj)
     const char* classname = (typeInfo != NULL && typeInfo->relativeName_ != NULL)
         ? CreateCStringFromString(typeInfo->relativeName_) : UNKNOWN;
     if (obj == NULL) {
-        printf("%s %s %p \n", msg, classname, obj);
+        konan::consolePrintf("%s %s %p \n", msg, classname, obj);
     }
     else {
-        printf("%s %s %p:%d rc=%p, flags=%x\n", 
+        konan::consolePrintf("%s %s %p:%d rc=%p, flags=%x\n", 
             msg, classname, obj, obj->getNodeId(), 
             (void*)obj->refCount(), obj->getFlags());
     }

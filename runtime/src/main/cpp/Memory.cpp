@@ -976,7 +976,7 @@ inline bool canFreeze(ContainerHeader* container) {
     return container != nullptr && !container->shared() && !container->frozen();
   else
     // In relaxed memory model we ignore permanent and frozen object when recursively freezing.
-    return container != nullptr && !container->frozen();
+    return container != nullptr && !container->frozen_or_freezing();
 }
 
 inline bool isFreezableAtomic(ObjHeader* obj) {
@@ -1050,7 +1050,7 @@ ContainerHeader* allocAggregatingFrozenContainer(KStdVector<ContainerHeader*>& c
 #if USE_GC
 void processFinalizerQueue(MemoryState* state) {
   // TODO: reuse elements of finalizer queue for new allocations.
-  RTGC_LOG("Processing FinalizerQ");
+  RTGC_LOG("Processing FinalizerQ\n");
   while (state->finalizerQueue != nullptr) {
     auto* container = state->finalizerQueue;
     if (false) {
@@ -1074,7 +1074,7 @@ void processFinalizerQueue(MemoryState* state) {
     atomicAdd(&allocCount, -1);
   }
   RuntimeAssert(state->finalizerQueueSize == 0, "Queue must be empty here");
-  RTGC_LOG("Processing FinalizerQ done");
+  RTGC_LOG("Processing FinalizerQ done\n");
 }
 
 
@@ -2756,18 +2756,14 @@ OBJ_GETTER(initInstance,
 #endif
 }
 
-#if RTGC
-  KRef runFreezeHooksRecursive(ObjHeader* root, KStdUnorderedSet<KRef>& newlyFrozen);
-#else
-  void runFreezeHooksRecursive(ObjHeader* root);
-#endif
+void runFreezeHooksRecursive(ObjHeader* root, KStdVector<KRef>* newlyFrozen);
 
 void sharePermanentSubgraph(ObjHeader* obj);
 
 template <bool Strict>
 OBJ_GETTER(initSharedInstance,
     ObjHeader** location, const TypeInfo* typeInfo, void (*ctor)(ObjHeader*)) {
-  //konan::consolePrintf("initSharedInstance %p %p", location, typeInfo);
+  RTGC_LOG("initSharedInstance %p %p", location, typeInfo);
 #if KONAN_NO_THREADS
   ObjHeader* value = *location;
   if (value != nullptr) {
@@ -2834,8 +2830,8 @@ OBJ_GETTER(initSharedInstance,
           garbageCollect();
         }
         if (!isPermanentOrFrozen(object->container())) {
-          KStdUnorderedSet<KRef> newlyFrozen;
-          runFreezeHooksRecursive(object, newlyFrozen);
+          KStdVector<KRef> newlyFrozen;
+          runFreezeHooksRecursive(object, &newlyFrozen);
         }
         sharePermanentSubgraph(object);
       }
@@ -3395,35 +3391,40 @@ void runFreezeHooks(ObjHeader* obj) {
 }
 
 #ifdef RTGC
-KRef runFreezeHooksRecursive(ObjHeader* root, KStdUnorderedSet<KRef>& seen) {
+void runFreezeHooksRecursive(ObjHeader* root, KStdVector<KRef>* toVisit) {
 #else
 void runFreezeHooksRecursive(ObjHeader* root) {
-  KStdUnorderedSet<KRef> seen;
+  KStdVector<KRef> seen;
 #endif
-  KStdVector<KRef> toVisit;
-  seen.insert(root);
-  toVisit.push_back(root);
-  while (!toVisit.empty()) {
-    KRef obj = toVisit.back();
-    toVisit.pop_back();
+  RTGC_LOG("runFreezeHooksRecursive %p\n", root);
+  toVisit->push_back(root);
+  for (size_t idx = 0; idx < toVisit->size(); idx ++) {
+    KRef obj = (*toVisit)[idx];
+    RTGC_LOG("runFreezeHooksRecursive 1 %p\n", obj);
     if (RTGC && obj->has_meta_object() && (obj->meta_object()->flags_ & MF_NEVER_FROZEN) != 0) {
-      return obj;
+      for (auto* o : *toVisit) {
+        o->container()->clearFreezing();
+      }
+      MEMORY_LOG("See freeze blocker for %p: %p\n", root, firstBlocker)
+      ThrowFreezingException(root, firstBlocker);
     }
 
+    RTGC_dumpRefInfo(obj->container());
+    //RTGC_LOG("runFreezeHooksRecursive runFreezeHooks 1 %p\n", obj);
     runFreezeHooks(obj);
+    RTGC_LOG("runFreezeHooksRecursive runFreezeHooks 2 %p\n", obj);
 
-    traverseReferredObjects(obj, [&seen, &toVisit](ObjHeader* field) {
+    traverseReferredObjects(obj, [toVisit](ObjHeader* field) {
       /**
        * runFreezeHooks() 수행 도중 side-effect 방지를 위해 mark() 대신에 seen set 를 이용(?!?)
        */
-      auto wasNotSeenYet = seen.insert(field).second;
-      // Only iterating on unseen objects which containers will get frozen by freezeCyclic or freezeAcyclic.
-      if (wasNotSeenYet && canFreeze(field->container())) {
-        toVisit.push_back(field);
+      RTGC_LOG("runFreezeHooks traverseReferredObjects %p\n", field);
+      if (canFreeze(field->container())) {
+        field->container()->markFreezing();
+        toVisit->push_back(field);
       }
     });
   }
-  return nullptr;
 }
 
 /**
@@ -3461,18 +3462,17 @@ void freezeSubgraph(ObjHeader* root) {
     return;
   }
 
-  if (RTGC) {
-    garbageCollect();
-  }
-
-  MEMORY_LOG("Run freeze hooks on subgraph of %p\n", root);
-
   // Note: Actual freezing can fail, but these hooks won't be undone, and moreover
   // these hooks will run again on a repeated freezing attempt.
 
 #if RTGC
-  KStdUnorderedSet<KRef> newlyFrozen;
-  KRef firstBlocker = runFreezeHooksRecursive(root, newlyFrozen);
+  garbageCollect();
+  KStdVector<KRef> newlyFrozen;
+  runFreezeHooksRecursive(root, &newlyFrozen);
+  for (auto* e: newlyFrozen) {
+    e->container()->freezeRef();
+    e->container()->makeShared();
+  }
 #else
   runFreezeHooksRecursive(root);
 
@@ -3488,18 +3488,11 @@ void freezeSubgraph(ObjHeader* root) {
     root : nullptr;
   KStdVector<ContainerHeader*> order;
   depthFirstTraversal(rootContainer, &hasCycles, &firstBlocker, &order);
-#endif
   MEMORY_LOG("Freeze subgraph of %p\n", root)
   if (firstBlocker != nullptr) {
     MEMORY_LOG("See freeze blocker for %p: %p\n", root, firstBlocker)
     ThrowFreezingException(root, firstBlocker);
   }
-#if RTGC
-  for (auto* e: newlyFrozen) {
-    e->container()->freezeRef();
-    e->container()->makeShared();
-  }
-#else  
   ContainerHeaderSet newlyFrozen;
   // Now unmark all marked objects, and freeze them, if no cycles detected.
   if (hasCycles) {
@@ -3507,10 +3500,9 @@ void freezeSubgraph(ObjHeader* root) {
   } else  {
     freezeAcyclic(rootContainer, &newlyFrozen);
   }
-#endif  
   MEMORY_LOG("Graph of %p is %s with %d elements\n", root, hasCycles ? "cyclic" : "acyclic", newlyFrozen.size())
 
-#if USE_GC && !RTGC
+#if USE_GC
   // Now remove frozen objects from the toFree list.
   // TODO: optimize it by keeping ignored (i.e. freshly frozen) objects in the set,
   // and use it when analyzing toFree during collection.
@@ -3521,6 +3513,7 @@ void freezeSubgraph(ObjHeader* root) {
     }
   }
 #endif
+#endif  
 }
 
 void ensureNeverFrozen(ObjHeader* object) {
