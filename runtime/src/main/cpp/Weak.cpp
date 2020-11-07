@@ -88,6 +88,7 @@ OBJ_GETTER(Konan_WeakReferenceCounter_get, ObjHeader* counter) {
 }
 
 void WeakReferenceCounterClear(ObjHeader* counter) {
+  RTGC_LOG("WeakReferenceCounterClear %p", counter);
   ObjHeader** referredAddress = &asWeakReferenceCounter(counter)->referred;
   // Note, that we don't do UpdateRef here, as reference is weak.
 #if KONAN_NO_THREADS
