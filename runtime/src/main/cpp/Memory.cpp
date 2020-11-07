@@ -2354,10 +2354,10 @@ void deinitForeignRef(ObjHeader* object, ForeignRefManager* manager) {
   if (RTGC || IsStrictMemoryModel) {
     if (memoryState != nullptr && (RTGC || isForeignRefAccessible(object, manager))) {
       if (RTGC) {
-        bool isLocalThread = manager == memoryState->foreignRefManager;
-        if (!isLocalThread) GCNode::rtgcLock(_IncrementRC);
+        //bool isLocalThread = manager == memoryState->foreignRefManager;
+        //if (!isLocalThread) GCNode::rtgcLock(_IncrementRC);
         releaseRef<false>(object);
-        if (!isLocalThread) GCNode::rtgcUnlock();
+        //if (!isLocalThread) GCNode::rtgcUnlock();
       }
       else {
         releaseRef<true>(object);

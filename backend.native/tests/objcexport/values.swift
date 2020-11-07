@@ -1012,14 +1012,14 @@ class TestSharedRefs {
                 objectVar = object
                 objectWeakVar = object
 
-        // ValuesKt.print("** 5")
+        ValuesKt.print("** 5")
                 try! assertTrue(objectWeakVar === object)
-        // ValuesKt.print("** 5-e")
+        ValuesKt.print("** 5-e")
             }
         }
 
-        ValuesKt.print("** 6-0")
         runInNewThread(initializeKotlinRuntime: releaseWithKotlinRuntime) {
+        ValuesKt.print("** 6-0")
             objectVar = nil
             collection = nil
             //ValuesKt.print("** 6-1")
