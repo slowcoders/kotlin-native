@@ -88,6 +88,7 @@ inline bool isValidRuntime() {
 volatile int aliveRuntimesCount = 0;
 
 RuntimeState* initRuntime() {
+  RTGC_LOG("initRuntime");
   SetKonanTerminateHandler();
   RuntimeState* result = konanConstructInstance<RuntimeState>();
   if (!result) return kInvalidRuntime;

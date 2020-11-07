@@ -289,11 +289,12 @@ void CyclicNodeDetector::checkCyclic(GCRefList* cyclicTestNodes) {
         }
     }
 
-    for (GCObject* obj_; (obj_ = finishedList.pop()) != NULL;) {
+    for (GCRefChain* chain = finishedList.topChain(); chain != NULL; chain = chain->next()) {
         /**
          * garbage cyclic node 를 삭제하는 동안 해당 노드에 연결된 다른 순환 참조 노드가 garbage 상태로 변경되어 삭제될 수 있다.
          * 이에 먼저 state 를 변경하고, garbage cyclic node 삭제작업을 실시한다.
          */
+        GCObject* obj_ = chain->obj();
         RTGC_LOG("## RTGC Reset TraceState obj:%p node:%p/%d\n", obj_, obj_->getNode(), obj_->getNodeId());
         obj_->getNode()->setTraceState(NOT_TRACED);
     }
@@ -411,7 +412,8 @@ void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
                 cyclicNode->setTraceState(IN_TRACING);
                 tracingList.setFirst(tracingChain);
                 cnt = 1;
-                RTGC_LOG("## rootObjCount of cyclic node: %d -> %d\n", cyclicNode->getId(), cyclicNode->getRootObjectCount());
+                RTGC_LOG("## rootObjCount of cyclic node: %d -> %d, topChain=%p\n", cyclicNode->getId(), 
+                    cyclicNode->getRootObjectCount(), cyclicNode->externalReferrers.topChain());
                 for (GCRefChain* c = cyclicNode->externalReferrers.topChain(); c != NULL; c = c->next()) {
                     RTGC_LOG("## External Referrer of cyclic node: %d, %d:%p\n", cyclicNode->getId(), ++cnt, c->obj());
                 }

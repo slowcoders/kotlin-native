@@ -54,7 +54,7 @@
 // http://researcher.watson.ibm.com/researcher/files/us-bacon/Bacon03Pure.pdf.
 #define USE_GC 1
 // Define to 1 to print all memory operations.
-#define TRACE_MEMORY 0
+#define TRACE_MEMORY 1
 // Define to 1 to print major GC events.
 #define TRACE_GC 0
 // Collect memory manager events statistics.
@@ -436,7 +436,7 @@ inline bool isPermanentOrFrozen(ContainerHeader* container) {
 }
 
 inline bool isShareable(ContainerHeader* container) {
-    return container == nullptr || container->shared();
+    return container == nullptr || container->shared() || container->frozen();
 }
 
 void shareAny(ObjHeader* obj);
@@ -1093,7 +1093,7 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderDeque* visited) {
 
     traverseContainerReferredObjects(container, [&toVisit](ObjHeader* ref) {
       auto* child = ref->container();
-      if (isShareable(child)) return;
+      if (tryMakeShareable(child)) return;
 
       if (child->isAcyclic()) {
         child->incMemberRefCount<false>(true);
@@ -1219,16 +1219,13 @@ void freeAggregatingFrozenContainer(ContainerHeader* container) {
 // so better be inlined.
 ALWAYS_INLINE void runDeallocationHooks(ContainerHeader* container) {
   ObjHeader* obj = reinterpret_cast<ObjHeader*>(container + 1);
-  // konan::consolePrintf("## runDeallocationHooks %p %x tag=0x%x objCount(%d)\n", container, *(int64_t*)obj, container->getFlags(), container->objectCount());
-  // if (*(int64_t*)obj < 16) {
-  //   rtgc_trap(obj);    
-  // }
 
   for (uint32_t index = 0; index < container->objectCount(); index++) {
     auto* type_info = obj->type_info();
-    // konan::consolePrintf("## runDeallocationHooks %p objIndex(%d)\n", type_info, index);
     if (type_info == theWorkerBoundReferenceTypeInfo) {
+      RTGC_LOG("## runDeallocationHooks-DisposeWorkerBoundReference %p\n", obj);
       DisposeWorkerBoundReference(obj);
+      RTGC_LOG("## runDeallocationHooks-DisposeWorkerBoundReference done %p\n", obj);
     }
 #if USE_CYCLIC_GC
     if ((type_info->flags_ & TF_LEAK_DETECTOR_CANDIDATE) != 0) {
@@ -1239,7 +1236,9 @@ ALWAYS_INLINE void runDeallocationHooks(ContainerHeader* container) {
     CycleDetector::removeCandidateIfNeeded(obj);
 #endif  // USE_CYCLE_DETECTOR
     if (obj->has_meta_object()) {
+      RTGC_LOG("## runDeallocationHooks-destroyMetaObject %p\n", obj);
       ObjHeader::destroyMetaObject(&obj->typeInfoOrMeta_);
+      RTGC_LOG("## runDeallocationHooks-destroyMetaObject done %p\n", obj);
     }
     obj = reinterpret_cast<ObjHeader*>(reinterpret_cast<uintptr_t>(obj) + objectSize(obj));
   }
@@ -1255,7 +1254,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
     return;
   }
 
-  RTGC_LOG("## RTGC free container %p(%d) %p\n", container, garbageNodeId, memoryState);
+  RTGC_LOG("## RTGC free container %p/%d %p freeable=%d\n", container, garbageNodeId, memoryState, container->freeable());
   bool isRoot = memoryState->gcInProgress ++ == 0;
   auto toRelease = memoryState->toRelease;
   runDeallocationHooks(container);
@@ -1426,11 +1425,6 @@ void traverseStronglyConnectedComponent(ContainerHeader* start,
       }
     }
   }
-}
-
-template <bool Atomic>
-inline bool tryIncrementRC(ContainerHeader* container) {
-  return container->tryIncRefCount<Atomic>();
 }
 
 #if RTGC
@@ -1676,6 +1670,36 @@ inline void decrementRC(ContainerHeader* container) {
 }
 
 #endif
+
+template <bool Atomic>
+inline bool tryIncrementRC(ContainerHeader* container) {
+#if !RTGC  
+  return container->tryIncRefCount<Atomic>();
+#else
+    bool res = false;
+    if (Atomic) GCNode::rtgcLock(_IncrementRC);
+      // Note: tricky case here is doing this during cycle collection.
+      // This can actually happen due to deallocation hooks.
+      // Fortunately by this point reference counts have been made precise again.
+    if (container->refCount() > 0) {
+      CyclicNode* c = container->getLocalCyclicNode();
+      if (c == nullptr || !c->isGarbage()) {
+        if (container->isAcyclic()) {
+          incrementAcyclicRC<false>(container);
+        }
+        else { 
+          incrementRC<false>(container);
+        }
+        res = true;
+      }
+    } 
+
+    if (Atomic) GCNode::rtgcUnlock();
+    return res;
+
+#endif
+}
+
 
 #ifdef USE_GC
 
@@ -2294,7 +2318,8 @@ ForeignRefManager* initLocalForeignRef(ObjHeader* object) {
 
 ForeignRefManager* initForeignRef(ObjHeader* object) {
   retainRef(object);
-  RTGC_LOG("initForeignRef %p\n", object->container());
+  tryMakeShareable(object->container());
+  RTGC_LOG("initForeignRef %p\n", object);
 
   if (!IsStrictMemoryModel && !RTGC) return nullptr;
 
@@ -2302,31 +2327,41 @@ ForeignRefManager* initForeignRef(ObjHeader* object) {
   // but this will force the implementation to release objects on uninitialized threads
   // which is generally a memory leak. See [deinitForeignRef].
   auto* manager = memoryState->foreignRefManager;
-  if (!RTGC) manager->addRef();
+  manager->addRef();
   return manager;
 }
 
 bool isForeignRefAccessible(ObjHeader* object, ForeignRefManager* manager) {
   if (!IsStrictMemoryModel && !RTGC) return true;
 
-  if (manager == memoryState->foreignRefManager) {
+  bool canAccess = manager == memoryState->foreignRefManager;
     // Note: it is important that this code neither crashes nor returns false-negative result
     // (although may produce false-positive one) if [manager] is a dangling pointer.
     // See BackRefFromAssociatedObject::releaseRef for more details.
-    return true;
+  if (!canAccess) {
+  // Note: getting container and checking it with 'isShareable()' is supposed to be correct even for unowned object.
+  // @zee can not use isShareable at external thread.
+    canAccess = object->container() == NULL || object->container()->shared();
   }
 
-  // Note: getting container and checking it with 'isShareable()' is supposed to be correct even for unowned object.
-  // @zee can not use tryMakeShareable at external thread.
-  return isShareable(object->container());
+  RTGC_LOG("isForeignRefAccessible %p canAccess=%d\n", object, canAccess)
+  return canAccess;
 }
 
 void deinitForeignRef(ObjHeader* object, ForeignRefManager* manager) {
-  RTGC_LOG("deinitForeignRef %p canAccess=%d\n", memoryState, (memoryState != nullptr && isForeignRefAccessible(object, manager)));
+  RTGC_LOG("deinitForeignRef %p(mem=%p)canAccess=%d\n", object, memoryState, (memoryState != nullptr && isForeignRefAccessible(object, manager)));
 
   if (RTGC || IsStrictMemoryModel) {
-    if (memoryState != nullptr && isForeignRefAccessible(object, manager)) {
-      releaseRef<true>(object);
+    if (memoryState != nullptr && (RTGC || isForeignRefAccessible(object, manager))) {
+      if (RTGC) {
+        bool isLocalThread = manager == memoryState->foreignRefManager;
+        if (!isLocalThread) GCNode::rtgcLock(_IncrementRC);
+        releaseRef<false>(object);
+        if (!isLocalThread) GCNode::rtgcUnlock();
+      }
+      else {
+        releaseRef<true>(object);
+      }
     } else {
       // Prefer this for (memoryState == nullptr) since otherwise the object may leak:
       // an uninitialized thread did not run any Kotlin code;
@@ -2379,6 +2414,7 @@ MemoryState* initMemory() {
 }
 
 void deinitMemory(MemoryState* memoryState) {
+  RTGC_LOG("deinitMemory %p\n", memoryState);
   static int pendingDeinit = 0;
   atomicAdd(&pendingDeinit, 1);
 #if USE_GC
@@ -2456,7 +2492,7 @@ void resumeMemory(MemoryState* state) {
 }
 
 void makeShareable(ContainerHeader* container) {
-  //if (!container->frozen())
+  if (!container->frozen())
     container->makeShared();
 }
 
@@ -2567,8 +2603,6 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
 
 }
 namespace {
-
-void shareAny(ObjHeader* obj);
 
 template <bool Strict>
 void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
@@ -3021,7 +3055,6 @@ const ObjHeader* leaveFrameAndReturnRef(ObjHeader** start, int param_count, ObjH
     }
     if (returnRef != NULL) {
       retainRef(returnRef);
-      MEMORY_LOG("*** returns in leave %p\n", returnRef);
     }
   }
   return res;
@@ -3400,25 +3433,26 @@ void runFreezeHooksRecursive(ObjHeader* root) {
   toVisit->push_back(root);
   for (size_t idx = 0; idx < toVisit->size(); idx ++) {
     KRef obj = (*toVisit)[idx];
-    RTGC_LOG("runFreezeHooksRecursive 1 %p\n", obj);
+    //RTGC_LOG("runFreezeHooksRecursive 1 %p\n", obj);
     if (RTGC && obj->has_meta_object() && (obj->meta_object()->flags_ & MF_NEVER_FROZEN) != 0) {
       for (auto* o : *toVisit) {
         o->container()->clearFreezing();
       }
-      MEMORY_LOG("See freeze blocker for %p: %p\n", root, firstBlocker)
-      ThrowFreezingException(root, firstBlocker);
+      MEMORY_LOG("See freeze blocker for %p: %p\n", root, obj)
+      ThrowFreezingException(root, obj);
     }
 
-    RTGC_dumpRefInfo(obj->container());
-    //RTGC_LOG("runFreezeHooksRecursive runFreezeHooks 1 %p\n", obj);
+    if (false && ENABLE_RTGC_LOG) {
+      RTGC_dumpRefInfo(obj->container());
+    }
     runFreezeHooks(obj);
-    RTGC_LOG("runFreezeHooksRecursive runFreezeHooks 2 %p\n", obj);
+    //RTGC_LOG("runFreezeHooksRecursive runFreezeHooks 2 %p\n", obj);
 
     traverseReferredObjects(obj, [toVisit](ObjHeader* field) {
       /**
        * runFreezeHooks() 수행 도중 side-effect 방지를 위해 mark() 대신에 seen set 를 이용(?!?)
        */
-      RTGC_LOG("runFreezeHooks traverseReferredObjects %p\n", field);
+      //RTGC_LOG("runFreezeHooks traverseReferredObjects %p\n", field);
       if (canFreeze(field->container())) {
         field->container()->markFreezing();
         toVisit->push_back(field);

@@ -52,7 +52,7 @@ class BackRefFromAssociatedObject {
   template <ErrorPolicy errorPolicy>
   bool tryAddRef();
 
-  void releaseRef();
+  bool releaseRef();
 
   // Error if called from the wrong worker with non-frozen obj_.
   template <ErrorPolicy errorPolicy>

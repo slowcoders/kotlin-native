@@ -185,6 +185,10 @@ public:
     rtNode.flags_ |= flags;
   }
 
+  inline bool shareable() const {
+    return (rtNode.flags_ & CONTAINER_TAG_FROZEN) != 0;
+  }
+
   inline bool shared() const {
     return (rtNode.flags_ & CONTAINER_TAG_SHARED) != 0;
   }
@@ -220,6 +224,7 @@ public:
 
   template <bool Atomic>
   inline bool tryIncRefCount() {
+    assert(!RTGC);
     if (Atomic) {
       while (true) {
         uint64_t currentRefCount_ = ref_.count;

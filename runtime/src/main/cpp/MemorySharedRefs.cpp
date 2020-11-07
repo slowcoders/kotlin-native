@@ -162,7 +162,8 @@ bool BackRefFromAssociatedObject::tryAddRef() {
 template bool BackRefFromAssociatedObject::tryAddRef<ErrorPolicy::kThrow>();
 template bool BackRefFromAssociatedObject::tryAddRef<ErrorPolicy::kTerminate>();
 
-void BackRefFromAssociatedObject::releaseRef() {
+bool BackRefFromAssociatedObject::releaseRef() {
+  RTGC_LOG("BackRefFromAssociatedObject::releaseRef %p\n", obj_);
   ForeignRefContext context = context_;
   if (atomicAdd(&refCount, -1) == 0) {
     // Note: by this moment "subsequent" addRef may have already happened and patched context_.
@@ -170,7 +171,9 @@ void BackRefFromAssociatedObject::releaseRef() {
     DeinitForeignRef(obj_, context);
     // From this moment [context] is generally a dangling pointer.
     // This is handled in [IsForeignRefAccessible] and [addRef].
+    return true;
   }
+  return false;
 }
 
 template <ErrorPolicy errorPolicy>
