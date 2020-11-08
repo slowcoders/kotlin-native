@@ -37,6 +37,7 @@ import test.utils.*
 import kotlin.*
 import runtime.workers.worker2.*;
 import runtime.workers.worker6.*;
+import runtime.workers.worker10.*;
 
 interface Interface {
     fun iMember(clazz: Interface) : Interface { return clazz; }
@@ -57,6 +58,13 @@ fun printTime(test:String) {
 fun test(str: String) {
     try {
 printTime("start")
+
+runEnumIdentityTest();
+printTime("runEnumIdentityTest")
+
+
+testWorker10();
+printTime("testWorker10")
 
 runWorker2Test()
 printTime("runWorker2Test")
@@ -135,9 +143,6 @@ printTime("testObjCSmoke")
 
 runHashSet0Test();
 printTime("runHashSet0Test")
-
-runEnumIdentityTest();
-printTime("runEnumIdentityTest")
 
 
 runWorker1Test();

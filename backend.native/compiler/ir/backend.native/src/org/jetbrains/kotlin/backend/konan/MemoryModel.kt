@@ -6,5 +6,6 @@ package org.jetbrains.kotlin.backend.konan
 
 enum class MemoryModel(val suffix: String) {
     STRICT("Strict"),
-    RELAXED("Relaxed")
+    RELAXED("Relaxed"),
+    RTGC("Relaxed")
 }

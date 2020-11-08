@@ -304,7 +304,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
                                          internal val irFunction: IrFunction? = null): ContextUtils {
 
     override val context = codegen.context
-    val RTGC:Boolean = context.memoryModel == MemoryModel.RELAXED;
+    val RTGC:Boolean = context.memoryModel == MemoryModel.RTGC;
     var ENABLE_ALTER_ARGS:Boolean = true;
     val RTGC_ENABLE_STACK_LOCAL:Boolean = true;
     val vars = VariableManager(this)

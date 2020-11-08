@@ -260,8 +260,8 @@ KInt Konan_Platform_getCpuArchitecture() {
 #endif
 }
 
-KInt Konan_Platform_getMemoryModel() {
-  return IsStrictMemoryModel ? 0 : 1;
+KInt Konan_Platform_getMemoryModel() {  
+  return IsStrictMemoryModel ? 0 : (RTGC ? 2 : 1);
 }
 
 KBoolean Konan_Platform_isDebugBinary() {

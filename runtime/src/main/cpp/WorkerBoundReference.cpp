@@ -25,7 +25,9 @@ WorkerBoundReference* asWorkerBoundReference(KRef thiz) {
 RUNTIME_NOTHROW void DisposeWorkerBoundReference(KRef thiz) {
   // DisposeSharedRef is only called when all references to thiz are gone.
   // Can be null if WorkerBoundReference wasn't frozen.
-  if (auto* holder = asWorkerBoundReference(thiz)->holder) {
+  WorkerBoundReference* ref = asWorkerBoundReference(thiz);
+  if (auto* holder = ref->holder) {
+    ref->holder = nullptr;
     holder->dispose();
     konanDestructInstance(holder);
   }

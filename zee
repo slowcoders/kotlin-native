@@ -1,4 +1,4 @@
-FAILURE: Build completed with 10 failures.
+FAILURE: Build completed with 6 failures.
 
 1: Task failed with an exception.
 -----------
@@ -20,6 +20,8 @@ Run with --stacktrace option to get the stack trace. Run with --info or --debug 
 -----------
 * What went wrong:
 Execution failed for task ':backend.native:tests:cycle_detector'.
+> Test failed. Actual exit status doesn't match with exit status checker: 1
+
 
 
 * Try:
@@ -27,6 +29,19 @@ Run with --stacktrace option to get the stack trace. Run with --info or --debug 
 ==============================================================================
 
 3: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:enumIdentity'.
+> Test failed. Expected output: true
+  , actual output: * ??? 0x7f7fd9620ce0:0 rc=0x2, flags=8001
+  true
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+4: Task failed with an exception.
 -----------
 * What went wrong:
 Execution failed for task ':backend.native:tests:kt-37572'.
@@ -37,16 +52,6 @@ Execution failed for task ':backend.native:tests:kt-37572'.
   Memory leaks detected, 13 objects leaked!
   Use `Platform.isMemoryLeakCheckerActive = false` to avoid this check.
 
-
-* Try:
-Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
-==============================================================================
-
-4: Task failed with an exception.
------------
-* What went wrong:
-Execution failed for task ':runtime:wasm32Runtime'.
-> Process 'command '/Users/zeedh/.konan/dependencies/clang-llvm-apple-8.0.0-darwin-macos/bin/clang++'' finished with non-zero exit value 1
 
 * Try:
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
@@ -68,26 +73,6 @@ Execution failed for task ':backend.native:tests:stack_trace_inline'.
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
-6: Task failed with an exception.
------------
-* What went wrong:
-Execution failed for task ':backend.native:tests:testObjCExport'.
-> Execution of swiftTestExecutable failed with exit code: 139 
-
-* Try:
-Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
-==============================================================================
-
-7: Task failed with an exception.
------------
-* What went wrong:
-Execution failed for task ':backend.native:tests:testObjCExportStatic'.
-> Execution of swiftTestExecutable failed with exit code: 139 
-
-* Try:
-Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
-==============================================================================
-
 
 * Get more help at https://help.gradle.org
 
@@ -95,8 +80,7 @@ Deprecated Gradle features were used in this build, making it incompatible with 
 Use '--warning-mode all' to show the individual deprecation warnings.
 See https://docs.gradle.org/6.6.1/userguide/command_line_interface.html#sec:command_line_warnings
 
-BUILD FAILED in 39m 11s
-1295 actionable tasks: 746 executed, 549 up-to-date
-zeedh@zee-david kotlin-native % 
-
+BUILD FAILED in 40m 45s
+1301 actionable tasks: 749 executed, 552 up-to-date
+zeedh@DaeHoons-MacBook-Pro kotlin-native % 
 

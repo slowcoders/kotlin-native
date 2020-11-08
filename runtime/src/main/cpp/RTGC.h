@@ -13,10 +13,10 @@
 
 #define RTGC                true
 #define RTGC_LATE_DESTORY   false
-#define ENABLE_RTGC_LOG     true
+#define ENABLE_RTGC_LOG     false
 #define RTGC_NO_INLINE      // NO_INLINE
 #define DEBUG_RTGC_BUCKET   false
-static const bool RTGC_STATISTCS = false;
+static const bool RTGC_STATISTCS = true;
 
 typedef struct ContainerHeader GCObject;
 
@@ -123,7 +123,9 @@ struct OnewayNode;
 
 enum LockType {
   _FreeContainer,
+  _ProcessFinalizerQueue,
   _IncrementRC,
+  _TryIncrementRC,
   _IncrementAcyclicRC,
   _DecrementRC,    
   _DecrementAcyclicRC,    

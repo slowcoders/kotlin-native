@@ -54,7 +54,7 @@
 // http://researcher.watson.ibm.com/researcher/files/us-bacon/Bacon03Pure.pdf.
 #define USE_GC 1
 // Define to 1 to print all memory operations.
-#define TRACE_MEMORY 1
+#define TRACE_MEMORY 0
 // Define to 1 to print major GC events.
 #define TRACE_GC 0
 // Collect memory manager events statistics.
@@ -1056,7 +1056,7 @@ void processFinalizerQueue(MemoryState* state) {
     if (false) {
       bool isShared = container->shared();
       OnewayNode* node = container->getLocalOnewayNode();
-      if (isShared) GCNode::rtgcLock(_FreeContainer);
+      if (isShared) GCNode::rtgcLock(_ProcessFinalizerQueue);
       if (node != NULL) {
         node->dealloc();
       }
@@ -1085,6 +1085,7 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderDeque* visited) {
 
   ContainerHeaderDeque toVisit;
   bool hasExternalRefs = false;
+  start->attachNode();
   start->mark();
   toVisit.push_back(start);
 
@@ -1217,7 +1218,7 @@ void freeAggregatingFrozenContainer(ContainerHeader* container) {
 
 // This is called from 2 places where it's unconditionally called,
 // so better be inlined.
-ALWAYS_INLINE void runDeallocationHooks(ContainerHeader* container) {
+ALWAYS_INLINE void runDeallocationHooks(ContainerHeader* container, ForeignRefManager* manager) {
   ObjHeader* obj = reinterpret_cast<ObjHeader*>(container + 1);
 
   for (uint32_t index = 0; index < container->objectCount(); index++) {
@@ -1237,7 +1238,7 @@ ALWAYS_INLINE void runDeallocationHooks(ContainerHeader* container) {
 #endif  // USE_CYCLE_DETECTOR
     if (obj->has_meta_object()) {
       RTGC_LOG("## runDeallocationHooks-destroyMetaObject %p\n", obj);
-      ObjHeader::destroyMetaObject(&obj->typeInfoOrMeta_);
+      ObjHeader::destroyMetaObject(&obj->typeInfoOrMeta_, manager);
       RTGC_LOG("## runDeallocationHooks-destroyMetaObject done %p\n", obj);
     }
     obj = reinterpret_cast<ObjHeader*>(reinterpret_cast<uintptr_t>(obj) + objectSize(obj));
@@ -1257,7 +1258,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
   RTGC_LOG("## RTGC free container %p/%d %p freeable=%d\n", container, garbageNodeId, memoryState, container->freeable());
   bool isRoot = memoryState->gcInProgress ++ == 0;
   auto toRelease = memoryState->toRelease;
-  runDeallocationHooks(container);
+  runDeallocationHooks(container, nullptr);
 
   bool doFree = container->freeable();
   if (RTGC && doFree) {
@@ -1677,7 +1678,7 @@ inline bool tryIncrementRC(ContainerHeader* container) {
   return container->tryIncRefCount<Atomic>();
 #else
     bool res = false;
-    if (Atomic) GCNode::rtgcLock(_IncrementRC);
+    if (Atomic) GCNode::rtgcLock(_TryIncrementRC);
       // Note: tricky case here is doing this during cycle collection.
       // This can actually happen due to deallocation hooks.
       // Fortunately by this point reference counts have been made precise again.
@@ -2363,6 +2364,10 @@ void deinitForeignRef(ObjHeader* object, ForeignRefManager* manager) {
         releaseRef<true>(object);
       }
     } else {
+      if (RTGC && object->container()->refCount() == 1) {
+        // early destory WorkerBound/Weak References. cf) testObjCExport
+        runDeallocationHooks(object->container(), manager);
+      }
       // Prefer this for (memoryState == nullptr) since otherwise the object may leak:
       // an uninitialized thread did not run any Kotlin code;
       // it may be an externally-managed thread which is not supposed to run Kotlin code
@@ -3492,7 +3497,7 @@ void freezeSubgraph(ObjHeader* root) {
 
   ContainerHeader* rootContainer = root->container();
   if (isPermanentOrFrozen(rootContainer)) {
-    shareAny(root);
+    //shareAny(root);
     return;
   }
 
@@ -3505,7 +3510,7 @@ void freezeSubgraph(ObjHeader* root) {
   runFreezeHooksRecursive(root, &newlyFrozen);
   for (auto* e: newlyFrozen) {
     e->container()->freezeRef();
-    e->container()->makeShared();
+    //e->container()->makeShared();
   }
 #else
   runFreezeHooksRecursive(root);
@@ -3736,12 +3741,17 @@ MetaObjHeader* ObjHeader::createMetaObject(TypeInfo** location) {
   return meta;
 }
 
-void ObjHeader::destroyMetaObject(TypeInfo** location) {
+void ObjHeader::destroyMetaObject(TypeInfo** location, ForeignRefManager* manager) {
   MetaObjHeader* meta = clearPointerBits(*(reinterpret_cast<MetaObjHeader**>(location)), OBJECT_TAG_MASK);
   *const_cast<const TypeInfo**>(location) = meta->typeInfo_;
   if (meta->WeakReference.counter_ != nullptr) {
     WeakReferenceCounterClear(meta->WeakReference.counter_);
-    ZeroHeapRef(&meta->WeakReference.counter_);
+    if (manager == nullptr) {
+      ZeroHeapRef(&meta->WeakReference.counter_);
+    }
+    else {
+      deinitForeignRef(meta->WeakReference.counter_, manager);
+    }
   }
 
 #ifdef KONAN_OBJC_INTEROP

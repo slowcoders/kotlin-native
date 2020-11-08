@@ -43,7 +43,7 @@ class KonanConfig(val project: Project, val configuration: CompilerConfiguration
     val lightDebug: Boolean = configuration.get(KonanConfigKeys.LIGHT_DEBUG)
             ?: target.family.isAppleFamily // Default is true for Apple targets.
 
-    val memoryModel: MemoryModel get() = MemoryModel.RELAXED
+    val memoryModel: MemoryModel get() = MemoryModel.RTGC
     // configuration.get(KonanConfigKeys.MEMORY_MODEL)!!
 
     val needCompilerVerification: Boolean

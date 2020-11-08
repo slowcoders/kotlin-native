@@ -215,11 +215,11 @@ public:
        value =__sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT);
      else
        value = (ref_.count += RTGC_ROOT_REF_INCREEMENT);
-#endif
 #if KONAN_ENABLE_ASSERT
   RuntimeAssert(isAcyclic(), "!Acyclic objct");
     RuntimeAssert(value != 0, "refCount overflow");
 #endif    
+#endif
   }
 
   template <bool Atomic>
@@ -336,11 +336,11 @@ public:
 #else
     int64_t value __attribute__((unused))= Atomic ?
         __sync_add_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count += RTGC_MEMBER_REF_INCREEMENT;
-#endif
 #if KONAN_ENABLE_ASSERT
     RuntimeAssert(ignoreAcyclic || !isAcyclic(), "Acyclic objct does not have member refCount");
     RuntimeAssert(((RTGCRef*)&value)->obj != 0, "member ref overflow");
 #endif    
+#endif
   }
 
   inline int getMemberRefCount() {
@@ -559,6 +559,10 @@ ALWAYS_INLINE bool hasPointerBits(T* ptr, unsigned bits) {
   return getPointerBits(ptr, bits) != 0;
 }
 
+class ForeignRefManager;
+typedef ForeignRefManager* ForeignRefContext;
+
+
 // Header for the meta-object.
 struct MetaObjHeader {
   // Pointer to the type info. Must be first, to match ArrayHeader and ObjHeader layout.
@@ -632,7 +636,7 @@ struct ObjHeader {
   }
 
   static MetaObjHeader* createMetaObject(TypeInfo** location);
-  static void destroyMetaObject(TypeInfo** location);
+  static void destroyMetaObject(TypeInfo** location, ForeignRefManager* manager);
 };
 
 // Header of value type array objects. Keep layout in sync with that of object header.
@@ -878,9 +882,6 @@ class ExceptionObjHolder {
  private:
    ObjHeader* obj_;
 };
-
-class ForeignRefManager;
-typedef ForeignRefManager* ForeignRefContext;
 
 
 #ifdef RTGC
