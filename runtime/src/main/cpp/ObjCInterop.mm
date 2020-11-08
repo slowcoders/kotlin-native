@@ -193,7 +193,7 @@ struct KotlinObjCClassInfo {
 static void AddMethods(Class clazz, const struct ObjCMethodDescription* methods, int32_t methodsNum) {
   for (int32_t i = 0; i < methodsNum; ++i) {
     const struct ObjCMethodDescription* method = &methods[i];
-    BOOL added = class_addMethod(clazz, sel_registerName(method->selector), (IMP)method->imp, method->encoding);
+    BOOL added __attribute__((unused)) = class_addMethod(clazz, sel_registerName(method->selector), (IMP)method->imp, method->encoding);
     RuntimeAssert(added == YES, "Unable to add method to Objective-C class");
   }
 }
@@ -271,7 +271,7 @@ void* CreateKotlinObjCClass(const KotlinObjCClassInfo* info) {
   int bodySize = sizeof(BackRefFromAssociatedObject);
   char bodyTypeEncoding[16];
   snprintf(bodyTypeEncoding, sizeof(bodyTypeEncoding), "[%dc]", bodySize);
-  BOOL added = class_addIvar(newClass, "kotlinBody", bodySize, /* log2(align) = */ 3, bodyTypeEncoding);
+  BOOL added __attribute__((unused)) = class_addIvar(newClass, "kotlinBody", bodySize, /* log2(align) = */ 3, bodyTypeEncoding);
   RuntimeAssert(added == YES, "Unable to add ivar to Objective-C class");
 
   objc_registerClassPair(newClass);

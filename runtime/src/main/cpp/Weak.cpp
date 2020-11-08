@@ -38,7 +38,7 @@ inline void lock(int32_t* address) {
 }
 
 inline void unlock(int32_t* address) {
-    int old = __sync_val_compare_and_swap(address, 1, 0);
+    int old __attribute__((unused)) = __sync_val_compare_and_swap(address, 1, 0);
     RuntimeAssert(old == 1, "Incorrect lock state");
 }
 

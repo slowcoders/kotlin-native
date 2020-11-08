@@ -271,14 +271,14 @@ extern "C" void Kotlin_ObjCExport_initializeClass(Class clazz) {
   for (int i = 0; i < typeAdapter->directAdapterNum; ++i) {
     const ObjCToKotlinMethodAdapter* adapter = typeAdapter->directAdapters + i;
     SEL selector = sel_registerName(adapter->selector);
-    BOOL added = class_addMethod(clazz, selector, adapter->imp, adapter->encoding);
+    BOOL added __attribute__((unused))= class_addMethod(clazz, selector, adapter->imp, adapter->encoding);
     RuntimeAssert(added, "Unexpected selector clash");
   }
 
   for (int i = 0; i < typeAdapter->classAdapterNum; ++i) {
     const ObjCToKotlinMethodAdapter* adapter = typeAdapter->classAdapters + i;
     SEL selector = sel_registerName(adapter->selector);
-    BOOL added = class_addMethod(object_getClass(clazz), selector, adapter->imp, adapter->encoding);
+    BOOL added __attribute__((unused))= class_addMethod(object_getClass(clazz), selector, adapter->imp, adapter->encoding);
     RuntimeAssert(added, "Unexpected selector clash");
   }
 
@@ -933,7 +933,7 @@ static const TypeInfo* createTypeInfo(Class clazz, const TypeInfo* superType, co
         itableEqualsSuper = false;
         interfaceVTables.emplace(interfaceId, KStdVector<VTableElement>(interfaceVTableSize));
       } else {
-        auto const& interfaceVTable = interfaceVTablesIt->second;
+        auto const& interfaceVTable __attribute__((unused)) = interfaceVTablesIt->second;
         RuntimeAssert(interfaceVTable.size() == static_cast<size_t>(interfaceVTableSize), "");
       }
     }
