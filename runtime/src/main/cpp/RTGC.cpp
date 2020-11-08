@@ -239,7 +239,9 @@ void OnewayNode::dealloc() {
 void GCNode::dumpGCLog() {
     if (!RTGC_STATISTCS) return;
     printf("** RTGCLock FreeContainer %d\n", g_cntRTGCLocks[_FreeContainer]);
+    printf("** RTGCLock _ProcessFinalizerQueue %d\n", g_cntRTGCLocks[_ProcessFinalizerQueue]);
     printf("** RTGCLock IncrementRC %d\n", g_cntRTGCLocks[_IncrementRC]);
+    printf("** RTGCLock TryIncrementRC %d\n", g_cntRTGCLocks[_TryIncrementRC]);
     printf("** RTGCLock IncrementAcyclicRC %d\n", g_cntRTGCLocks[_IncrementAcyclicRC]);
     printf("** RTGCLock DecrementRC %d\n", g_cntRTGCLocks[_DecrementRC]);
     printf("** RTGCLock DecrementAcyclicRC %d\n", g_cntRTGCLocks[_DecrementAcyclicRC]);
@@ -248,6 +250,8 @@ void GCNode::dumpGCLog() {
     printf("** RTGCLock UpdateHeapRef %d\n", g_cntRTGCLocks[_UpdateHeapRef]);
     printf("** RTGCLock PopBucket %d\n", g_cntRTGCLocks[_PopBucket]);
     printf("** RTGCLock RecycleBucket %d\n", g_cntRTGCLocks[_RecycleBucket]);
+    printf("** RTGCLock _DetectCylcles %d\n", g_cntRTGCLocks[_DetectCylcles]);
+    printf("** RTGCLock _SetHeapRefLocked %d\n", g_cntRTGCLocks[_SetHeapRefLocked]);
 
     printf("** cntRefChain %d = %d - %d\n", RTGCGlobal::g_cntAddRefChain - RTGCGlobal::g_cntRemoveRefChain,
         RTGCGlobal::g_cntAddRefChain, RTGCGlobal::g_cntRemoveRefChain);

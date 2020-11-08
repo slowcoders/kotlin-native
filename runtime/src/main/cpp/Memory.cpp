@@ -3497,7 +3497,7 @@ void freezeSubgraph(ObjHeader* root) {
 
   ContainerHeader* rootContainer = root->container();
   if (isPermanentOrFrozen(rootContainer)) {
-    //shareAny(root);
+    shareAny(root);
     return;
   }
 
@@ -3510,7 +3510,7 @@ void freezeSubgraph(ObjHeader* root) {
   runFreezeHooksRecursive(root, &newlyFrozen);
   for (auto* e: newlyFrozen) {
     e->container()->freezeRef();
-    //e->container()->makeShared();
+    e->container()->makeShared();
   }
 #else
   runFreezeHooksRecursive(root);

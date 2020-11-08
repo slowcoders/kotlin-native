@@ -57,6 +57,14 @@ fun printTime(test:String) {
 
 fun test(str: String) {
     try {
+
+runPatternTest()
+printTime("runPatternTest")
+
+runPattern2Test()
+printTime("runPattern2Test")
+
+
 printTime("start")
 
 runEnumIdentityTest();
@@ -127,12 +135,6 @@ if (test_without_illegal_sharing_check) {
     runIlleagalSharingWithWeakTest()
     printTime("runIlleagalSharingWithWeakTest")
 }
-
-runPatternTest()
-printTime("runPatternTest")
-
-runPattern2Test()
-printTime("runPattern2Test")
 
 //AllCodePointsTest().test()
 //printTime("AllCodePointsTest")
