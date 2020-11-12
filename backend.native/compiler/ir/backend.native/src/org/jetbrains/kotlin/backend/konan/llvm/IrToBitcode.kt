@@ -32,6 +32,7 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.descriptorUtil.classId
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
+import org.jetbrains.kotlin.backend.konan.llvm.ContextUtils
 
 internal enum class FieldStorageKind {
     MAIN_THREAD,
@@ -416,7 +417,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                                         )
                                         if (irField.storageKind == FieldStorageKind.SHARED)
                                             freeze(initialization, currentCodeContext.exceptionHandler)
-                                        storeAny(initialization, address, false)
+                                        storeGlobalVar(initialization, address)
                                     }
                                 }
                             }
@@ -436,7 +437,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                                     val address = context.llvmDeclarations.forStaticField(irField).storageAddressAccess.getAddress(
                                             functionGenerationContext
                                     )
-                                    storeAny(initialization, address, false)
+                                    storeGlobalVar(initialization, address)
                                 }
                             }
                     ret(null)
@@ -458,11 +459,11 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                                     val address = context.llvmDeclarations.forStaticField(irField).storageAddressAccess.getAddress(
                                             functionGenerationContext
                                     )
-                                    storeGlobalRef(codegen.kNullObjHeaderPtr, address)
+                                    storeGlobalVar(codegen.kNullObjHeaderPtr, address)
                                 }
                             }
                     context.llvm.globalSharedObjects.forEach { address ->
-                        storeGlobalRef(codegen.kNullObjHeaderPtr, address)
+                        storeGlobalVar(codegen.kNullObjHeaderPtr, address)
                     }
                     ret(null)
                 }
@@ -1289,6 +1290,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         context.log{"evaluateSetVariable            : ${ir2string(value)}"}
         val result = evaluateExpression(value.value)
         val variable = currentCodeContext.getDeclaredVariable(value.symbol.owner)
+        /// --- ZZZZ -----
         functionGenerationContext.vars.store(result, variable)
         assert(value.type.isUnit())
         return functionGenerationContext.theUnitInstanceRef.llvm
@@ -1356,6 +1358,8 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 }
             } ?: evaluateExpression(it)
         }
+
+        /// ------ ZZZZZZ !!!! -----
 
         if (idxVar < 0) {
             currentCodeContext.genDeclareVariable(
@@ -1600,8 +1604,10 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         context.log { "evaluateGetField               : ${ir2string(value)}" }
         return if (!value.symbol.owner.isStatic) {
             val thisPtr = evaluateExpression(value.receiver!!)
-            functionGenerationContext.loadSlot(
-                    fieldPtrOfClass(thisPtr, value.symbol.owner), !value.symbol.owner.isFinal)
+            val isPermanent = functionGenerationContext.context.permanentRefs.get(thisPtr) != null;
+            if (isPermanent) println("## permanent owner =" + value.symbol.owner)
+            functionGenerationContext.loadSlotEx(
+                    fieldPtrOfClass(thisPtr, value.symbol.owner), !isPermanent && !value.symbol.owner.isFinal)
         } else {
             assert(value.receiver == null)
             if (value.symbol.owner.correspondingPropertySymbol?.owner?.isConst == true) {
@@ -1613,7 +1619,10 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 val ptr = context.llvmDeclarations.forStaticField(value.symbol.owner).storageAddressAccess.getAddress(
                         functionGenerationContext
                 )
-                functionGenerationContext.loadSlot(ptr, !value.symbol.owner.isFinal)
+                val isPermanent = false;
+                // = functionGenerationContext.context.permanentAddrs.contains(ptr);
+                // if (isPermanent) println("## permanent static =" + value.symbol.owner)
+                functionGenerationContext.loadSlotEx(ptr, !isPermanent && !value.symbol.owner.isFinal)
             }
         }.also {
             if (value.type.classifierOrNull?.isClassWithFqName(vectorType) == true)
@@ -1673,10 +1682,10 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
             val isObjC = value.symbol.owner.parentAsClass.isObjCClass();
             if (functionGenerationContext.RTGC && !isObjC) {
                 /* @zeedh Can't circular test into ObjC object until to implement custom memory allocation feature. */
-                functionGenerationContext.storeMember(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), thisPtr)
+                functionGenerationContext.storeMemberVar(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), thisPtr)
             }
             else {
-                functionGenerationContext.storeAny(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), false)
+                functionGenerationContext.storeGlobalVar(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner))
             }
         } else {
             assert(value.receiver == null)
@@ -1687,7 +1696,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 functionGenerationContext.checkMainThread(currentCodeContext.exceptionHandler)
             if (value.symbol.owner.storageKind == FieldStorageKind.SHARED)
                 functionGenerationContext.freeze(valueToAssign, currentCodeContext.exceptionHandler)
-            functionGenerationContext.storeAny(valueToAssign, globalAddress, false)
+            functionGenerationContext.storeGlobalVar(valueToAssign, globalAddress)
         }
         if (store != null && value.value.type.classifierOrNull?.isClassWithFqName(vectorType) == true) {
             LLVMSetAlignment(store, 8)
@@ -1729,7 +1738,13 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
             IrConstKind.Short  -> return Int16(value.value as Short).llvm
             IrConstKind.Int    -> return Int32(value.value as Int).llvm
             IrConstKind.Long   -> return Int64(value.value as Long).llvm
-            IrConstKind.String -> return evaluateStringConst(value as IrConst<String>)
+            IrConstKind.String -> {
+                var str = evaluateStringConst(value as IrConst<String>)
+                if (currentCodeContext.functionScope() is FunctionScope) {
+                    functionGenerationContext.context.permanentRefs.put(str, str);
+                }
+                return str;
+            }
             IrConstKind.Float  -> return Float32(value.value as Float).llvm
             IrConstKind.Double -> return Float64(value.value as Double).llvm
         }
@@ -2072,7 +2087,6 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
 
     private fun evaluateArgExpression(expr: IrExpression) : LLVMValueRef {
         val arg = evaluateExpression(expr);
-        // println("=== arg " + arg);
         return arg;
     }
 
@@ -2082,6 +2096,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
      * exactly correspond to a tail of LLVM parameters.
      */
     private fun evaluateExplicitArgs(expression: IrFunctionAccessExpression): List<LLVMValueRef> {
+        //// ------ ZZZZZ -------
         var evaluatedArgs: Map<IrValueParameter, LLVMValueRef>;
         if (!functionGenerationContext.ENABLE_ALTER_ARGS) {
             evaluatedArgs = expression.getArgumentsWithIr().map { (param, argExpr) ->

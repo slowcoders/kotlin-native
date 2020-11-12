@@ -83,7 +83,7 @@ OBJ_GETTER(Konan_WeakReferenceCounter_get, ObjHeader* counter) {
   RETURN_OBJ(*referredAddress);
 #else
   auto* weakCounter = asWeakReferenceCounter(counter);
-  RETURN_RESULT_OF(ReadHeapRefLocked, referredAddress,  &weakCounter->lock,  &weakCounter->cookie);
+  RETURN_RESULT_OF(ReadHeapRefLocked, referredAddress,  &weakCounter->lock, counter, &weakCounter->cookie);
 #endif
 }
 

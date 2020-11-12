@@ -2860,6 +2860,9 @@ OBJ_GETTER(initSharedInstance,
     return object;
   #else  // KONAN_NO_EXCEPTIONS
     try {
+      if (true || RTGC_STATISTCS) {
+        RTGC_dumpTypeInfo("initShared", typeInfo, object->container());
+      }
       ctor(object);
       if (Strict) { // ZZZZZ??? } || RTGC) {
         FreezeSubgraph(object);
@@ -2873,9 +2876,6 @@ OBJ_GETTER(initSharedInstance,
           runFreezeHooksRecursive(object, &newlyFrozen);
         }
         sharePermanentSubgraph(object);
-      }
-      if (RTGC_STATISTCS) {
-        //RTGC_dumpTypeInfo("initShared", typeInfo, object->container());
       }
       #ifdef RTGC
         retainRef(object);
@@ -2912,7 +2912,16 @@ inline int32_t computeCookie() {
 
 OBJ_GETTER(swapHeapRefLocked,
     ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner, int32_t* cookie) {
-  MEMORY_LOG("swapHeapRefLocked: %p, v=%p, o=%p\n", location, newValue, owner);
+  MEMORY_LOG("swapHeapRefLocked: %p, v=%p, o=%p isLocal=%d\n", location, newValue, owner, owner != nullptr && !owner->container()->shared());
+  bool isLocal = owner != nullptr && !owner->container()->shared();
+  if (isLocal) {
+      ObjHeader* old = *location;
+      UpdateReturnRef(OBJ_RESULT, old);
+      if (old == expectedValue) {
+          UpdateHeapRef(location, newValue, owner);
+      }
+      return old;
+  }
     GCNode::rtgcLock(_SetHeapRefLocked);
 //lock(spinlock);
   ObjHeader* oldValue = *location;
@@ -2955,6 +2964,11 @@ OBJ_GETTER(swapHeapRefLocked,
 
 void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner, int32_t* cookie) {
   MEMORY_LOG("setHeapRefLocked: %p, v=%p, o=%p\n", location, newValue, owner);
+  bool isLocal = owner != nullptr && !owner->container()->shared();
+  if (isLocal) {
+      UpdateHeapRef(location, newValue, owner);
+      return;
+  }
   GCNode::rtgcLock(_SetHeapRefLocked);
 #if USE_CYCLIC_GC
   if (g_hasCyclicCollector)
@@ -2975,8 +2989,14 @@ void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlo
   //unlock(spinlock);
 }
 
-OBJ_GETTER(readHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* cookie) {
+OBJ_GETTER(readHeapRefLocked, ObjHeader** location, int32_t* spinlock, ObjHeader* owner, int32_t* cookie) {
   MEMORY_LOG("ReadHeapRefLocked: %p\n", location)
+  bool isLocal = owner != nullptr && !owner->container()->shared();
+  if (isLocal) {
+      ObjHeader* value = *location;
+      UpdateReturnRef(OBJ_RESULT, value);
+      return value;
+  }
   GCNode::rtgcLock(_SetHeapRefLocked);
 //lock(spinlock);
   ObjHeader* value = *location;
@@ -4041,8 +4061,8 @@ void SetHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlo
   setHeapRefLocked(location, newValue, spinlock, owner, cookie);
 }
 
-OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* cookie) {
-  RETURN_RESULT_OF(readHeapRefLocked, location, spinlock, cookie);
+OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock, ObjHeader* owner, int32_t* cookie) {
+  RETURN_RESULT_OF(readHeapRefLocked, location, spinlock, owner, cookie);
 }
 
 OBJ_GETTER(ReadHeapRefNoLock, ObjHeader* object, KInt index) {

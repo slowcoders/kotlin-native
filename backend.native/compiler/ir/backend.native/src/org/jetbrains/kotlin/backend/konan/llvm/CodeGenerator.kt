@@ -267,7 +267,7 @@ internal class StackLocalsManagerImpl(
                 if (isObjectType(fieldType)) {
                     val fieldPtr = LLVMBuildStructGEP(builder, stackLocal.bodyPtr, fieldIndex, "")!!
                     if (refsOnly)
-                        storeStackRef(kNullObjHeaderPtr, fieldPtr)
+                        storeStackVar(kNullObjHeaderPtr, fieldPtr)
                     else
                         call(context.llvm.zeroStackRefFunction, listOf(fieldPtr))
                 }
@@ -307,6 +307,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     val RTGC:Boolean = context.memoryModel == MemoryModel.RTGC;
     var ENABLE_ALTER_ARGS:Boolean = true;
     val RTGC_ENABLE_STACK_LOCAL:Boolean = true;
+
     val vars = VariableManager(this)
     private val basicBlockToLastLocation = mutableMapOf<LLVMBasicBlockRef, LocationInfoRange>()
 
@@ -424,60 +425,54 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
     fun loadSlot(address: LLVMValueRef, isVar: Boolean, name: String = ""): LLVMValueRef {
         val value = LLVMBuildLoad(builder, address, name)!!
-        if (isObjectRef(value) && isVar) {
-            val slot = alloca(LLVMTypeOf(value), variableLocation = null)
-            storeStackRef(value, slot)
+        if (isObjectRef(value)) {
+            if (isVar) {
+                val slot = alloca(LLVMTypeOf(value), variableLocation = null)
+                storeStackVar(value, slot)
+            }
         }
         return value
     }
 
-    fun alterSlot(address: LLVMValueRef, name: String = ""): LLVMValueRef {
-        val value = LLVMBuildLoad(builder, address, name)!!
-        val slot = alloca(LLVMTypeOf(value), variableLocation = null)
-        storeStackRef(value, slot)
-        val v2 = LLVMBuildLoad(builder, slot, name)!!
-        return v2;
+    fun loadSlotEx(address: LLVMValueRef, isVar: Boolean, name: String = ""): LLVMValueRef {
+        val value = loadSlot(address, isVar, name)
+        if (isObjectRef(value)) {
+            if (!isVar) {
+                context.permanentRefs.put(value, value);
+            }
+        }
+        return value
     }
 
     fun store(value: LLVMValueRef, ptr: LLVMValueRef) {
         LLVMBuildStore(builder, value, ptr)
     }
 
-    fun storeHeapRef(value: LLVMValueRef, ptr: LLVMValueRef, owner: LLVMValueRef) {
+    fun storeStackVar(value: LLVMValueRef, ptr: LLVMValueRef) = 
+    if (context.memoryModel == MemoryModel.STRICT || !isObjectRef(value)) {
+        LLVMBuildStore(builder, value, ptr)
+    }
+    else {
+        call(context.llvm.updateStackRefFunction, listOf(ptr, value))
+        null;
+    }
+
+    fun storeGlobalVar(value: LLVMValueRef, ptr: LLVMValueRef) = 
+    if (!isObjectRef(value)) {
+        LLVMBuildStore(builder, value, ptr)
+    }
+    else {
+        call(context.llvm.updateStackRefFunction, listOf(ptr, value))
+        null;
+    }
+
+    fun storeMemberVar(value: LLVMValueRef, ptr: LLVMValueRef, owner: LLVMValueRef) = 
+    if (isObjectRef(value)) {
         call(context.llvm.updateHeapRefFunction, listOf(ptr, value, owner))
-    }
-
-    fun storeStackRef(value: LLVMValueRef, ptr: LLVMValueRef) {
-        if (context.memoryModel == MemoryModel.STRICT)
-            store(ptr, ptr)
-        else
-            call(context.llvm.updateStackRefFunction, listOf(ptr, value))
-    }
-
-    fun storeGlobalRef(value: LLVMValueRef, ptr: LLVMValueRef) {
-        storeStackRef(value, ptr)
-    }
-
-    fun storeRoot(value: LLVMValueRef, ptr: LLVMValueRef) = if (isObjectRef(value)) {
-        storeStackRef(value, ptr)
         null
     } else {
         LLVMBuildStore(builder, value, ptr)
     }
-
-    fun storeMember(value: LLVMValueRef, ptr: LLVMValueRef, owner: LLVMValueRef) = if (isObjectRef(value)) {
-        storeHeapRef(value, ptr, owner)
-        null
-    } else {
-        LLVMBuildStore(builder, value, ptr)
-    }
-
-    fun storeAny(value: LLVMValueRef, ptr: LLVMValueRef, onStack: Boolean) = if (isObjectRef(value)) {
-            if (RTGC || onStack) storeStackRef(value, ptr) else storeHeapRef(value, ptr, value)
-            null
-        } else {
-            LLVMBuildStore(builder, value, ptr)
-        }
 
     fun freeze(value: LLVMValueRef, exceptionHandler: ExceptionHandler) {
         if (isObjectRef(value))
@@ -1079,11 +1074,16 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         }
 
         if (storageKind == ObjectStorageKind.PERMANENT) {
-            return loadSlot(objectPtr, false)
+            return loadSlotEx(objectPtr, false)
         }
         val bbInit = basicBlock("label_init", startLocationInfo, endLocationInfo)
         val bbExit = basicBlock("label_continue", startLocationInfo, endLocationInfo)
-        val objectVal = loadSlot(objectPtr, false)
+        val objectVal = if (RTGC && storageKind == ObjectStorageKind.SHARED) {
+            loadSlotEx(objectPtr, false)
+        }
+        else {
+            loadSlot(objectPtr, false)
+        }
         val objectInitialized = icmpUGt(ptrToInt(objectVal, codegen.intPtrType), codegen.immOneIntPtrType)
         val bbCurrent = currentBlock
         condBr(objectInitialized, bbExit, bbInit)

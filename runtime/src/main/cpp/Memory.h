@@ -779,7 +779,8 @@ OBJ_GETTER(SwapHeapRefLocked,
 void SetHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock,
     ObjHeader* owner, int32_t* cookie) RUNTIME_NOTHROW;
 // Reads reference with taken lock.
-OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* cookie) RUNTIME_NOTHROW;
+OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock, 
+    ObjHeader* owner, int32_t* cookie) RUNTIME_NOTHROW;
 // Called on frame enter, if it has object slots.
 MODEL_VARIANTS(void, EnterFrame, ObjHeader** start, int parameters, int count);
 // Called on frame leave, if it has object slots.
@@ -883,6 +884,10 @@ class ExceptionObjHolder {
    ObjHeader* obj_;
 };
 
+inline bool isPermanentOrLocal(ObjHeader* obj) {
+    ContainerHeader* container = obj->container();
+    return container == nullptr || !container->shared();
+}
 
 #ifdef RTGC
 

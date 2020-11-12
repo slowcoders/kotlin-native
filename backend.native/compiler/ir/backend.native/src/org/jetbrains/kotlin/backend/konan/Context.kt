@@ -197,6 +197,8 @@ internal class Context(config: KonanConfig) : KonanBackendContext(config) {
     lateinit var cAdapterGenerator: CAdapterGenerator
 
     lateinit var expectDescriptorToSymbol: MutableMap<DeclarationDescriptor, IrSymbol>
+    val permanentRefs: HashMap<LLVMValueRef, LLVMValueRef> = hashMapOf();
+    //val permanentAddrs: HashSet<LLVMValueRef> = hashSetOf();
 
     override val builtIns: KonanBuiltIns by lazy(PUBLICATION) {
         moduleDescriptor.builtIns as KonanBuiltIns

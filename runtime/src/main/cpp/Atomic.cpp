@@ -185,24 +185,48 @@ OBJ_GETTER(Kotlin_AtomicReference_compareAndSwap, KRef thiz, KRef expectedValue,
     Kotlin_AtomicReference_checkIfFrozen(newValue);
     // See Kotlin_AtomicReference_get() for explanations, why locking is needed.
     AtomicReferenceLayout* ref = asAtomicReference(thiz);
-    RETURN_RESULT_OF(SwapHeapRefLocked, &ref->value_, expectedValue, newValue,
+    if (!ref->header.container()->shared()) {
+        ObjHeader* old = ref->value_;
+        UpdateReturnRef(OBJ_RESULT, old);
+        if (old == expectedValue) {
+            UpdateHeapRef(&ref->value_, newValue, thiz);
+        }
+        return old;
+    }
+    else {
+        RETURN_RESULT_OF(SwapHeapRefLocked, &ref->value_, expectedValue, newValue,
         &ref->lock_, thiz, &ref->cookie_);
+    }
 }
 
 KBoolean Kotlin_AtomicReference_compareAndSet(KRef thiz, KRef expectedValue, KRef newValue) {
     Kotlin_AtomicReference_checkIfFrozen(newValue);
     // See Kotlin_AtomicReference_get() for explanations, why locking is needed.
     AtomicReferenceLayout* ref = asAtomicReference(thiz);
-    ObjHolder holder;
-    auto old = SwapHeapRefLocked(&ref->value_, expectedValue, newValue,
-        &ref->lock_, thiz, &ref->cookie_, holder.slot());
+    ObjHeader* old;
+    if (!ref->header.container()->shared()) {
+        old = ref->value_;
+        if (old == expectedValue) {
+            UpdateHeapRef(&ref->value_, newValue, thiz);
+        }
+    }
+    else {
+        ObjHolder holder;
+        old = SwapHeapRefLocked(&ref->value_, expectedValue, newValue,
+            &ref->lock_, thiz, &ref->cookie_, holder.slot());
+    }
     return old == expectedValue;
 }
 
 void Kotlin_AtomicReference_set(KRef thiz, KRef newValue) {
     Kotlin_AtomicReference_checkIfFrozen(newValue);
     AtomicReferenceLayout* ref = asAtomicReference(thiz);
-    SetHeapRefLocked(&ref->value_, newValue, &ref->lock_, thiz, &ref->cookie_);
+    if (!ref->header.container()->shared()) {
+        UpdateHeapRef(&ref->value_, newValue, thiz);
+    }
+    else {
+        SetHeapRefLocked(&ref->value_, newValue, &ref->lock_, thiz, &ref->cookie_);
+    }
 }
 
 OBJ_GETTER(Kotlin_AtomicReference_get, KRef thiz) {
@@ -211,7 +235,14 @@ OBJ_GETTER(Kotlin_AtomicReference_get, KRef thiz) {
     // rescheduled unluckily, between the moment value is read from the field and RC is incremented,
     // object may go away.
     AtomicReferenceLayout* ref = asAtomicReference(thiz);
-    RETURN_RESULT_OF(ReadHeapRefLocked, &ref->value_, &ref->lock_, &ref->cookie_);
+    if (!ref->header.container()->shared()) {
+        ObjHeader* value = ref->value_;
+        UpdateReturnRef(OBJ_RESULT, value);
+        return value;
+    }
+    else {
+        RETURN_RESULT_OF(ReadHeapRefLocked, &ref->value_, &ref->lock_, thiz, &ref->cookie_);
+    }
 }
 
 }  // extern "C"
