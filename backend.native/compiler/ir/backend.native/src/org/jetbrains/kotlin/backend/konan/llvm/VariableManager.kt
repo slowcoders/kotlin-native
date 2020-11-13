@@ -20,7 +20,7 @@ internal fun IrElement.needDebugInfo(context: Context) = context.shouldContainDe
 internal class VariableManager(val functionGenerationContext: FunctionGenerationContext) {
     internal interface Record {
         fun load() : LLVMValueRef
-        fun store(value: LLVMValueRef)
+        fun store(value: LLVMValueRef, maybeInit:Boolean)
         fun address() : LLVMValueRef
         fun attachReturnValue(value: LLVMValueRef) { throw Error("writing to immutable: ") }
         fun getAttachedReturnValue() : LLVMValueRef? { throw Error("no attached value: ") }
@@ -30,6 +30,7 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         var loadedValues = mutableListOf<Pair<Int, LLVMValueRef>>();
         var attachedRetValue: LLVMValueRef? = null
         var permanentValue: LLVMValueRef? = null;
+        var isAssigned: Boolean = false; 
         override fun load() : LLVMValueRef {
             if (!functionGenerationContext.ENABLE_ALTER_ARGS) {
                 return functionGenerationContext.loadSlot(address(), !functionGenerationContext.RTGC && isVar)
@@ -47,9 +48,12 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
             }
             return value;
         }
-        override fun store(value: LLVMValueRef) {
+        override fun store(value: LLVMValueRef, maybeInit:Boolean) {
             if (functionGenerationContext.ENABLE_ALTER_ARGS && loadedValues.size > 0) alterPushedVariable(loadedValues);
-            permanentValue = functionGenerationContext.context.permanentRefs.get(value);
+            if (!this.isAssigned && maybeInit) {
+                permanentValue = functionGenerationContext.permanentRefs.get(value);
+            }
+            this.isAssigned = true;
             if (permanentValue == null) {
                 functionGenerationContext.storeStackVar(value, address())
             }
@@ -65,14 +69,14 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
 
     inner class ParameterRecord(val address: LLVMValueRef, val refSlot: Boolean) : Record {
         override fun load() : LLVMValueRef = functionGenerationContext.loadSlot(address, false)
-        override fun store(value: LLVMValueRef) = throw Error("writing to parameter")
+        override fun store(value: LLVMValueRef, maybeInit:Boolean) = throw Error("writing to parameter")
         override fun address() : LLVMValueRef = this.address
         override fun toString() = (if (refSlot) "refslot" else "slot") + " for ${address}"
     }
 
     class ValueRecord(val value: LLVMValueRef, val name: Name) : Record {
         override fun load() : LLVMValueRef = value
-        override fun store(value: LLVMValueRef) = throw Error("writing to immutable: ${name}")
+        override fun store(value: LLVMValueRef, maybeInit:Boolean) = throw Error("writing to immutable: ${name}")
         override fun address() : LLVMValueRef = throw Error("no address for: ${name}")
         override fun toString() = "value of ${value} from ${name}"
     }
@@ -148,7 +152,8 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         val slot = functionGenerationContext.alloca(type, valueDeclaration.name.asString(), variableLocation)
         val slotRec = SlotRecord(slot, functionGenerationContext.isObjectType(type), isVar);
         if (value != null) {
-            slotRec.permanentValue = functionGenerationContext.context.permanentRefs.get(value);
+            slotRec.permanentValue = functionGenerationContext.permanentRefs.get(value);
+            slotRec.isAssigned = true;
             if (slotRec.permanentValue == null) {
                 functionGenerationContext.storeStackVar(value, slot)
             }
@@ -188,14 +193,15 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         val slot = functionGenerationContext.alloca(type, variableLocation = null)
         val slotRec = SlotRecord(slot, functionGenerationContext.isObjectType(type), true);
         if (value != null) {
-            slotRec.permanentValue = functionGenerationContext.context.permanentRefs.get(value);
-            if (slotRec.permanentValue == null) {
+            //slotRec.permanentValue = functionGenerationContext.permanentRefs.get(value);
+            //if (slotRec.permanentValue == null) {
                 functionGenerationContext.storeStackVar(value, slot)
-            }
-            else {
+            //}
+            //else {
                 //print("## load permanent slot")
-            }
+            //}
         }
+        slotRec.isAssigned = true;
         variables.add(slotRec)
         return index
     }
@@ -221,8 +227,8 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         return variables[index].load()
     }
 
-    fun store(value: LLVMValueRef, index: Int) {
-        variables[index].store(value)
+    fun store(value: LLVMValueRef, index: Int, maybeInit: Boolean) {
+        variables[index].store(value, maybeInit)
     }
 
     fun attachReturnValue(value: LLVMValueRef, index: Int) { variables[index].attachReturnValue(value) }

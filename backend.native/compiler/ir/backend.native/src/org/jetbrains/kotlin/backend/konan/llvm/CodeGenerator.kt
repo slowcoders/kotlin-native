@@ -1216,7 +1216,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             else
                 kNullObjHeaderPtrPtr
             if (needSlots) {
-                // Zero-init slots.
+                // Zero-init slots. ZZZZZ
                 val slotsMem = bitcast(kInt8Ptr, slots)
                 call(context.llvm.memsetFunction,
                         listOf(slotsMem, Int8(0).llvm,

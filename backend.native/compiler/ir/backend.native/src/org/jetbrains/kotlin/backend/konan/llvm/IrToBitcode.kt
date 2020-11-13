@@ -1291,7 +1291,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         val result = evaluateExpression(value.value)
         val variable = currentCodeContext.getDeclaredVariable(value.symbol.owner)
         /// --- ZZZZ -----
-        functionGenerationContext.vars.store(result, variable)
+        functionGenerationContext.vars.store(result, variable, false)
         assert(value.type.isUnit())
         return functionGenerationContext.theUnitInstanceRef.llvm
     }
@@ -1372,7 +1372,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 // println("*** return consumed " + value);
             }
             else {
-                functionGenerationContext.vars.store(value, idxVar)
+                functionGenerationContext.vars.store(value, idxVar, true)
             }
         }
         functionGenerationContext.anonymousRetValue = oldAnonymousVar;
