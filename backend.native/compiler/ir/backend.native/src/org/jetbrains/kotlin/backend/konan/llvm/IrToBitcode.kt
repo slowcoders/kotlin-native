@@ -1604,7 +1604,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         context.log { "evaluateGetField               : ${ir2string(value)}" }
         return if (!value.symbol.owner.isStatic) {
             val thisPtr = evaluateExpression(value.receiver!!)
-            val isPermanent = functionGenerationContext.context.permanentRefs.get(thisPtr) != null;
+            val isPermanent = functionGenerationContext.permanentRefs.get(thisPtr) != null;
             if (isPermanent) println("## permanent owner =" + value.symbol.owner)
             functionGenerationContext.loadSlotEx(
                     fieldPtrOfClass(thisPtr, value.symbol.owner), !isPermanent && !value.symbol.owner.isFinal)
@@ -1741,7 +1741,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
             IrConstKind.String -> {
                 var str = evaluateStringConst(value as IrConst<String>)
                 if (currentCodeContext.functionScope() is FunctionScope) {
-                    functionGenerationContext.context.permanentRefs.put(str, str);
+                    functionGenerationContext.permanentRefs.put(str, str);
                 }
                 return str;
             }

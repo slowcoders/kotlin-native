@@ -2861,7 +2861,7 @@ OBJ_GETTER(initSharedInstance,
   #else  // KONAN_NO_EXCEPTIONS
     try {
       if (true || RTGC_STATISTCS) {
-        RTGC_dumpTypeInfo("initShared", typeInfo, object->container());
+        // RTGC_dumpTypeInfo("initShared", typeInfo, object->container());
       }
       ctor(object);
       if (Strict) { // ZZZZZ??? } || RTGC) {

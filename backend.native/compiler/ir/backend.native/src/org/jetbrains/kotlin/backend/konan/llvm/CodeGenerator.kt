@@ -307,6 +307,8 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     val RTGC:Boolean = context.memoryModel == MemoryModel.RTGC;
     var ENABLE_ALTER_ARGS:Boolean = true;
     val RTGC_ENABLE_STACK_LOCAL:Boolean = true;
+    val permanentRefs: HashMap<LLVMValueRef, LLVMValueRef> = hashMapOf();
+    //val permanentAddrs: HashSet<LLVMValueRef> = hashSetOf();
 
     val vars = VariableManager(this)
     private val basicBlockToLastLocation = mutableMapOf<LLVMBasicBlockRef, LocationInfoRange>()
@@ -438,7 +440,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         val value = loadSlot(address, isVar, name)
         if (isObjectRef(value)) {
             if (!isVar) {
-                context.permanentRefs.put(value, value);
+                //permanentRefs.put(value, value);
             }
         }
         return value
