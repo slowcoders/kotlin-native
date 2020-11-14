@@ -77,6 +77,7 @@ struct RTGCGlobal {
   static int g_cntRemoveCyclicNode;
   static int g_cntAddCyclicTest;
   static int g_cntRemoveCyclicTest;
+  static int g_cntFreezed;
 
   static void validateMemPool();
 
@@ -144,14 +145,17 @@ struct GCNode {
   friend CyclicNode;  
   friend class CyclicNodeDetector;
   GCRefList externalReferrers;
-protected:  
-
-  //static CyclicNode* g_cyclicNodes;
-
-  void clearSuspectedCyclic() { externalReferrers.flags_ &= ~NEED_CYCLIC_TEST; } 
-  void markSuspectedCyclic() { externalReferrers.flags_ |= NEED_CYCLIC_TEST; } 
 
 public:
+
+  void clearSuspectedCyclic() { 
+    if (RTGC_STATISTCS && isSuspectedCyclic()) RTGCGlobal::g_cntRemoveCyclicTest ++;
+    externalReferrers.flags_ &= ~NEED_CYCLIC_TEST; 
+  } 
+  void markSuspectedCyclic() { 
+    if (RTGC_STATISTCS && !isSuspectedCyclic()) RTGCGlobal::g_cntAddCyclicTest ++;
+    externalReferrers.flags_ |= NEED_CYCLIC_TEST; 
+  } 
 
   bool isSuspectedCyclic() {
     return (externalReferrers.flags_ & NEED_CYCLIC_TEST) != 0;
@@ -195,16 +199,14 @@ public:
   int getId(); // { return (this - g_cyclicNodes) + CYCLIC_NODE_ID_START; }
 
   static CyclicNode* getNode(int nodeId);
-  // {
-  //   if (nodeId < CYCLIC_NODE_ID_START) {
-  //     return NULL;
-  //   }
-  //   return g_cyclicNodes + nodeId - CYCLIC_NODE_ID_START;
-  // }
+
+  static CyclicNode* createTwoWayNode(GCObject* root, GCObject* rookie);
 
   bool isDamaged() {
     return nextDamaged != 0;
   }
+
+  char* addCyclicObject(GCObject* rookie);
 
   bool isGarbage() {
     return rootObjectCount == 0 && externalReferrers.topChain() == 0;
@@ -245,8 +247,7 @@ public:
 
   static CyclicNode* create()  RTGC_NO_INLINE;
   static void addCyclicTest(GCObject* node, bool isLocalTest)  RTGC_NO_INLINE;
-  static void removeCyclicTest(struct RTGCMemState* rtgcMem, GCObject* node)  RTGC_NO_INLINE;
-  static void detectCycles()  RTGC_NO_INLINE;
+  static void garbageCollectCycles(void* freezing)  NO_INLINE;
 };
 
 

@@ -37,6 +37,7 @@ CyclicBucket g_cyclicBucket;
 
 int RTGCGlobal::g_cntAddCyclicTest = 0;
 int RTGCGlobal::g_cntRemoveCyclicTest = 0;
+int RTGCGlobal::g_cntFreezed = 0;
 
 static pthread_t g_lockThread = NULL;
 static int g_cntLock = 0;
@@ -259,10 +260,12 @@ void GCNode::dumpGCLog() {
         RTGCGlobal::g_cntAddCyclicNode, RTGCGlobal::g_cntRemoveCyclicNode);
     printf("** cntCyclicTest %d = %d - %d\n", RTGCGlobal::g_cntAddCyclicTest - RTGCGlobal::g_cntRemoveCyclicTest,
         RTGCGlobal::g_cntAddCyclicTest, RTGCGlobal::g_cntRemoveCyclicTest);
+    printf("** cntFreezed %d\n", RTGCGlobal::g_cntFreezed);
 
     RTGCGlobal::g_cntAddRefChain = RTGCGlobal::g_cntRemoveRefChain = 0;
     RTGCGlobal::g_cntAddCyclicNode = RTGCGlobal::g_cntRemoveCyclicNode = 0;
     RTGCGlobal::g_cntAddCyclicTest = RTGCGlobal::g_cntRemoveCyclicTest = 0;
+    RTGCGlobal::g_cntFreezed = 0;
     
     g_cntRTGCLocks[_FreeContainer] = 0;
     g_cntRTGCLocks[_IncrementRC] = 0;

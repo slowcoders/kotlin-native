@@ -25,8 +25,8 @@
 
 
 typedef enum {
-  CONTAINER_TAG_GC_MARKED   = 0x01, // Unused, Reserved for TRACE_STATE
-  CONTAINER_TAG_GC_BUFFERED = 0x02, // Unused, Reserved for TRACE_STATE
+  CONTAINER_TAG_GC_MARKED   = 0x01, // Reserved for TRACE_STATE
+  CONTAINER_TAG_GC_BUFFERED = 0x02, // Reserved for TRACE_STATE
 
   // Container is frozen, could only refer to other frozen objects.
   CONTAINER_TAG_FROZEN = 0x04,
@@ -45,7 +45,7 @@ typedef enum {
   CONTAINER_TAG_STACK_OR_PERMANANT = CONTAINER_TAG_NOT_FREEABLE,//1 << 7, // Unused, Reserved
   CONTAINER_TAG_FREEZING    = 0x80,
   
-  CONTAINER_TAG_GC_SEEN     = 0x100,
+  CONTAINER_TAG_reserved     = 0x100,
   // If indeed has more that one object.
   CONTAINER_TAG_GC_HAS_OBJECT_COUNT = 0x200,
 
@@ -122,6 +122,10 @@ public:
     return (rtNode.flags_ & (CONTAINER_TAG_FROZEN | CONTAINER_TAG_FREEZING)) != 0;
   }
 
+  inline bool isFreezing() const {
+    return (rtNode.flags_ & (CONTAINER_TAG_FREEZING)) != 0;
+  }
+
   inline void markAcyclic() {
     rtNode.flags_ |= CONTAINER_TAG_ACYCLIC;
   }
@@ -172,7 +176,7 @@ public:
     int flags = CONTAINER_TAG_FROZEN | CONTAINER_TAG_SHARED;
     if (IS_SHARED_PERMANENT_NEVER_FREEABLE) {
       if (isNeedCyclicTest()) {
-        clearNeedCyclicTest();
+          getNode()->clearSuspectedCyclic();
       }
       flags |= CONTAINER_TAG_STACK_OR_PERMANANT | CONTAINER_TAG_ACYCLIC;
     }
@@ -291,22 +295,26 @@ public:
     return getNode();
   }
 
-  void markNeedCyclicTest() {
-    if (RTGC_STATISTCS && !isNeedCyclicTest()) RTGCGlobal::g_cntAddCyclicTest ++;
-    this->rtNode.flags_ |= NEED_CYCLIC_TEST;
-  }
+  // void markNeedCyclicTest() {
+  //   if (RTGC_STATISTCS && !isNeedCyclicTest()) RTGCGlobal::g_cntAddCyclicTest ++;
+  //   this->rtNode.flags_ |= NEED_CYCLIC_TEST;
+  // }
 
   bool isNeedCyclicTest() {
-    return (this->rtNode.flags_ & NEED_CYCLIC_TEST) != 0;
+    return (this->getNodeId() != 0 && this->getNode()->isSuspectedCyclic());//rtNode.flags_ & NEED_CYCLIC_TEST) != 0;
   }
 
-  void clearNeedCyclicTest() {
-    if (RTGC_STATISTCS && isNeedCyclicTest()) RTGCGlobal::g_cntRemoveCyclicTest ++;
-    this->rtNode.flags_ &= ~NEED_CYCLIC_TEST;
-  }
+  // void clearNeedCyclicTest() {
+  //   if (RTGC_STATISTCS && isNeedCyclicTest()) RTGCGlobal::g_cntRemoveCyclicTest ++;
+  //   this->rtNode.flags_ &= ~NEED_CYCLIC_TEST;
+  // }
 
   void markDestroyed() {
-    this->rtNode.flags_ |= CONTAINER_TAG_NOT_FREEABLE;
+    this->rtNode.flags_ |= CONTAINER_TAG_NOT_FREEABLE | 3;
+  }
+
+  bool isDestroyed() {
+    return (this->rtNode.flags_ & (CONTAINER_TAG_NOT_FREEABLE | 3)) == (CONTAINER_TAG_NOT_FREEABLE | 3);
   }
 
   bool isGarbage() {
@@ -513,6 +521,7 @@ public:
     rtNode.flags_ &= ~CONTAINER_TAG_GC_MARKED;
   }
 
+#ifndef RTGC
   inline bool seen() const {
     return (rtNode.flags_ & CONTAINER_TAG_GC_SEEN) != 0;
   }
@@ -524,7 +533,7 @@ public:
   inline void resetSeen() {
     rtNode.flags_ &= ~CONTAINER_TAG_GC_SEEN;
   }
-
+#endif
   // Following operations only work on freed container which is in finalization queue.
   // We cannot use 'this' here, as it conflicts with aliasing analysis in clang.
   inline void setNextLink(ContainerHeader* next) {

@@ -1060,7 +1060,6 @@ void processFinalizerQueue(MemoryState* state) {
       if (node != NULL) {
         node->dealloc();
       }
-      CyclicNode::removeCyclicTest(state, container);
       if (isShared) GCNode::rtgcUnlock();
     }
 
@@ -1165,13 +1164,15 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container) {
   RTGC_LOG("scheduleDestroyContainer %1\n", container);
   if (true) {
-    bool isShared = container->shared();
+    if (container->isNeedCyclicTest()) return;
+
+    bool isShared = false; // container->shared();
     OnewayNode* node = container->getLocalOnewayNode();
     if (isShared) GCNode::rtgcLock(_FreeContainer);
     if (node != NULL) {
       node->dealloc();
     }
-    CyclicNode::removeCyclicTest(state, container);
+    // CyclicNode::removeCyclicTest(state, container);
     if (isShared) GCNode::rtgcUnlock();
   }
 #if USE_GC
@@ -1357,6 +1358,7 @@ namespace {
   *  - not 'marked' and not 'seen' as WHITE marker (object is unprocessed)
   * When we see GREY during DFS, it means we see cycle.
   */
+ #ifndef RTGC
 void depthFirstTraversal(ContainerHeader* start, bool* hasCycles,
                          KRef* firstBlocker, KStdVector<ContainerHeader*>* order) {
   ContainerHeaderDeque toVisit;
@@ -1404,7 +1406,7 @@ void depthFirstTraversal(ContainerHeader* start, bool* hasCycles,
     });
   }
 }
-
+#endif
 void traverseStronglyConnectedComponent(ContainerHeader* start,
                                         KStdUnorderedMap<ContainerHeader*,
                                             KStdVector<ContainerHeader*>> const* reversedEdges,
@@ -1518,7 +1520,14 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     if (!val_node->isSuspectedCyclic() &&
       val_node->externalReferrers.isEmpty() &&
       !owner_node->externalReferrers.isEmpty()) {
-        CyclicNode::addCyclicTest(container, true);
+        bool early_detect_cycle = false;
+        if (early_detect_cycle &&
+            owner_node->externalReferrers.find(owner) != nullptr) {
+          CyclicNode::createTwoWayNode(owner, container);
+        }
+        else {
+          CyclicNode::addCyclicTest(container, true);
+        }
     }
   }
   val_node->externalReferrers.push(owner);
@@ -2191,7 +2200,7 @@ void garbageCollect(MemoryState* state, bool force) {
     state->foreignRefManager->processEnqueuedReleaseRefsWith([](ObjHeader* obj) {
         ReleaseRef(obj);
       });
-    CyclicNode::detectCycles();
+    CyclicNode::garbageCollectCycles(nullptr);
     // GCNode::dumpGCLog();    
     // In relaxed model we just process finalizer queue and be done with it.
     processFinalizerQueue(state);
@@ -3525,9 +3534,10 @@ void freezeSubgraph(ObjHeader* root) {
   // these hooks will run again on a repeated freezing attempt.
 
 #if RTGC
-  garbageCollect();
   KStdVector<KRef> newlyFrozen;
   runFreezeHooksRecursive(root, &newlyFrozen);
+  CyclicNode::garbageCollectCycles(&newlyFrozen);
+
   for (auto* e: newlyFrozen) {
     e->container()->freezeRef();
     e->container()->makeShared();
@@ -3904,6 +3914,10 @@ ArrayHeader* ArenaContainer::PlaceArray(const TypeInfo* type_info, uint32_t coun
   setHeader(result->obj(), type_info);
   result->count_ = count;
   return result;
+}
+
+void ScheduleDestroyContainer(MemoryState* state, ContainerHeader* container) {
+  scheduleDestroyContainer(state, container);
 }
 
 // API of the memory manager.
