@@ -1179,9 +1179,9 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 #endif  // USE_GC
 
 void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container) {
-  RTGC_LOG("scheduleDestroyContainer %1\n", container);
+  RTGC_LOG("scheduleDestroyContainer %p isEnqueued=%d\n", container, container->isEnquedCyclicTest());
   if (true) {
-    if (RTGC_LATE_DESTROY_CYCLIC_SUSPECT && container->isNeedCyclicTest()) return;
+    if (RTGC_LATE_DESTROY_CYCLIC_SUSPECT && container->isEnquedCyclicTest()) return;
 
     bool isShared = false; // container->shared();
     OnewayNode* node = container->getLocalOnewayNode();
@@ -3551,7 +3551,7 @@ void freezeSubgraph(ObjHeader* root) {
   // these hooks will run again on a repeated freezing attempt.
 
 #if RTGC
-  bool gc_only_freezing = false;
+  bool gc_only_freezing = true;
   if (!gc_only_freezing) garbageCollect();
   KStdVector<KRef> newlyFrozen;
   runFreezeHooksRecursive(root, &newlyFrozen);

@@ -76,9 +76,14 @@ void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
     DebugRefAssert(obj, !obj->isAcyclic());
     DebugRefAssert(obj, !obj->isNeedCyclicTest());
     RTGC_LOG("addCyclicTest %p\n", obj);
-    obj->markNeedCyclicTest();
-
-    rtgcMem->g_cyclicTestNodes.push(obj);
+    obj->getNode()->markSuspectedCyclic();
+    if (obj->markEnquedCyclicTest()) {
+        rtgcMem->g_cyclicTestNodes.push(obj);
+    }
+    else {
+        DebugRefAssert(obj, obj->frozen());
+        //konan::consolePrintf("Double enque cyclic test!!!");
+    }
 }
 
 void CyclicNode::removeCyclicTest(RTGCMemState* rtgcMem, GCObject* obj) {
@@ -352,7 +357,8 @@ void CyclicNodeDetector::checkCyclic(KStdVector<KRef>* freezing) {
             if (RTGC_STATISTCS) RTGCGlobal::g_cntFreezed ++;
             ContainerHeader* root = obj->container();
             DebugAssert(isValidObjectContainer(root));
-            if (root->clearNeedCyclicTest()) {
+            if (root->getNodeId() != 0 && root->getNode()->clearSuspectedCyclic()) {
+                // Do not clear enqued cyclic test!
                 this->traceCyclic(root);
             }
         }

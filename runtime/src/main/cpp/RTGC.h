@@ -11,13 +11,14 @@
 #include <atomic>
 #include <vector>
 
-#define RTGC                              true
-#define RTGC_DEBUG                        true
+#define RTGC                              1
+#define RTGC_DEBUG                        1
+#define RTGC_STATISTCS                    1
 #define RTGC_NO_INLINE                    // NO_INLINE
-#define RTGC_STATISTCS                    true
+#define ENABLE_RTGC_LOG                   0
+
 #define RTGC_LATE_DESTORY                 0
 #define RTGC_LATE_DESTROY_CYCLIC_SUSPECT  true
-#define ENABLE_RTGC_LOG                   0
 #define DEBUG_RTGC_BUCKET                 0
 
 typedef struct ContainerHeader GCObject;

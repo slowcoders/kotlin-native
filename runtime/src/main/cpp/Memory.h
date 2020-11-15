@@ -254,12 +254,7 @@ public:
   }
 
   GCNode* getNode() {
-#if RTGC_DEBUG
-    if (ref_.rtgc.node == 0) {
-      RTGC_dumpRefInfo0(this);
-    }
-    RuntimeAssert(ref_.rtgc.node != 0, "node not initialized");
-#endif    
+    DebugRefAssert(this, ref_.rtgc.node != 0);
     if (this->isInCyclicNode()) {
       return CyclicNode::getNode(ref_.rtgc.node);
     }
@@ -295,15 +290,6 @@ public:
     return getNode();
   }
 
-  void markNeedCyclicTest() {
-    this->getNode()->markSuspectedCyclic();
-    this->rtNode.flags_ |= NEED_CYCLIC_TEST;
-  }
-
-  bool isEnquedCyclicTest() {
-    return (this->rtNode.flags_ & NEED_CYCLIC_TEST) != 0;
-  }
-
   bool isNeedCyclicTest() {
     return (this->getNodeId() != 0 && this->getNode()->isSuspectedCyclic());//rtNode.flags_ & NEED_CYCLIC_TEST) != 0;
   }
@@ -312,6 +298,18 @@ public:
     bool needTest = this->getNode()->clearSuspectedCyclic();
     this->rtNode.flags_ &= ~NEED_CYCLIC_TEST;
     return needTest;
+  }
+
+  bool isEnquedCyclicTest() {
+    return (this->rtNode.flags_ & NEED_CYCLIC_TEST) != 0;
+  }
+
+  bool markEnquedCyclicTest() {
+    if (!this->isEnquedCyclicTest()) {
+      this->rtNode.flags_ |= NEED_CYCLIC_TEST;
+      return true;
+    }
+    return false;
   }
 
   void markDestroyed() {
@@ -349,10 +347,8 @@ public:
 #else
     int64_t value __attribute__((unused))= Atomic ?
         __sync_add_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count += RTGC_MEMBER_REF_INCREEMENT;
-#if KONAN_ENABLE_ASSERT
-    RuntimeAssert(ignoreAcyclic || !isAcyclic(), "Acyclic objct does not have member refCount");
-    RuntimeAssert(((RTGCRef*)&value)->obj != 0, "member ref overflow");
-#endif    
+    DebugAssert(ignoreAcyclic || !isAcyclic());
+    DebugAssert(((RTGCRef*)&value)->obj != 0);
 #endif
   }
 
@@ -367,10 +363,8 @@ public:
 
   template <bool Atomic>
   inline void decMemberRefCount() {
-#if KONAN_ENABLE_ASSERT
-    RuntimeAssert(!isAcyclic(), "Acyclic objct does not have member refCount");
-    RuntimeAssert(ref_.rtgc.obj != 0, "member ref underflow");
-#endif    
+    DebugRefAssert(this, !isAcyclic());
+    DebugRefAssert(this, ref_.rtgc.obj != 0);
 #ifdef KONAN_NO_THREADS
     int64_t value __attribute__((unused))= ref_.count -= RTGC_MEMBER_REF_INCREEMENT;
 #else
@@ -387,10 +381,8 @@ public:
     int64_t value __attribute__((unused))= Atomic ?
        __sync_add_and_fetch(&ref_.count, RTGC_ROOT_REF_INCREEMENT) : ref_.count += RTGC_ROOT_REF_INCREEMENT;
 #endif
-#if KONAN_ENABLE_ASSERT
-    RuntimeAssert(!isAcyclic(), "Acyclic objct does not have root refCount");
-    RuntimeAssert(((RTGCRef*)&value)->root != 0, "root ref overflow");
-#endif    
+    DebugRefAssert(this, !isAcyclic());
+    DebugRefAssert(this, ((RTGCRef*)&value)->root != 0);
     return *(RTGCRef*)&value;
   }
 
@@ -400,10 +392,8 @@ public:
 
   template <bool Atomic>
   inline RTGCRef decRootCount() {
-#if KONAN_ENABLE_ASSERT
-  RuntimeAssert(!isAcyclic(), "Acyclic objct does not have root refCount");
-  RuntimeAssert(ref_.rtgc.root != 0, "root ref underflow");
-#endif
+    DebugRefAssert(this, !isAcyclic());
+    DebugRefAssert(this, ref_.rtgc.root != 0);
 #ifdef KONAN_NO_THREADS
     int64_t value __attribute__((unused))= ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #else
@@ -415,10 +405,8 @@ public:
 
   template <bool Atomic>
   inline int decRefCount() {
-#if KONAN_ENABLE_ASSERT
-  RuntimeAssert(isAcyclic(), "!Acyclic objct");
-    RuntimeAssert(ref_.count != 0, "refCount underflow");
-#endif    
+    DebugRefAssert(this, isAcyclic());
+    DebugRefAssert(this, ref_.count != 0);
 #ifdef KONAN_NO_THREADS
     int value __attribute__((unused))= ref_.count -= RTGC_ROOT_REF_INCREEMENT;
 #else
@@ -429,10 +417,8 @@ public:
   }
 
   inline int decRefCount() {
-  #if KONAN_ENABLE_ASSERT
-    RuntimeAssert(isAcyclic(), "!Acyclic objct");
-    RuntimeAssert(ref_.count != 0, "refCount underflow");
-#endif    
+    DebugRefAssert(this, isAcyclic());
+    DebugRefAssert(this, ref_.count != 0);
 #ifdef KONAN_NO_THREADS
       int value __attribute__((unused))= ref_.count -= RTGC_ROOT_REF_INCREEMENT;
   #else
