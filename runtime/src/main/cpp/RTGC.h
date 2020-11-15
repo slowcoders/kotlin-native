@@ -16,7 +16,7 @@
 #define RTGC_NO_INLINE                    // NO_INLINE
 #define RTGC_STATISTCS                    true
 #define RTGC_LATE_DESTORY                 0
-#define RTGC_LATE_DESTROY_CYCLIC_SUSPECT  0
+#define RTGC_LATE_DESTROY_CYCLIC_SUSPECT  true
 #define ENABLE_RTGC_LOG                   0
 #define DEBUG_RTGC_BUCKET                 0
 

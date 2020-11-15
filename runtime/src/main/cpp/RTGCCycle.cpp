@@ -445,7 +445,6 @@ void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
         if (checkFreezingOnly && !referrer->isFreezing()) {
             continue;
         }
-        DebugRefAssert(referrer, !referrer->isAcyclic());
 
         RTGC_LOG("## Tracing Obj %p %d memberRef=%d isCyclic=%d\n", referrer, referrer->getNodeId(), referrer->getMemberRefCount(), referrer->isInCyclicNode());
         GCNode* referrer_node = referrer->getNode();
