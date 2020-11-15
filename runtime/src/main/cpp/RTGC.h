@@ -11,12 +11,14 @@
 #include <atomic>
 #include <vector>
 
-#define RTGC                true
-#define RTGC_LATE_DESTORY   false
-#define ENABLE_RTGC_LOG     false
-#define RTGC_NO_INLINE      // NO_INLINE
-#define DEBUG_RTGC_BUCKET   false
-static const bool RTGC_STATISTCS = true;
+#define RTGC                              true
+#define RTGC_DEBUG                        true
+#define RTGC_NO_INLINE                    // NO_INLINE
+#define RTGC_STATISTCS                    true
+#define RTGC_LATE_DESTORY                 0
+#define RTGC_LATE_DESTROY_CYCLIC_SUSPECT  0
+#define ENABLE_RTGC_LOG                   0
+#define DEBUG_RTGC_BUCKET                 0
 
 typedef struct ContainerHeader GCObject;
 
@@ -41,11 +43,18 @@ bool rtgc_trap(void* pObj) NO_INLINE;
 #define RTGC_TRAP(...)
 #endif
 
+#ifdef RTGC_DEBUG
+#  define DebugAssert(condition) assert(condition)
+#  define DebugRefAssert(ref, condition) assert(RTGC_Check(ref, condition))
+#else
+#  define DebugAssert(condition) assert(condition)
+#  define DebugRefAssert(ref, condition) // ignore
+#endif
 
 void RTGC_dumpRefInfo(GCObject* container) NO_INLINE;
 void RTGC_dumpRefInfo0(GCObject* container) NO_INLINE;
 void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj);
-void RTGC_Error(GCObject* obj) NO_INLINE;
+bool RTGC_Check(GCObject* obj, bool isValid) NO_INLINE;
 extern void* RTGC_debugInstance;
 
 struct RTGCRef {
@@ -148,9 +157,13 @@ struct GCNode {
 
 public:
 
-  void clearSuspectedCyclic() { 
-    if (RTGC_STATISTCS && isSuspectedCyclic()) RTGCGlobal::g_cntRemoveCyclicTest ++;
-    externalReferrers.flags_ &= ~NEED_CYCLIC_TEST; 
+  bool clearSuspectedCyclic() { 
+    if (isSuspectedCyclic()) {
+      if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveCyclicTest ++;
+      externalReferrers.flags_ &= ~NEED_CYCLIC_TEST; 
+      return true;
+    }
+    return false;
   } 
   void markSuspectedCyclic() { 
     if (RTGC_STATISTCS && !isSuspectedCyclic()) RTGCGlobal::g_cntAddCyclicTest ++;
@@ -200,7 +213,7 @@ public:
 
   static CyclicNode* getNode(int nodeId);
 
-  static CyclicNode* createTwoWayNode(GCObject* root, GCObject* rookie);
+  static CyclicNode* createTwoWayLink(GCObject* root, GCObject* rookie) RTGC_NO_INLINE;
 
   bool isDamaged() {
     return nextDamaged != 0;
@@ -247,6 +260,7 @@ public:
 
   static CyclicNode* create()  RTGC_NO_INLINE;
   static void addCyclicTest(GCObject* node, bool isLocalTest)  RTGC_NO_INLINE;
+  static void removeCyclicTest(struct RTGCMemState* rtgcMem, GCObject* node)  RTGC_NO_INLINE;
   static void garbageCollectCycles(void* freezing)  NO_INLINE;
 };
 
@@ -378,8 +392,6 @@ struct RTGCMemState {
   CyclicNode* g_damagedCylicNodes;
   GCRefList g_cyclicTestNodes;
 };
-
-
 
 using RTGC_FIELD_TRAVERSE_CALLBACK = std::function<void(GCObject*)>;
 

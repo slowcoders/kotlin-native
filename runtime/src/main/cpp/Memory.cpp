@@ -904,10 +904,27 @@ void RTGC_traverseObjectFields(ContainerHeader* container, RTGC_FIELD_TRAVERSE_C
 namespace {
 template <typename func>
 inline void traverseReferredObjects(ObjHeader* obj, func process) {
-  traverseObjectFields(obj, [process](ObjHeader** location) {
-    ObjHeader* ref = *location;
-    if (ref != nullptr) process(ref);
-  });
+  const TypeInfo* typeInfo = obj->type_info();
+  if (typeInfo != theArrayTypeInfo) {
+    const int32_t* offsets = typeInfo->objOffsets_;
+    for (int index = typeInfo->objOffsetsCount_; --index >= 0; ) {
+      ObjHeader** location = reinterpret_cast<ObjHeader**>(
+          reinterpret_cast<uintptr_t>(obj) + *offsets++);
+      KRef ref = *location;
+      if (ref != nullptr) {
+        process(ref);
+      }
+    }
+  } else {
+    ArrayHeader* array = obj->array();
+    KRef* pRef = ArrayAddressOfElementAt(array, 0);
+    for (int32_t index = (int32_t)array->count_; --index >= 0;) {
+      KRef ref = *pRef ++;
+      if (ref != nullptr) {
+        process(ref);
+      }
+    }
+  }
 }
 
 //*
@@ -1164,15 +1181,17 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container) {
   RTGC_LOG("scheduleDestroyContainer %1\n", container);
   if (true) {
-    if (container->isNeedCyclicTest()) return;
+    if (RTGC_LATE_DESTROY_CYCLIC_SUSPECT && container->isNeedCyclicTest()) return;
 
     bool isShared = false; // container->shared();
     OnewayNode* node = container->getLocalOnewayNode();
     if (isShared) GCNode::rtgcLock(_FreeContainer);
+    if (!RTGC_LATE_DESTROY_CYCLIC_SUSPECT) {
+      CyclicNode::removeCyclicTest(state, container);
+    }
     if (node != NULL) {
       node->dealloc();
     }
-    // CyclicNode::removeCyclicTest(state, container);
     if (isShared) GCNode::rtgcUnlock();
   }
 #if USE_GC
@@ -1263,13 +1282,12 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
 
   bool doFree = container->freeable();
   if (RTGC && doFree) {
+
       container->markDestroyed();
       ContainerHeader* owner = container;
       bool isOwnerPushed = isRoot;
-      while (true) {
-        traverseContainerObjectFields(owner, [garbageNodeId, toRelease, &isOwnerPushed, owner](ObjHeader** location) {
-          ObjHeader* old = *location;
-          if (old == nullptr) return;
+      while (true) {//garbageNodeId == 0) {
+        traverseReferredObjects((ObjHeader*)(owner+1), [garbageNodeId, toRelease, &isOwnerPushed, owner](ObjHeader* old) {
           ContainerHeader* deassigned = old->container();
           RTGC_LOG("--- cleaning fields start %p(%p) IN %p(%d)\n", deassigned, old, owner, garbageNodeId);
           if (isFreeable(deassigned)) {
@@ -1517,17 +1535,16 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
       return;
     }
     
-    if (!val_node->isSuspectedCyclic() &&
-      val_node->externalReferrers.isEmpty() &&
-      !owner_node->externalReferrers.isEmpty()) {
-        bool early_detect_cycle = false;
-        if (early_detect_cycle &&
-            owner_node->externalReferrers.find(owner) != nullptr) {
-          CyclicNode::createTwoWayNode(owner, container);
-        }
-        else {
-          CyclicNode::addCyclicTest(container, true);
-        }
+    if (!val_node->isSuspectedCyclic()) {
+      bool early_detect_cycle = false;
+      if (early_detect_cycle && owner_node->externalReferrers.find(container)) {
+        CyclicNode::createTwoWayLink(owner, container);
+        return;
+      }
+      else if (val_node->externalReferrers.isEmpty() &&
+              !owner_node->externalReferrers.isEmpty()) {
+        CyclicNode::addCyclicTest(container, true);
+      }
     }
   }
   val_node->externalReferrers.push(owner);
@@ -3534,9 +3551,11 @@ void freezeSubgraph(ObjHeader* root) {
   // these hooks will run again on a repeated freezing attempt.
 
 #if RTGC
+  bool gc_only_freezing = false;
+  if (!gc_only_freezing) garbageCollect();
   KStdVector<KRef> newlyFrozen;
   runFreezeHooksRecursive(root, &newlyFrozen);
-  CyclicNode::garbageCollectCycles(&newlyFrozen);
+  if (gc_only_freezing) CyclicNode::garbageCollectCycles(&newlyFrozen);
 
   for (auto* e: newlyFrozen) {
     e->container()->freezeRef();

@@ -58,14 +58,15 @@ fun printTime(test:String) {
 fun test(str: String) {
     try {
 
-runPatternTest()
-printTime("runPatternTest")
+
+printTime("start")
 
 runPattern2Test()
 printTime("runPattern2Test")
 
+runPatternTest()
+printTime("runPatternTest")
 
-printTime("start")
 
 runEnumIdentityTest();
 printTime("runEnumIdentityTest")

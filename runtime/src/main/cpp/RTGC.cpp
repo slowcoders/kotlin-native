@@ -332,15 +332,15 @@ bool rtgc_trap(void* pObj) {
     return enable_rtgc_trap;
 }
 
-void RTGC_Error(GCObject* obj) {
-    if (obj != NULL) {
+bool RTGC_Check(GCObject* obj, bool isValid) {
+    if (!isValid) {
         RTGC_dumpRefInfo(obj);
     }
-    ThrowOutOfMemoryError();
+    return isValid;
 }
 
 void RTGC_dumpRefInfo0(GCObject* obj) {
-    RTGC_dumpTypeInfo("*", NULL, obj);
+    RTGC_dumpTypeInfo("-", NULL, obj);
 }
 
 void RTGC_dumpRefInfo(GCObject* obj) {

@@ -254,7 +254,7 @@ public:
   }
 
   GCNode* getNode() {
-#if KONAN_ENABLE_ASSERT
+#if RTGC_DEBUG
     if (ref_.rtgc.node == 0) {
       RTGC_dumpRefInfo0(this);
     }
@@ -295,19 +295,24 @@ public:
     return getNode();
   }
 
-  // void markNeedCyclicTest() {
-  //   if (RTGC_STATISTCS && !isNeedCyclicTest()) RTGCGlobal::g_cntAddCyclicTest ++;
-  //   this->rtNode.flags_ |= NEED_CYCLIC_TEST;
-  // }
+  void markNeedCyclicTest() {
+    this->getNode()->markSuspectedCyclic();
+    this->rtNode.flags_ |= NEED_CYCLIC_TEST;
+  }
+
+  bool isEnquedCyclicTest() {
+    return (this->rtNode.flags_ & NEED_CYCLIC_TEST) != 0;
+  }
 
   bool isNeedCyclicTest() {
     return (this->getNodeId() != 0 && this->getNode()->isSuspectedCyclic());//rtNode.flags_ & NEED_CYCLIC_TEST) != 0;
   }
 
-  // void clearNeedCyclicTest() {
-  //   if (RTGC_STATISTCS && isNeedCyclicTest()) RTGCGlobal::g_cntRemoveCyclicTest ++;
-  //   this->rtNode.flags_ &= ~NEED_CYCLIC_TEST;
-  // }
+  bool clearNeedCyclicTest() {
+    bool needTest = this->getNode()->clearSuspectedCyclic();
+    this->rtNode.flags_ &= ~NEED_CYCLIC_TEST;
+    return needTest;
+  }
 
   void markDestroyed() {
     this->rtNode.flags_ |= CONTAINER_TAG_NOT_FREEABLE | 3;
@@ -899,6 +904,12 @@ inline bool isPermanentOrLocal(ObjHeader* obj) {
 }
 
 #ifdef RTGC
+
+inline bool isValidObjectContainer(ContainerHeader* container) {
+  ObjHeader* obj = (ObjHeader*)(container + 1);
+  return obj->container() == container;
+}
+
 
 void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner) RTGC_NO_INLINE;
 void freeContainer(ContainerHeader* header, int garbageNodeId=-1) RTGC_NO_INLINE;

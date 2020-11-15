@@ -222,6 +222,7 @@ private fun debugString(value: Any?): String {
 @Frozen
 @LeakDetectorCandidate
 @NoReorderFields
+@ExportTypeInfo("theAtomicReferenceTypeInfo")
 public class AtomicReference<T> {
     private var value_: T
 
