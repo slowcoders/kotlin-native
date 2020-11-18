@@ -357,8 +357,8 @@ void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj)
         konan::consolePrintf("%s %s %p \n", msg, classname, obj);
     }
     else {
-        konan::consolePrintf("%s %s %p:%d rc=%p, flags=%x\n", 
-            msg, classname, obj, obj->getNodeId(), 
+        konan::consolePrintf("%p-%s %s %p:%d rc=%p, flags=%x\n", 
+            rtgcMem, msg, classname, obj, obj->getNodeId(), 
             (void*)obj->refCount(), obj->getFlags());
     }
     if (classname != UNKNOWN) konan::free((void*)classname);

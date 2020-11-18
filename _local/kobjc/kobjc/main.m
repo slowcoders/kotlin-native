@@ -9,7 +9,8 @@
 #import <Cocoa/Cocoa.h>
 #import <Test2/Test2.h>
 
-void cpu_cache_test();
+extern void cpu_cache_test();
+extern void lzay_delloc_test();
 
 @interface SslSocket0 : NSObject
 
@@ -68,7 +69,7 @@ int main(int argc, char * argv[])
 //        assert(cc != NULL);
 
         
-        //cpu_cache_test();
+        lzay_delloc_test();
         
         [Test2HelloKt forIntegersB:1 s:1 i:3 l:[Test2ULong numberWithUnsignedLongLong:4]];
 //        [Test2HelloKt forIntegersB:1 s:1 i:3 l:nil];

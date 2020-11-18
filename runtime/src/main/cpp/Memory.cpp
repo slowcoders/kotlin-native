@@ -1178,8 +1178,8 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 
 #endif  // USE_GC
 
-void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container) {
-  RTGC_LOG("scheduleDestroyContainer %p isEnqueued=%d\n", container, container->isEnquedCyclicTest());
+void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container, const char* msg = "free") {
+  RTGC_LOG("scheduleDestroyContainer %p isEnqueued=%d %s\n", container, container->isEnquedCyclicTest(), msg);
   if (true) {
     if (RTGC_LATE_DESTROY_CYCLIC_SUSPECT && container->isEnquedCyclicTest()) return;
 
@@ -1535,7 +1535,7 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
       return;
     }
     
-    if (!val_node->isSuspectedCyclic()) {
+    if (val_node->mayCreateCyclicReference()) {
       bool early_detect_cycle = false;
       if (early_detect_cycle && owner_node->externalReferrers.find(container)) {
         CyclicNode::createTwoWayLink(owner, container);
@@ -1598,7 +1598,7 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     }
   }
 
-  if (!val_node->isSuspectedCyclic() &&
+  if (val_node->mayCreateCyclicReference() &&
     !val_node->externalReferrers.isEmpty()) {
       CyclicNode::addCyclicTest(container, false);
   }
@@ -3482,6 +3482,7 @@ void runFreezeHooksRecursive(ObjHeader* root) {
 #endif
   RTGC_LOG("runFreezeHooksRecursive %p\n", root);
   toVisit->push_back(root);
+  root->container()->markFreezing();
   for (size_t idx = 0; idx < toVisit->size(); idx ++) {
     KRef obj = (*toVisit)[idx];
     //RTGC_LOG("runFreezeHooksRecursive 1 %p\n", obj);
@@ -3558,8 +3559,11 @@ void freezeSubgraph(ObjHeader* root) {
   if (gc_only_freezing) CyclicNode::garbageCollectCycles(&newlyFrozen);
 
   for (auto* e: newlyFrozen) {
-    e->container()->freezeRef();
-    e->container()->makeShared();
+    ContainerHeader* container = e->container();
+    DebugAssert(container->isFreezing());
+    container->clearFreezing();
+    container->freezeRef();
+    container->makeShared();
   }
 #else
   runFreezeHooksRecursive(root);
@@ -3935,8 +3939,8 @@ ArrayHeader* ArenaContainer::PlaceArray(const TypeInfo* type_info, uint32_t coun
   return result;
 }
 
-void ScheduleDestroyContainer(MemoryState* state, ContainerHeader* container) {
-  scheduleDestroyContainer(state, container);
+void ScheduleDestroyContainer(MemoryState* state, ContainerHeader* container, const char* msg) {
+  scheduleDestroyContainer(state, container, msg);
 }
 
 // API of the memory manager.

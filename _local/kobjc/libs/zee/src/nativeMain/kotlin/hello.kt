@@ -57,9 +57,11 @@ fun printTime(test:String) {
 
 fun test(str: String) {
     try {
-
-
 printTime("start")
+
+runFreezeStressTest();
+printTime("runFreezeStressTest")
+
 
 runPattern2Test()
 printTime("runPattern2Test")
@@ -102,9 +104,6 @@ if (test_deep_recursive) {
 
 testInitializer6();
 printTime("testInitializer6")
-
-runFreezeStressTest();
-printTime("runFreezeStressTest")
 
 runWeakTest1()
 runWeakTest2()

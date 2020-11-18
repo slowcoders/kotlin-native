@@ -35,7 +35,7 @@
 
 #include "Alloc.h"
 #include "Common.h"
-#include "Memory.h"
+#include "KAssert.h"
 #include "TypeInfo.h"
 
 // Note that almost all types are signed.
@@ -56,9 +56,9 @@ typedef KFloat __attribute__ ((__vector_size__ (16)))   KVector4f;
 
 typedef const void* KConstNativePtr;
 
-typedef ObjHeader* KRef;
-typedef const ObjHeader* KConstRef;
-typedef const ArrayHeader* KString;
+typedef struct ObjHeader* KRef;
+typedef const struct ObjHeader* KConstRef;
+typedef const struct ArrayHeader* KString;
 
 // Definitions of STL classes used inside Konan runtime.
 typedef std::basic_string<char, std::char_traits<char>,

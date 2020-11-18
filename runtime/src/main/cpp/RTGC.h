@@ -1,9 +1,7 @@
 #ifndef RTGC_H
 #define RTGC_H
 
-#include "KAssert.h"
-#include "Common.h"
-#include "TypeInfo.h"
+#include "Types.h"
 #include "Atomic.h"
 #include "Porting.h"
 #include <functional>
@@ -171,10 +169,18 @@ public:
     externalReferrers.flags_ |= NEED_CYCLIC_TEST; 
   } 
 
+  bool mayCreateCyclicReference() {
+    return (externalReferrers.flags_ & (CONTAINER_TAG_FROZEN | NEED_CYCLIC_TEST)) == 0;
+  } 
+
   bool isSuspectedCyclic() {
     return (externalReferrers.flags_ & NEED_CYCLIC_TEST) != 0;
   }
 
+  void markFrozen() {
+    externalReferrers.flags_ |= CONTAINER_TAG_FROZEN;
+  }
+  
   static void initMemory(struct RTGCMemState* state);
 
 
@@ -391,7 +397,8 @@ struct RTGCMemState {
   CyclicBucket::LocalAllocator cyclicNodeAllocator;
 
   CyclicNode* g_damagedCylicNodes;
-  GCRefList g_cyclicTestNodes;
+  KStdDeque<GCObject*> g_cyclicTestNodes;
+  //GCRefList g_cyclicTestNodes;
 };
 
 using RTGC_FIELD_TRAVERSE_CALLBACK = std::function<void(GCObject*)>;

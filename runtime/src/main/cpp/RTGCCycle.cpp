@@ -16,6 +16,7 @@
 #include "RTGCPrivate.h"
 #include "assert.h"
 
+typedef KStdVector<ContainerHeader*> ContainerHeaderList;
 
 extern THREAD_LOCAL_VARIABLE RTGCMemState* rtgcMem;
 static const bool DELAY_NODE_DESTROY = true;
@@ -74,25 +75,31 @@ void CyclicNode::markDamaged() {
 
 void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
     DebugRefAssert(obj, !obj->isAcyclic());
-    DebugRefAssert(obj, !obj->isNeedCyclicTest());
-    RTGC_LOG("addCyclicTest %p\n", obj);
-    obj->getNode()->markSuspectedCyclic();
-    if (obj->markEnquedCyclicTest()) {
-        rtgcMem->g_cyclicTestNodes.push(obj);
+    DebugRefAssert(obj, obj->getNode()->mayCreateCyclicReference());
+    RTGC_LOG("addCyclicTest %p %p\n", obj, rtgcMem);
+    if (false && (char*)obj < (char*)0x10000a914bd0) {
+        RTGC_dumpRefInfo(obj);
+    }
+    if (obj->enqueueCyclicTest()) {
+        rtgcMem->g_cyclicTestNodes.push_back(obj);
     }
     else {
         DebugRefAssert(obj, obj->frozen());
         //konan::consolePrintf("Double enque cyclic test!!!");
     }
+    obj->getNode()->markSuspectedCyclic();
 }
 
 void CyclicNode::removeCyclicTest(RTGCMemState* rtgcMem, GCObject* obj) {
+    DebugAssert(!RTGC_LATE_DESTROY_CYCLIC_SUSPECT);
+#if !RTGC_LATE_DESTROY_CYCLIC_SUSPECT
     if (!obj->isEnquedCyclicTest()) return;
 
-    obj->clearNeedCyclicTest();
+    obj->dequeueCyclicTest();
     RTGC_LOG("## RTGC Remove Cyclic Test %p:%d\n", obj, obj->getNodeId());
     /* TODO ZZZZ replace tryRemove => remove */
     rtgcMem->g_cyclicTestNodes.tryRemove(obj, true);
+#endif
 }
 
 void CyclicNode::mergeCyclicNode(GCObject* obj, int expiredNodeId) {
@@ -176,7 +183,7 @@ CyclicNode* CyclicNode::createTwoWayLink(GCObject* root, GCObject* rookie) {
     if (cyclicNode == nullptr) {
         cyclicNode = CyclicNode::create();
     }
-    if (root->isNeedCyclicTest() || rookie->isNeedCyclicTest()) {
+    if (root->getNode()->isSuspectedCyclic() || rookie->getNode()->isSuspectedCyclic()) {
         cyclicNode->markSuspectedCyclic();
     }
     cyclicNode->addCyclicObject(root);
@@ -332,21 +339,25 @@ void CyclicNode::garbageCollectCycles(void* freezing) {
     detector.checkCyclic((KStdVector<KRef>*)freezing);
 }
 
-void ScheduleDestroyContainer(MemoryState* state, ContainerHeader* container);
+void ScheduleDestroyContainer(MemoryState* state, ContainerHeader* container, const char* msg="");
 
 void CyclicNodeDetector::checkCyclic(KStdVector<KRef>* freezing) {
     GCNode::rtgcLock(_DetectCylcles);
     if (freezing == nullptr) {
         this->checkFreezingOnly = false;
-        GCRefList* cyclicTestNodes = &rtgcMem->g_cyclicTestNodes;
+        KStdDeque<GCObject*>* cyclicTestNodes = &rtgcMem->g_cyclicTestNodes;
 
-        for (GCObject* root = cyclicTestNodes->pop(); root != NULL; root = cyclicTestNodes->pop()) {
+        while (!cyclicTestNodes->empty()) {
+            GCObject* root = cyclicTestNodes->back();
+            cyclicTestNodes->pop_back(); 
             DebugAssert(isValidObjectContainer(root));
+            DebugRefAssert(root, root->isEnquedCyclicTest() || (!root->freeable() && root->shared()));
+            //DebugAssert(cyclicTestNodes->find(root) == nullptr);
             if (RTGC_LATE_DESTROY_CYCLIC_SUSPECT && root->isDestroyed()) {
-                root->clearNeedCyclicTest();
-                ScheduleDestroyContainer((MemoryState*)rtgcMem, root);
+                root->dequeueCyclicTest();
+                ScheduleDestroyContainer((MemoryState*)rtgcMem, root, "in RTGC");
             }
-            else if (root->clearNeedCyclicTest()) {
+            else if (root->dequeueCyclicTest()) {
                 this->traceCyclic(root);
             }
         }
@@ -357,8 +368,7 @@ void CyclicNodeDetector::checkCyclic(KStdVector<KRef>* freezing) {
             if (RTGC_STATISTCS) RTGCGlobal::g_cntFreezed ++;
             ContainerHeader* root = obj->container();
             DebugAssert(isValidObjectContainer(root));
-            if (root->getNodeId() != 0 && root->getNode()->clearSuspectedCyclic()) {
-                // Do not clear enqued cyclic test!
+            if (root->getNodeId() != 0 && root->getNode()->isSuspectedCyclic()) {
                 this->traceCyclic(root);
             }
         }
@@ -400,6 +410,7 @@ void CyclicNodeDetector::checkCyclic(KStdVector<KRef>* freezing) {
         }
     }
     GCNode::rtgcUnlock();
+    RTGC_LOG("## RTGC CYCLE DETECTER END %p\n", rtgcMem);
 
 }
 
@@ -412,7 +423,7 @@ void CyclicNodeDetector::traceCyclic(GCObject* root) {
         return;
     }
 
-    RTGC_LOG("## RTGC c root: %p, next: %p\n", root, rtgcMem->g_cyclicTestNodes.topChain() == NULL ? NULL : rtgcMem->g_cyclicTestNodes.topChain()->obj());
+    RTGC_LOG("## RTGC c root: %p freezingOnly=%d\n", root, this->checkFreezingOnly);//, rtgcMem->g_cyclicTestNodes.topChain() == NULL ? NULL : rtgcMem->g_cyclicTestNodes.topChain()->obj());
     GCNode* node = root->getNode();
     if (node->getTraceState() != NOT_TRACED) {
         DebugRefAssert(root, node->getTraceState() == TRACE_FINISHED);

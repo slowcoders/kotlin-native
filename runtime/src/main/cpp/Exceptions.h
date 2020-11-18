@@ -18,6 +18,7 @@
 #define RUNTIME_EXCEPTIONS_H
 
 #include "Types.h"
+#include "Memory.h"
 
 #ifdef __cplusplus
 extern "C" {

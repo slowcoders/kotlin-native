@@ -144,10 +144,12 @@ public:
 
   inline void freezeRef() {
     if (!frozen()) {
-      RuntimeAssert(!isNeedCyclicTest(), "garbageCollect() must be executed before freezerRef()");
-      clearFreezing();
       rtNode.flags_ |= CONTAINER_TAG_FROZEN;
-      if (!isAcyclic() && !isInCyclicNode()) {
+      CyclicNode* cyclicNode = getLocalCyclicNode();
+      if (cyclicNode != NULL) {
+        cyclicNode->markFrozen();
+      }
+      else if (!isAcyclic()) {
         markAcyclic();
         if (ref_.rtgc.obj != 0) {
           getNode()->externalReferrers.clear();
@@ -175,13 +177,10 @@ public:
   inline void makeSharedPermanent() {
     int flags = CONTAINER_TAG_FROZEN | CONTAINER_TAG_SHARED;
     if (IS_SHARED_PERMANENT_NEVER_FREEABLE) {
-      if (isNeedCyclicTest()) {
-          getNode()->clearSuspectedCyclic();
-      }
       flags |= CONTAINER_TAG_STACK_OR_PERMANANT | CONTAINER_TAG_ACYCLIC;
     }
     else {
-      RuntimeAssert(!isNeedCyclicTest(), "garbageCollect() must be executed before makeSharedPermanent()");
+      DebugAssert(getNodeId() == 0 || !getNode()->isSuspectedCyclic());
       if (!isInCyclicNode()) {
         flags |= CONTAINER_TAG_ACYCLIC;
       }
@@ -290,11 +289,15 @@ public:
     return getNode();
   }
 
-  bool isNeedCyclicTest() {
-    return (this->getNodeId() != 0 && this->getNode()->isSuspectedCyclic());//rtNode.flags_ & NEED_CYCLIC_TEST) != 0;
+  bool enqueueCyclicTest() {
+    if (!this->isEnquedCyclicTest()) {
+      this->rtNode.flags_ |= NEED_CYCLIC_TEST;
+      return true;
+    }
+    return false;
   }
 
-  bool clearNeedCyclicTest() {
+  bool dequeueCyclicTest() {
     bool needTest = this->getNode()->clearSuspectedCyclic();
     this->rtNode.flags_ &= ~NEED_CYCLIC_TEST;
     return needTest;
@@ -304,13 +307,6 @@ public:
     return (this->rtNode.flags_ & NEED_CYCLIC_TEST) != 0;
   }
 
-  bool markEnquedCyclicTest() {
-    if (!this->isEnquedCyclicTest()) {
-      this->rtNode.flags_ |= NEED_CYCLIC_TEST;
-      return true;
-    }
-    return false;
-  }
 
   void markDestroyed() {
     this->rtNode.flags_ |= CONTAINER_TAG_NOT_FREEABLE | 3;

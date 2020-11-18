@@ -15,6 +15,7 @@
 		7869EE7F2484D42D00DDE5CC /* kobjcTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 7869EE7E2484D42D00DDE5CC /* kobjcTests.m */; };
 		7869EE8A2484D42D00DDE5CC /* kobjcUITests.m in Sources */ = {isa = PBXBuildFile; fileRef = 7869EE892484D42D00DDE5CC /* kobjcUITests.m */; };
 		7869EEAD2484EBF000DDE5CC /* kotlin in Resources */ = {isa = PBXBuildFile; fileRef = 7869EEAC2484EBF000DDE5CC /* kotlin */; };
+		786AD38B2563FB92002062F2 /* cpu_test2.m in Sources */ = {isa = PBXBuildFile; fileRef = 786AD38A2563FB92002062F2 /* cpu_test2.m */; };
 		789B11E3249C609700505D14 /* cpu_test.m in Sources */ = {isa = PBXBuildFile; fileRef = 789B11E2249C609700505D14 /* cpu_test.m */; };
 /* End PBXBuildFile section */
 
@@ -65,6 +66,7 @@
 		7869EE892484D42D00DDE5CC /* kobjcUITests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = kobjcUITests.m; sourceTree = "<group>"; };
 		7869EE8B2484D42D00DDE5CC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7869EEAC2484EBF000DDE5CC /* kotlin */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = kotlin; path = libs/zee/src/nativeMain/kotlin; sourceTree = SOURCE_ROOT; };
+		786AD38A2563FB92002062F2 /* cpu_test2.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = cpu_test2.m; sourceTree = "<group>"; };
 		789B11E2249C609700505D14 /* cpu_test.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = cpu_test.m; sourceTree = "<group>"; };
 		78A5518A24A8DE5900CD0405 /* libobjcsmoke.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libobjcsmoke.dylib; path = libs/zee/libobjcsmoke.dylib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -128,6 +130,7 @@
 				7869EE732484D42D00DDE5CC /* main.m */,
 				7869EE752484D42D00DDE5CC /* kobjc.entitlements */,
 				789B11E2249C609700505D14 /* cpu_test.m */,
+				786AD38A2563FB92002062F2 /* cpu_test2.m */,
 			);
 			path = kobjc;
 			sourceTree = "<group>";
@@ -301,6 +304,7 @@
 				789B11E3249C609700505D14 /* cpu_test.m in Sources */,
 				7869EE742484D42D00DDE5CC /* main.m in Sources */,
 				7869EE6C2484D42C00DDE5CC /* AppDelegate.m in Sources */,
+				786AD38B2563FB92002062F2 /* cpu_test2.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
