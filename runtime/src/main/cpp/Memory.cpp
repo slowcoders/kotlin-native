@@ -1226,7 +1226,7 @@ void freeAggregatingFrozenContainer(ContainerHeader* container) {
   ContainerHeader** subContainer = reinterpret_cast<ContainerHeader**>(container + 1);
   MEMORY_LOG("Total subcontainers = %d\n", container->objectCount());
   for (uint32_t i = 0; i < container->objectCount(); ++i) {
-    MEMORY_LOG("Freeing subcontainer %p\n", *subContainer);
+    RTGC_LOG("Freeing subcontainer %p\n", *subContainer);
     freeContainer(*subContainer++);
   }
 #if USE_GC
@@ -1289,16 +1289,16 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
       while (true) {//garbageNodeId == 0) {
         traverseReferredObjects((ObjHeader*)(owner+1), [garbageNodeId, toRelease, &isOwnerPushed, owner](ObjHeader* old) {
           ContainerHeader* deassigned = old->container();
-          RTGC_LOG("--- cleaning fields start %p(%p) IN %p(%d)\n", deassigned, old, owner, garbageNodeId);
+          RTGC_LOG_V("--- cleaning fields start %p(%p) IN %p(%d)\n", deassigned, old, owner, garbageNodeId);
           if (isFreeable(deassigned)) {
             //*location = NULL;
             if (garbageNodeId != 0) {
               if (deassigned->getNodeId() == garbageNodeId) {
-                RTGC_LOG("--- cleaning fields in cyclicNode %p (%d)\n", deassigned, garbageNodeId);
+                RTGC_LOG_V("--- cleaning fields in cyclicNode %p (%d)\n", deassigned, garbageNodeId);
                 freeContainer(deassigned, garbageNodeId);
               }
               else {
-                RTGC_LOG("--- cleaning fields Node %p (%d)\n", deassigned, garbageNodeId);
+                RTGC_LOG_V("--- cleaning fields Node %p (%d)\n", deassigned, garbageNodeId);
                 if (RTGC_LATE_DESTORY) {
                   if (!isOwnerPushed) {
                     isOwnerPushed = true;
@@ -1311,7 +1311,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
                 }
               }
             } else {
-              RTGC_LOG("--- cleaning fields any %p (%d)\n", deassigned, garbageNodeId);
+              RTGC_LOG_V("--- cleaning fields any %p (%d)\n", deassigned, garbageNodeId);
               if (RTGC_LATE_DESTORY) {
                 if (!isOwnerPushed) {
                   isOwnerPushed = true;
@@ -1324,7 +1324,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
               }
             }
           }
-          RTGC_LOG("--- cleaning fields done %p (%d)\n", old, garbageNodeId);
+          RTGC_LOG_V("--- cleaning fields done %p (%d)\n", old, garbageNodeId);
         });
 #if (RTGC_LATE_DESTORY)
         if (!isRoot) {
@@ -1348,12 +1348,12 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
   else {
     // Now let's clean all object's fields in this container.
     traverseContainerObjectFields(container, [](ObjHeader** location) {
-          RTGC_LOG("--- cleaning not freeable %p\n", location);
+          RTGC_LOG_V("--- cleaning not freeable %p\n", location);
           ZeroHeapRef(location);
     });
   }
 
-  RTGC_LOG("--- free container check free %p\n", container);
+  RTGC_LOG_V("--- free container check free %p\n", container);
   // And release underlying memory.
   memoryState->gcInProgress --;
   if (doFree) {
@@ -1365,7 +1365,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
     }
   }
 
-  RTGC_LOG("## RTGC free container done %p(%d) gcDepth=(%d)\n", container, garbageNodeId, memoryState->gcInProgress);
+  RTGC_LOG_V("## RTGC free container done %p(%d) gcDepth=(%d)\n", container, garbageNodeId, memoryState->gcInProgress);
 }
 
 namespace {
@@ -1536,8 +1536,8 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     }
     
     if (val_node->mayCreateCyclicReference()) {
-      bool early_detect_cycle = false;
-      if (early_detect_cycle && owner_node->externalReferrers.find(container)) {
+      bool check_two_way_link = true;
+      if (check_two_way_link && owner_node->externalReferrers.find(container)) {
         CyclicNode::createTwoWayLink(owner, container);
         return;
       }

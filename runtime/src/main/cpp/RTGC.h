@@ -14,6 +14,7 @@
 #define RTGC_STATISTCS                    1
 #define RTGC_NO_INLINE                    // NO_INLINE
 #define ENABLE_RTGC_LOG                   0
+#define ENABLE_RTGC_LOG_VERBOSE           (1 & ENABLE_RTGC_LOG)
 
 #define RTGC_LATE_DESTORY                 0
 #define RTGC_LATE_DESTROY_CYCLIC_SUSPECT  true
@@ -40,6 +41,12 @@ bool rtgc_trap(void* pObj) NO_INLINE;
 #else
 #define RTGC_LOG(...)
 #define RTGC_TRAP(...)
+#endif
+
+#if ENABLE_RTGC_LOG_VERBOSE
+#define RTGC_LOG_V(...) konan::consolePrintf(__VA_ARGS__);
+#else
+#define RTGC_LOG_V(...)
 #endif
 
 #ifdef RTGC_DEBUG
@@ -93,6 +100,7 @@ struct RTGCGlobal {
 };
 
 
+struct GCNode;
 
 struct GCRefChain {
   friend struct GCRefList;
@@ -121,6 +129,7 @@ public:
   void remove(GCObject* obj)  RTGC_NO_INLINE;
   void moveTo(GCObject* retiree, GCRefList* receiver)  RTGC_NO_INLINE;
   void tryRemove(GCObject* obj, bool isUnique)  RTGC_NO_INLINE;
+  void removeChains(GCNode* node)  RTGC_NO_INLINE;
   bool isEmpty() { return first_ == 0; }
   void setFirst(GCRefChain* last)  RTGC_NO_INLINE;
   void trySetFirst(GCRefChain* last)  RTGC_NO_INLINE;
@@ -224,6 +233,17 @@ public:
 
   bool isDamaged() {
     return nextDamaged != 0;
+  }
+
+  void markDirtyReferrerList() {
+    this->externalReferrers.flags_ |= DIRTY_CYCLIC_REFERRERS;
+  }
+
+  void clearDirtyReferrers() {
+    if ((this->externalReferrers.flags_ & DIRTY_CYCLIC_REFERRERS) != 0) {
+      this->externalReferrers.flags_ &= ~DIRTY_CYCLIC_REFERRERS;
+      this->externalReferrers.removeChains(this);
+    }
   }
 
   char* addCyclicObject(GCObject* rookie);

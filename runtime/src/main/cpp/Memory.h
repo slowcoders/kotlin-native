@@ -36,6 +36,7 @@ typedef enum {
 
   // 
   CONTAINER_TAG_ACYCLIC = 0x10,
+  DIRTY_CYCLIC_REFERRERS = CONTAINER_TAG_ACYCLIC,
 
   // no need to free, children cleanup still shall be there.
   CONTAINER_TAG_NOT_FREEABLE = 0x20,

@@ -69,7 +69,7 @@ int main(int argc, char * argv[])
 //        assert(cc != NULL);
 
         
-        lzay_delloc_test();
+//        lzay_delloc_test();
         
         [Test2HelloKt forIntegersB:1 s:1 i:3 l:[Test2ULong numberWithUnsignedLongLong:4]];
 //        [Test2HelloKt forIntegersB:1 s:1 i:3 l:nil];

@@ -143,6 +143,27 @@ void GCRefList::remove(GCObject* item) {
     recycleChain(chain, "next");
 }
 
+void GCRefList::removeChains(GCNode* node) {
+    GCRefChain* prev = NULL;
+    GCRefChain* next;
+    for(GCRefChain* chain = this->topChain(); chain != NULL; chain = next) {
+        GCObject* referrer = chain->obj();
+        next = chain->next();
+        if (referrer->getNode() != node) {
+            prev = chain;
+            continue;
+        }
+        if (prev == NULL) {
+            this->first_ = getRefChainIndex(next);
+        }
+        else {
+            prev->next_ = chain->next();
+        }
+        recycleChain(chain, "removeChains");
+    }
+}
+
+
 void GCRefList::moveTo(GCObject* item, GCRefList* receiver) {
     RuntimeAssert(this->first_ != 0, "RefList is empty");
     GCRefChain* prev = topChain();
