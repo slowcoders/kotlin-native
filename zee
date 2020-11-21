@@ -1,4 +1,4 @@
-FAILURE: Build completed with 6 failures.
+FAILURE: Build completed with 16 failures.
 
 1: Task failed with an exception.
 -----------
@@ -19,9 +19,12 @@ Run with --stacktrace option to get the stack trace. Run with --info or --debug 
 2: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:cycle_detector'.
-> Test failed. Actual exit status doesn't match with exit status checker: 1
-
+Execution failed for task ':backend.native:tests:custom_hook'.
+> Test failed. Expected exit status: 1, actual: 139
+  stdout:
+  value 42: Error
+  
+  stderr:
 
 
 * Try:
@@ -31,10 +34,13 @@ Run with --stacktrace option to get the stack trace. Run with --info or --debug 
 3: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:enumIdentity'.
-> Test failed. Expected output: true
-  , actual output: * ??? 0x7f7fd9620ce0:0 rc=0x2, flags=8001
-  true
+Execution failed for task ':backend.native:tests:freeze6'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  OK
+  OK
+  
+  stderr:
 
 
 * Try:
@@ -42,6 +48,88 @@ Run with --stacktrace option to get the stack trace. Run with --info or --debug 
 ==============================================================================
 
 4: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:interop_enums'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+5: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:interop_objc_smoke'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  
+  stderr:
+  Class TestExportObjCClass34 has multiple implementations. Which one will be used is undefined.
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+6: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:interop_objc_tests'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  [==========] Running 20 tests from 20 test cases.
+  [----------] Global test environment set-up.
+  [----------] 1 tests from KT38234_overrideKt
+  [ RUN      ] KT38234_overrideKt.testKT38234
+  [       OK ] KT38234_overrideKt.testKT38234 (1 ms)
+  [----------] 1 tests from KT38234_overrideKt (1 ms total)
+  
+  [----------] 1 tests from AllocNoRetainKt
+  [ RUN      ] AllocNoRetainKt.testAllocNoRetain
+  [       OK ] AllocNoRetainKt.testAllocNoRetain (0 ms)
+  [----------] 1 tests from AllocNoRetainKt (0 ms total)
+  
+  [----------] 1 tests from BlocksKt
+  [ RUN      ] BlocksKt.testBlocks
+  [       OK ] BlocksKt.testBlocks (0 ms)
+  [----------] 1 tests from BlocksKt (0 ms total)
+  
+  [----------] 1 tests from CallableReferencesKt
+  [ RUN      ] CallableReferencesKt.testCallableReferences
+  [       OK ] CallableReferencesKt.testCallableReferences (0 ms)
+  [----------] 1 tests from CallableReferencesKt (0 ms total)
+  
+  [----------] 1 tests from ClashingWithAnyKt
+  [ RUN      ] ClashingWithAnyKt.testClashingWithAny
+  [       OK ] ClashingWithAnyKt.testClashingWithAny (0 ms)
+  [----------] 1 tests from ClashingWithAnyKt (0 ms total)
+  
+  [----------] 1 tests from ConstructorReturnsNullKt
+  [ RUN      ] ConstructorReturnsNullKt.testConstructorReturnsNull
+  [       OK ] ConstructorReturnsNullKt.testConstructorReturnsNull (0 ms)
+  [----------] 1 tests from ConstructorReturnsNullKt (0 ms total)
+  
+  [----------] 1 tests from ConversionsKt
+  [ RUN      ] ConversionsKt.testConversions
+  [       OK ] ConversionsKt.testConversions (0 ms)
+  [----------] 1 tests from ConversionsKt (0 ms total)
+  
+  [----------] 1 tests from CustomStringKt
+  [ RUN      ] CustomStringKt.testCustomString
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+7: Task failed with an exception.
 -----------
 * What went wrong:
 Execution failed for task ':backend.native:tests:kt-37572'.
@@ -57,12 +145,59 @@ Execution failed for task ':backend.native:tests:kt-37572'.
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
-5: Task failed with an exception.
+8: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:objectExpression3'.
+> Test failed. Expected output: 
+  1
+  2
+  , actual output: 
+  
+  2
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+9: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:serialized_catch'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  Gotcha1: XXX
+  Gotcha2: YYY
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+10: Task failed with an exception.
 -----------
 * What went wrong:
 Execution failed for task ':backend.native:tests:stack_trace_inline'.
 > Test failed. Actual exit status doesn't match with exit status checker: 134
   stdout:
+  Uncaught Kotlin exception: kotlin.AssertionError: Expected <5>, actual <4>.
+      at 0   stack_trace_inline.kexe             0x000000010521b14f kfun:kotlin.Throwable#<init>(kotlin.String?){} + 95 (/Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/Throwable.kt:23:37)
+      at 1   stack_trace_inline.kexe             0x000000010521527d kfun:kotlin.Error#<init>(kotlin.String?){} + 93 (/Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/Exceptions.kt:12:44)
+      at 2   stack_trace_inline.kexe             0x00000001052158ae kfun:kotlin.AssertionError#<init>(kotlin.Any?){} + 222 (/Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/Exceptions.kt:128:41)
+      at 3   stack_trace_inline.kexe             0x0000000105205c55 kfun:kotlin.test.DefaultAsserter#fail(kotlin.String?){}kotlin.Nothing + 261 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/DefaultAsserter.kt:16:19)
+      at 4   stack_trace_inline.kexe             0x00000001052027a3 kfun:kotlin.test.Asserter#assertTrue(kotlin.Function0<kotlin.String?>;kotlin.Boolean){} + 291 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/Assertions.kt:226:13)
+      at 5   stack_trace_inline.kexe             0x0000000105202bc4 kfun:kotlin.test.Asserter#assertEquals(kotlin.String?;kotlin.Any?;kotlin.Any?){} + 580 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/Assertions.kt:245:9)
+      at 6   stack_trace_inline.kexe             0x0000000105205830 kfun:kotlin.test#assertEquals(0:0;0:0;kotlin.String?){0§<kotlin.Any?>} + 304 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/Assertions.kt:57:14)
+      at 7   stack_trace_inline.kexe             0x00000001052059aa kfun:kotlin.test#assertEquals$default(0:0;0:0;kotlin.String?;kotlin.Int){0§<kotlin.Any?&kotlin.Any?>} + 282 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/Assertions.kt:56:1)
+      at 8   stack_trace_inline.kexe             0x00000001052ce088 kfun:#checkFrame(kotlin.String){} + 1688 (/Users/zeedh/slowcoders/kotlin-native/test.output/local/stack_trace_inline/stack_trace_inline.kt:29:9)
+      at 9   stack_trace_inline.kexe             0x00000001052cd8ab kfun:#main(){} + 491 (/Users/zeedh/slowcoders/kotlin-native/test.output/local/stack_trace_inline/stack_trace_inline.kt:14:20)
+      at 10  stack_trace_inline.kexe             0x00000001052ce1ac Konan_start + 124 (/Users/zeedh/slowcoders/kotlin-native/test.output/local/stack_trace_inline/stack_trace_inline.kt:8:1)
+      at 11  stack_trace_inline.kexe             0x00000001052db373 Konan_run_start + 99
+      at 12  stack_trace_inline.kexe             0x00000001052db2e0 Konan_main + 32
+      at 13  libdyld.dylib                       0x00007fff6f4f3cc9 start + 1
   
   stderr:
   Memory leaks detected, 13 objects leaked!
@@ -73,6 +208,130 @@ Execution failed for task ':backend.native:tests:stack_trace_inline'.
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
+11: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:stdlibTest'.
+> Test /Users/zeedh/slowcoders/kotlin-native/test.output/stdlib/stdlibTest/macos_x64/stdlibTest.kexe exited with 139
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+12: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:testObjCExport'.
+> Execution of swiftTestExecutable failed with exit code: 139 
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+13: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:testObjCExportStatic'.
+> Execution of swiftTestExecutable failed with exit code: 139 
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+14: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:testing_custom_main'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  Custom main
+  Starting testing
+  Starting iteration: 1
+  Starting test suite: kotlin.test.tests.Custom_mainKt
+  Starting test case: test (kotlin.test.tests.Custom_mainKt)
+  test
+  Passed: test (kotlin.test.tests.Custom_mainKt)
+  Test suite finished: kotlin.test.tests.Custom_mainKt
+  Iteration finished: 1
+  Starting iteration: 2
+  Starting test suite: kotlin.test.tests.Custom_mainKt
+  Starting test case: test (kotlin.test.tests.Custom_mainKt)
+  test
+  Passed: test (kotlin.test.tests.Custom_mainKt)
+  Test suite finished: kotlin.test.tests.Custom_mainKt
+  Iteration finished: 2
+  Testing finished
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+15: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker5'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  Got 3
+  OK
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
+
+16: Task failed with an exception.
+-----------
+* What went wrong:
+Execution failed for task ':backend.native:tests:worker_bound_reference0'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
+  [==========] Running 36 tests from 1 test cases.
+  [----------] Global test environment set-up.
+  [----------] 36 tests from runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobal
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobal (1 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobalDenyAccessOnWorker
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobalDenyAccessOnWorker (0 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobalAccessOnWorkerFrozenInitially
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobalAccessOnWorkerFrozenInitially (0 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobalAccessOnWorkerFrozenBeforePassing
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobalAccessOnWorkerFrozenBeforePassing (0 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobalAccessOnWorkerFrozenBeforeAccess
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobalAccessOnWorkerFrozenBeforeAccess (0 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobalModification
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobalModification (0 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobalGetWorker
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testGlobalGetWorker (0 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocal
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocal (0 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalFrozen
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalFrozen (0 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalDenyAccessOnWorkerFrozen
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalDenyAccessOnWorkerFrozen (0 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalAccessOnWorkerFrozenInitiallyFrozen
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalAccessOnWorkerFrozenInitiallyFrozen (1 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalAccessOnWorkerFrozenBeforePassingFrozen
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalAccessOnWorkerFrozenBeforePassingFrozen (0 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalAccessOnWorkerFrozenBeforeAccessFrozen
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalAccessOnWorkerFrozenBeforeAccessFrozen (0 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalAccessOnMainThread
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalAccessOnMainThread (0 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalDenyAccessOnMainThreadFrozen
+  [       OK ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalDenyAccessOnMainThreadFrozen (1 ms)
+  [ RUN      ] runtime.concurrent.worker_bound_reference0.Worker_bound_reference0Kt.testLocalModificationFrozen
+  
+  stderr:
+
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+==============================================================================
 
 * Get more help at https://help.gradle.org
 
@@ -80,7 +339,7 @@ Deprecated Gradle features were used in this build, making it incompatible with 
 Use '--warning-mode all' to show the individual deprecation warnings.
 See https://docs.gradle.org/6.6.1/userguide/command_line_interface.html#sec:command_line_warnings
 
-BUILD FAILED in 40m 45s
-1301 actionable tasks: 749 executed, 552 up-to-date
+BUILD FAILED in 6m 34s
+1299 actionable tasks: 604 executed, 695 up-to-date
 zeedh@DaeHoons-MacBook-Pro kotlin-native % 
-
+zeedh@DaeHoons-MacBook-Pro kotlin-native % 
