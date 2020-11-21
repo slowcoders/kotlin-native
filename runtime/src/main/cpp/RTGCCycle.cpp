@@ -407,13 +407,11 @@ void CyclicNodeDetector::checkCyclic(KStdVector<KRef>* freezing) {
     for (GCObject* obj_; (obj_ = finishedList.pop()) != NULL;) {
         CyclicNode* cyclic = obj_->getLocalCyclicNode();
         if (cyclic != NULL) {
+            cyclic->clearDirtyReferrers();
             if (cyclic->isGarbage()) {
                 //if (RTGC_STATISTCS) konan::consolePrintf("## RTGC Garbage Cycle detected in tracing obj:%p node:%p/%d \n", obj_, cyclic, cyclic->getId());
                 ::freeContainer(obj_, cyclic->getId());
                 cyclic->dealloc();
-            }
-            else {
-                cyclic->clearDirtyReferrers();
             }
         }
     }
@@ -424,6 +422,9 @@ void CyclicNodeDetector::checkCyclic(KStdVector<KRef>* freezing) {
 
 void CyclicNodeDetector::traceCyclic(GCObject* root) {
     if (root->isAcyclic() || root->frozen()) {
+        if (ENABLE_RTGC_LOG_VERBOSE) {
+            RTGC_dumpRefInfo(root, "not cyclicable");
+        }
         // isAcyclic() = true 인 경우:
         //   InitSharedInstance() 실행 후, cyclicTestNode 에 포함된 객체가
         //   Acyclic으로 변경되었거나, acyclic freezing 객체이다.

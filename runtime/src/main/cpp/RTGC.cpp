@@ -143,7 +143,9 @@ void GCRefList::remove(GCObject* item) {
     recycleChain(chain, "next");
 }
 
+static GCRefChain* const NOT_CHANGED = (GCRefChain*)(void*)-1;
 void GCRefList::removeChains(GCNode* node) {
+    GCRefChain* top = NOT_CHANGED;
     GCRefChain* prev = NULL;
     GCRefChain* next;
     for(GCRefChain* chain = this->topChain(); chain != NULL; chain = next) {
@@ -154,12 +156,15 @@ void GCRefList::removeChains(GCNode* node) {
             continue;
         }
         if (prev == NULL) {
-            this->first_ = getRefChainIndex(next);
+            top = next;
         }
         else {
             prev->next_ = chain->next();
         }
         recycleChain(chain, "removeChains");
+    }
+    if (top != NOT_CHANGED) {
+        this->first_ = getRefChainIndex(next);
     }
 }
 
@@ -364,9 +369,9 @@ void RTGC_dumpRefInfo0(GCObject* obj) {
     RTGC_dumpTypeInfo("-", NULL, obj);
 }
 
-void RTGC_dumpRefInfo(GCObject* obj) {
+void RTGC_dumpRefInfo(GCObject* obj, const char* msg) {
     const TypeInfo* typeInfo = ((ObjHeader*)(obj+1))->type_info();
-    RTGC_dumpTypeInfo("*", typeInfo, obj);
+    RTGC_dumpTypeInfo(msg, typeInfo, obj);
 }
 
 

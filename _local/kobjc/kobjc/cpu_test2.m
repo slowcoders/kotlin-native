@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <Cocoa/Cocoa.h>
 
-#define USE_MALLOC 0
+#define USE_MALLOC 1
 const int MAX_OBJ_CNT = 1000 * 1000;
 typedef struct { int values[1024]; } Foo;
 Foo* memPool;
@@ -23,7 +23,8 @@ void initMemPool() {
     }
 }
 
-void markFoo(Foo* foo) { foo->values[0] = cntFree; }
+static int cntMark = 0;
+void markFoo(Foo* foo) { cntMark += foo->values[0]; }
 Foo* allocFoo() {
     return USE_MALLOC ? (Foo*)malloc(sizeof(Foo)) : freeItems[--cntFree];
 }

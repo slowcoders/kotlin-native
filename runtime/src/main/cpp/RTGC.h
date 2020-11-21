@@ -57,7 +57,7 @@ bool rtgc_trap(void* pObj) NO_INLINE;
 #  define DebugRefAssert(ref, condition) // ignore
 #endif
 
-void RTGC_dumpRefInfo(GCObject* container) NO_INLINE;
+void RTGC_dumpRefInfo(GCObject* container, const char* msg = "*") NO_INLINE;
 void RTGC_dumpRefInfo0(GCObject* container) NO_INLINE;
 void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj);
 bool RTGC_Check(GCObject* obj, bool isValid) NO_INLINE;

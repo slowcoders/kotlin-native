@@ -59,6 +59,15 @@ fun test(str: String) {
     try {
 printTime("start")
 
+val test_gc_bug_in_worker_thread = true;
+if (test_gc_bug_in_worker_thread) {
+    runWorkerBoundReference0Test()
+    printTime("runWorkerBoundReference0Test")
+
+    runAtomicTest();
+    printTime("runAtomicTest")
+}
+
 runFreezeStressTest();
 printTime("runFreezeStressTest")
 
@@ -83,17 +92,6 @@ printTime("runWorker2Test")
 
 testWorker6();
 printTime("testWorker6")
-
-
-val test_gc_bug_in_worker_thread = true;
-if (test_gc_bug_in_worker_thread) {
-    runWorkerBoundReference0Test()
-    printTime("runWorkerBoundReference0Test")
-
-    runAtomicTest();
-    printTime("runAtomicTest")
-}
-
 
 
 val test_deep_recursive = false;
@@ -193,3 +191,74 @@ fun supplyFun() : (String) -> String? = {
 fun main(args: Array<String>) {
   println("Hello kotlin")
 }
+
+/*
+ start: 1ms
+ true
+ runEnumIdentityTest: 0ms
+ IncorrectDereferenceException catched STRICT
+ OK
+ true
+ true
+ testWorker10: 2ms
+ OK
+ runWorker2Test: 1ms
+ Got 42
+ OK
+ testWorker6: 1ms
+ runWorkerBoundReference0Test: 5ms
+ 35
+ 20
+ OK
+ runAtomicTest: 4ms
+ testInitializer6: 101ms
+ OK
+ runFreezeStressTest: 1854ms
+ OK
+ runWeakTest1,2: 0ms
+ OK
+ runHashMap0Test: 3742ms
+ Hello
+ runtime.memory.var1.Integer@26abc8runVar1Test: 0ms
+ runPatternTest: 6ms
+ runPattern2Test: 319ms
+ Deallocated
+ 84
+ Foo
+ Hello, World!
+ Kotlin says: Hello, everybody!
+ Hello from Kotlin
+ 2, 1
+ true
+ true
+ Global string
+ Another global string
+ null
+ global object
+ 5
+ String macro
+ CFString macro
+ Deallocated
+ testObjCSmoke: 1ms
+ OK
+ Deallocated
+ runHashSet0Test: 0ms
+ OK
+ runWorker1Test: 0ms
+ OK
+ OK
+ testFreeze6: 1ms
+ 5
+ 6
+ 7
+ 8
+ 9
+ 10
+ 11
+ 12
+ 13
+ runArrayTest: 0ms
+ runSortTest: 10ms
+ runTestRunner: 0ms
+
+ */
