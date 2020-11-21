@@ -25,8 +25,8 @@
 
 
 typedef enum {
-  CONTAINER_TAG_GC_MARKED   = 0x01, // Reserved for TRACE_STATE
-  CONTAINER_TAG_GC_BUFFERED = 0x02, // Reserved for TRACE_STATE
+  CONTAINER_TAG_GC_BUFFERED = 0x01, // Reserved for TRACE_STATE
+  CONTAINER_TAG_GC_MARKED   = 0x02, // Reserved for TRACE_STATE
 
   // Container is frozen, could only refer to other frozen objects.
   CONTAINER_TAG_FROZEN = 0x04,
@@ -133,6 +133,10 @@ public:
 
   inline bool isAcyclic() const {
     return (rtNode.flags_ & CONTAINER_TAG_ACYCLIC) != 0;
+  }
+
+  inline void clearAcyclic_unsafe() {
+    rtNode.flags_ &= ~CONTAINER_TAG_ACYCLIC;
   }
 
   inline bool freeable() const {

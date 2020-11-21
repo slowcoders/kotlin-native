@@ -159,12 +159,12 @@ void GCRefList::removeChains(GCNode* node) {
             top = next;
         }
         else {
-            prev->next_ = chain->next();
+            prev->next_ = next;
         }
         recycleChain(chain, "removeChains");
     }
     if (top != NOT_CHANGED) {
-        this->first_ = getRefChainIndex(next);
+        this->first_ = getRefChainIndex(top);
     }
 }
 
