@@ -27,6 +27,7 @@ class CyclicNodeDetector {
     GCRefList finishedList;
     KStdDeque<char*> destroyedNodes;
     bool checkFreezingOnly;
+    KStdDeque<GCRefChain*> tracingQ;
     // GCRefList finishedList_;
 public:
     CyclicNodeDetector() {}
@@ -34,6 +35,7 @@ public:
     GCNode* markInTracing(GCObject* tracingObj);
 
     void buildCyclicNode(GCObject* obj)  RTGC_NO_INLINE;
+    void buildCyclicNode2(GCObject* obj)  RTGC_NO_INLINE;
     void addCyclicObject(CyclicNode* targetNode, GCObject* obj)  RTGC_NO_INLINE;
 
     void traceCyclic(GCObject* root);
@@ -41,9 +43,7 @@ public:
     void checkCyclic(KStdVector<KRef>* freezing);
 
     void detectCyclicNodes(GCObject* tracingObj);
-    void detectCyclicNodes2();
-
-    void traceCyclicNodes(GCObject* tracingObj);
+    void detectCyclicNodes2(GCObject* tracingObj);
 
     void destroyNode(GCNode* node);
 };
@@ -266,68 +266,108 @@ void CyclicNodeDetector::buildCyclicNode(GCObject* referrer) {
     }
 }
 
-void CyclicNodeDetector::traceCyclicNodes(GCObject* tracingObj) {
-    /** TODO
-     * KStdVect<GCRefChain*> tracingList;
-     */
-    GCNode* current_node = tracingObj->getNode();
-    current_node->setTraceState(IN_TRACING);
 
-    // int last_node_id =  tracingObj->getNodeId();
+void CyclicNodeDetector::buildCyclicNode2(GCObject* referrer) {
+    CyclicNode* cyclicNode = referrer->getLocalCyclicNode();
+    GCNode* referrer_node = referrer->getNode();
+    if (cyclicNode == nullptr) {
+        cyclicNode = CyclicNode::create();
+    }
 
-    RTGC_LOG("## RTGC tracing start %p\n", tracingObj);
-    
-    for (GCRefChain* chain = current_node->externalReferrers.topChain(); chain != NULL; chain = chain->next()) {
-        GCObject* referrer = chain->obj();
-        RTGC_LOG("##    Tracing into %p %d memberRef=%d isCyclic=%d\n", referrer, referrer->getNodeId(), referrer->getMemberRefCount(), referrer->isInCyclicNode());
-        GCNode* referrer_node = referrer->getNode();
+    int cnt __attribute__((unused)) = 1;
+    size_t idx = tracingQ.size() - 1;
+    DebugAssert(tracingQ[idx]->obj() == referrer);
+    for (;;) {
+        DebugAssert(idx > 0);
+        GCRefChain* pChain = tracingQ[--idx];
+        DebugAssert(pChain != nullptr);
+        GCObject* rookie = pChain->obj();
+        DebugAssert(rookie != nullptr);
+        if (rookie->getNode() == referrer_node) {
+            break;
+        }
+        RTGC_LOG("## RTGC Cyclic add: %d:%d, %p\n", cyclicNode->getId(), cnt++, rookie);
+        addCyclicObject(cyclicNode, rookie);
+    }
+    RTGC_LOG("## RTGC Cyclic add last: %d:%d, %p\n", cyclicNode->getId(), cnt, referrer);
+    addCyclicObject(cyclicNode, referrer);
+    cyclicNode->setTraceState(IN_TRACING);
 
-        if (ENABLE_RTGC_LOG) RTGCGlobal::validateMemPool();
-        switch (referrer_node->getTraceState()) {
-            case NOT_TRACED: // 추적되지 않은 참조 노드
-                RTGC_LOG("##     Push to trace %p\n", referrer);
-                current_node->setTraceState(TRACE_REQUESTED);
-                tracingList.push(referrer);
-                break;
-            case TRACE_REQUESTED:
-                RTGC_LOG("##     Recursive trace %p\n", referrer);
-                /**
-                 * 이미 TracingList 에 추가된 객체다.
-                 * 해당 객체를 통하여 순환참조가 발생할 수 있다. 어쩔 수 없이 recursive 검사.
-                 */
-                traceCyclicNodes(referrer);
-                break;
-            case IN_TRACING: // 순환 경로 발견
-                RTGC_LOG("##     Cyclic Found %p-%d\n", referrer, referrer->getNodeId());
-                if (referrer_node == tracingObj->getNode()) {
-                    RTGC_LOG("##     Cyclic inside: %p:%p, %p:%p\n", tracingObj, referrer->getNode(), referrer, referrer->getNode());
-                    break;
-                }
-                buildCyclicNode(referrer);
-                break;
-            case TRACE_FINISHED: // 이미 추적된 참조 노드
-                RTGC_LOG("##     already Traced %p\n", referrer);
-            default: 
-                // tracingList.trySetFirst(pChain);
-                break;
+    if (ENABLE_RTGC_LOG_VERBOSE) {
+        cnt = 1;
+        RTGC_LOG("## rootObjCount of cyclic node: %d -> %d\n", cyclicNode->getId(), cyclicNode->getRootObjectCount());
+        for (GCRefChain* c = cyclicNode->externalReferrers.topChain(); c != NULL; c = c->next()) {
+            RTGC_LOG("## External Referrer of cyclic node: %d, %d:%p\n", cyclicNode->getId(), ++cnt, c->obj());
         }
     }
-    RTGC_LOG("## RTGC tracing 2 %p\n", tracingObj);
 }
 
-void CyclicNodeDetector::detectCyclicNodes2() {
+void CyclicNodeDetector::detectCyclicNodes2(GCObject* traceRoot) {
 
-    while (!tracingList.isEmpty()) {
-        GCObject* tracingObj = tracingList.topChain()->obj();
-        GCNode* current_node = tracingObj->getNode();
-        if (current_node->getTraceState() != TRACE_REQUESTED) {
-            current_node->setTraceState(TRACE_FINISHED);
-            tracingList.pop();
-            finishedList.push(tracingObj);
-            continue;
+    GCRefChain root;
+    root.obj_ = traceRoot;
+    root.next_ = NULL;
+    tracingQ.push_back(&root);
+    
+    while (true) {
+        GCRefChain* chain = tracingQ.back();
+        GCObject* referrer = chain->obj();
+        
+        DebugRefAssert(referrer, !referrer->isAcyclic());
+        GCNode* referrer_node = referrer->getNode();
+        
+        GCRefChain* start_chain;
+        switch (referrer_node->getTraceState()) {
+            case NOT_TRACED: // 추적되지 않은 참조 노드 
+                if (checkFreezingOnly && !referrer->isFreezing()) break;
+
+                start_chain = referrer_node->externalReferrers.topChain();
+                if (start_chain == NULL) break;
+
+                RTGC_LOG("## RTGC tracingQ add: %p(mem:%p)\n", referrer, rtgcMem);
+                referrer_node->setTraceState(IN_TRACING);
+                tracingQ.push_back(start_chain);
+                continue;
+
+            case IN_TRACING: // 순환 경로 발견
+                RTGC_LOG("## RTGC Cyclic Found %p:%d\n", referrer, referrer->getNodeId());
+                buildCyclicNode2(referrer);
+                referrer_node = referrer->getNode();
+                break;
+
+            case TRACE_FINISHED: // 이미 추적된 참조 노드
+            default: 
+                RTGC_LOG("## RTGC TRACE_FINISHED Found %p/%d\n", referrer, referrer->getNodeId());
+                break;
         }
-        traceCyclicNodes(tracingObj);
 
+        GCRefChain* nextChain = chain->next();
+        while (true) {
+            DebugAssert(tracingQ[tracingQ.size()-1]->obj() == referrer);
+            size_t traceDepth = tracingQ.size() - 1;
+            GCObject* parent = traceDepth == 0 ? nullptr : tracingQ[traceDepth-1]->obj();
+            if (parent == nullptr || referrer_node != parent->getNode()) {
+                // tracingObj와 referent 를 경유하는 순환 경로가 발견되지 않은 경우
+                RTGC_LOG("## RTGC tracingQ remove: %p\n", referrer);
+                finishedList.push(referrer);
+                referrer_node->setTraceState(TRACE_FINISHED);
+                if (parent == nullptr) {
+                    DebugAssert(nextChain == NULL);
+                    tracingQ.pop_back();
+                    DebugAssert(tracingQ.empty());
+                    RTGC_LOG("## RTGC trace finished: %p\n", root);
+                    return;
+                }
+            }
+
+            if (nextChain != NULL) break;
+        
+            tracingQ.pop_back();
+            referrer = parent;
+            referrer_node = referrer->getNode();
+            nextChain = tracingQ.back()->next();
+        }
+        tracingQ.back() = nextChain;
     }
 }
 
@@ -439,22 +479,22 @@ void CyclicNodeDetector::traceCyclic(GCObject* root) {
         return;
     }
 
-    if (false) {
-        node->setTraceState(TRACE_REQUESTED);
-        tracingList.push(root);
-        detectCyclicNodes2();        
+    if (true) {
+        //node->setTraceState(TRACE_REQUESTED);
+        //tracingList.push(root);
+        detectCyclicNodes2(root);        
     }
     else {
         detectCyclicNodes(root);
         assert(tracingList.topChain()->obj() == root);
         assert(tracingList.topChain()->next() == NULL);
         tracingList.clear();
+        node = root->getNode();
+        RuntimeAssert(node->getTraceState() != TRACE_FINISHED, "Root trace finished");
+        node->setTraceState(TRACE_FINISHED);
     }
 
     // node maybe changed.
-    node = root->getNode();
-    RuntimeAssert(node->getTraceState() != TRACE_FINISHED, "Root trace finished");
-    node->setTraceState(TRACE_FINISHED);
     finishedList.push(root);
 }
 
@@ -474,18 +514,6 @@ void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
 
         RTGC_LOG("## Tracing Obj %p/%d memberRefCnt=%d\n", referrer, referrer->getNodeId(), referrer->getMemberRefCount());
         GCNode* referrer_node = referrer->getNode();
-        while (OPT_TRACING && referrer->getMemberRefCount() == 1 && referrer_node->getTraceState() == NOT_TRACED && !referrer->isInCyclicNode()) {
-            /**
-             * current_node 만이 유일한 referrer 인 경우, referrer_node 의 상태는 반드시 NOT_TRACED 이어야 한다.
-             * current_node 만이 순환참조의 진입점이 될 수 있다. (외줄 순환인 경우,referrer 와 tracingObj 가 동일해질 수 있다.)
-             * skip 된 referrer 의 TraceState 는 Reset하지 않다도 된다. 
-             * (순환참조 구성 시에는 Node 가 바뀌고, 아닌 경우 이미 Reset(NOT_TRACED) 상태이기 때문이다.
-             */
-            //RuntimeAssert(referrer_node->getTraceState() == NOT_TRACED, "Something wrong in detectCyclicNodes");
-            markInTracing(referrer);
-            referrer = referrer_node->externalReferrers.topChain()->obj();
-            referrer_node = referrer->getNode();
-        }
 
         if (ENABLE_RTGC_LOG) RTGCGlobal::validateMemPool();
 
@@ -521,16 +549,6 @@ void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
             default: 
                 RTGC_LOG("## RTGC TRACE_FINISHED Found %p-%d\n", referrer, referrer->getNodeId());
                 break;
-        }
-        GCNode* topNode = tracingObj->getNode();
-        while (OPT_TRACING) {
-            GCObject* obj = tracingList.topChain()->obj();
-            GCNode* node = obj->getNode();
-            if (node == topNode) break;
-
-            tracingList.pop();
-            finishedList.push(obj);
-            node->setTraceState(TRACE_FINISHED);
         }
     }
 
