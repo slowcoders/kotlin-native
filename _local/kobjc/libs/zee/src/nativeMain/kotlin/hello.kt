@@ -38,6 +38,7 @@ import kotlin.*
 import runtime.workers.worker2.*;
 import runtime.workers.worker6.*;
 import runtime.workers.worker10.*;
+import custom_hook.*;
 
 interface Interface {
     fun iMember(clazz: Interface) : Interface { return clazz; }
@@ -58,6 +59,10 @@ fun printTime(test:String) {
 fun test(str: String) {
     try {
 printTime("start")
+
+//testCustomHook();
+//printTime("testCustomHook")
+
 
 val test_gc_bug_in_worker_thread = true;
 if (test_gc_bug_in_worker_thread) {

@@ -392,10 +392,10 @@ void CyclicNodeDetector::traceCyclic(GCObject* root) {
         node = root->getNode();
         DebugAssert(node->getTraceState() != TRACE_FINISHED);
         node->setTraceState(TRACE_FINISHED);
+        // node maybe changed.
+        finishedList.push(root);
     }
 
-    // node maybe changed.
-    finishedList.push(root);
 }
 
 void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
@@ -446,18 +446,18 @@ void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
 
             chain = chain->next();
             while (chain == nullptr) {
-                if (traceStack.empty()) {
-                    return;
-                }
                 chain = traceStack.back();
                 referrer = chain->obj();
-                traceStack.pop_back();
-                GCObject* parent = traceStack.empty() ? NULL : traceStack.back()->obj();
-                if (parent == NULL || (referrer_node = referrer->getNode()) != parent->getNode()) {
+                DebugRefAssert(referrer, referrer->getNode()->getTraceState() != TRACE_FINISHED);
+                traceStack.pop_back();                
+                if (traceStack.empty() || (referrer_node = referrer->getNode()) != traceStack.back()->obj()->getNode()) {
                     // tracingObj와 referent 를 경유하는 순환 경로가 발견되지 않은 경우
                     RTGC_LOG("## RTGC traceStack remove: %p/%d\n", referrer, referrer->getNodeId());
                     finishedList.push(referrer);
                     referrer_node->setTraceState(TRACE_FINISHED);
+                    if (traceStack.empty()) {
+                        return;
+                    }
                 }
                 chain = chain->next();
             }

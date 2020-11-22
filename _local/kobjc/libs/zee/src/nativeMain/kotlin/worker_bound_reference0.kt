@@ -786,7 +786,7 @@ collectCyclicGarbageWithAtomicsFrozen()
 
 testGlobal()
 // for Strict mode Only
-// testGlobalDenyAccessOnWorker()
+testGlobalDenyAccessOnWorker()
 testGlobalAccessOnWorkerFrozenInitially()
 testGlobalAccessOnWorkerFrozenBeforePassing()
 testGlobalAccessOnWorkerFrozenBeforeAccess()
@@ -795,14 +795,14 @@ testGlobalGetWorker()
 testLocal();
 testLocalFrozen();
 // for Strict mode Only
-// testLocalDenyAccessOnWorkerFrozen();
+testLocalDenyAccessOnWorkerFrozen();
 testLocalAccessOnWorkerFrozenInitiallyFrozen()
 testLocalAccessOnWorkerFrozenBeforePassingFrozen()
 testLocalAccessOnWorkerFrozenBeforeAccessFrozen()
 // for Strict mode Only
-// testLocalAccessOnMainThread();
+testLocalAccessOnMainThread();
 // for Strict mode Only
-// testLocalDenyAccessOnMainThreadFrozen();
+testLocalDenyAccessOnMainThreadFrozen();
 testLocalModificationFrozen()
 testLocalGetWorkerFrozen()
 testLocalForeignGetWorker()
