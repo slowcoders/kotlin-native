@@ -111,6 +111,7 @@ RuntimeState* initRuntime() {
 }
 
 void deinitRuntime(RuntimeState* state) {
+  RTGC_LOG("deinitRuntime 0")
   ResumeMemory(state->memoryState);
   bool lastRuntime = atomicAdd(&aliveRuntimesCount, -1) == 0;
   InitOrDeinitGlobalVariables(DEINIT_THREAD_LOCAL_GLOBALS, state->memoryState);
@@ -119,11 +120,14 @@ void deinitRuntime(RuntimeState* state) {
   auto workerId = GetWorkerId(state->worker);
   WorkerDeinit(state->worker);
   DeinitMemory(state->memoryState);
+  RTGC_LOG("deinitRuntime 2")
   konanDestructInstance(state);
   WorkerDestroyThreadDataIfNeeded(workerId);
+  RTGC_LOG("deinitRuntime done")
 }
 
 void Kotlin_deinitRuntimeCallback(void* argument) {
+  RTGC_LOG("%%% Kotlin_deinitRuntimeCallback");
   auto* state = reinterpret_cast<RuntimeState*>(argument);
   RuntimeCheck(updateStatusIf(state, RUNNING, DESTROYING), "Cannot transition state to DESTROYING");
   deinitRuntime(state);
@@ -153,6 +157,7 @@ void Kotlin_initRuntimeIfNeeded() {
 }
 
 void Kotlin_deinitRuntimeIfNeeded() {
+  RTGC_LOG("%%% Kotlin_deinitRuntimeIfNeeded");
   if (isValidRuntime()) {
     deinitRuntime(::runtimeState);
     ::runtimeState = kInvalidRuntime;
@@ -164,8 +169,9 @@ RuntimeState* Kotlin_createRuntime() {
 }
 
 void Kotlin_destroyRuntime(RuntimeState* state) {
- RuntimeCheck(updateStatusIf(state, SUSPENDED, DESTROYING), "Cannot transition state to DESTROYING");
- deinitRuntime(state);
+  RTGC_LOG("%%% Kotlin_destroyRuntime");
+  RuntimeCheck(updateStatusIf(state, SUSPENDED, DESTROYING), "Cannot transition state to DESTROYING");
+  deinitRuntime(state);
 }
 
 RuntimeState* Kotlin_suspendRuntime() {

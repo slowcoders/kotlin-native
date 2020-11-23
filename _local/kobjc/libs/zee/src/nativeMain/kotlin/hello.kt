@@ -39,6 +39,7 @@ import runtime.workers.worker2.*;
 import runtime.workers.worker6.*;
 import runtime.workers.worker10.*;
 import custom_hook.*;
+import codegen.objectExpression.expr3.*
 
 interface Interface {
     fun iMember(clazz: Interface) : Interface { return clazz; }
@@ -63,6 +64,8 @@ printTime("start")
 //testCustomHook();
 //printTime("testCustomHook")
 
+runObjectExpression3Test()
+printTime("runObjectExpression3Test")
 
 val test_gc_bug_in_worker_thread = true;
 if (test_gc_bug_in_worker_thread) {

@@ -1070,15 +1070,6 @@ void processFinalizerQueue(MemoryState* state) {
   RTGC_LOG("Processing FinalizerQ\n");
   while (state->finalizerQueue != nullptr) {
     auto* container = state->finalizerQueue;
-    if (false) {
-      bool isShared = container->shared();
-      OnewayNode* node = container->getLocalOnewayNode();
-      if (isShared) GCNode::rtgcLock(_ProcessFinalizerQueue);
-      if (node != NULL) {
-        node->dealloc();
-      }
-      if (isShared) GCNode::rtgcUnlock();
-    }
 
     state->finalizerQueue = container->nextLink();
     state->finalizerQueueSize--;
@@ -1285,10 +1276,15 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
 
       container->markDestroyed();
       ContainerHeader* owner = container;
+      DebugAssert(container->objectCount() == 1);
       bool isOwnerPushed = isRoot;
       while (true) {//garbageNodeId == 0) {
+        // traverseObjectFields((ObjHeader*)(owner+1), [garbageNodeId, toRelease, &isOwnerPushed, owner](ObjHeader** location) {
+        //   ObjHeader* old = *location;
+        //   if (old == NULL) return;
         traverseReferredObjects((ObjHeader*)(owner+1), [garbageNodeId, toRelease, &isOwnerPushed, owner](ObjHeader* old) {
           ContainerHeader* deassigned = old->container();
+          DebugAssert(deassigned->objectCount() == 1);
           RTGC_LOG_V("--- cleaning fields start %p(%p) IN %p(%d)\n", deassigned, old, owner, garbageNodeId);
           if (isFreeable(deassigned)) {
             //*location = NULL;
@@ -1482,7 +1478,9 @@ inline void decrementRC(ContainerHeader* container) {
       if (0 == cyclic->decRootObjectCount<false>()
       &&  cyclic->externalReferrers.isEmpty()) {
         freeContainer(container, cyclic->getId());
-        cyclic->dealloc();
+        if (/*!RTGC_LATE_DESTROY_CYCLIC_SUSPECT || */!cyclic->isSuspectedCyclic()) {
+          cyclic->dealloc();
+        }
         break;
       }
     }
@@ -1593,7 +1591,9 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     if (cyclic->isGarbage()) {
       MEMORY_LOG("## RTGC garbage cyclic node free");
       freeContainer(container, cyclic->getId());
-      cyclic->dealloc();
+      if (/*!RTGC_LATE_DESTROY_CYCLIC_SUSPECT || */!cyclic->isSuspectedCyclic()) {  
+        cyclic->dealloc();
+      }
       return;
     }
   }
@@ -2445,14 +2445,16 @@ MemoryState* initMemory() {
 }
 
 void deinitMemory(MemoryState* memoryState) {
-  RTGC_LOG("deinitMemory %p\n", memoryState);
+  RTGC_LOG("deinitMemory %p {{\n", memoryState);
   static int pendingDeinit = 0;
   atomicAdd(&pendingDeinit, 1);
 #if USE_GC
   bool lastMemoryState = atomicAdd(&aliveMemoryStatesCount, -1) == 0;
   bool checkLeaks __attribute__((unused))= Kotlin_memoryLeakCheckerEnabled() && lastMemoryState;
   if (RTGC || lastMemoryState) {
-   garbageCollect(memoryState, true);
+    garbageCollect(memoryState, true);
+    memoryState->refChainAllocator.destroyAlloctor();
+    memoryState->cyclicNodeAllocator.destroyAlloctor();
 #if USE_CYCLIC_GC
    // If there are other pending deinits (rare situation) - just skip the leak checker.
    // This may happen when there're several threads with Kotlin runtimes created
@@ -2500,15 +2502,12 @@ void deinitMemory(MemoryState* memoryState) {
 #endif  // USE_GC
 #endif  // TRACE_MEMORY
 
-#if RTGC  
-  memoryState->refChainAllocator.destroyAlloctor();
-  memoryState->cyclicNodeAllocator.destroyAlloctor();
-#endif
 
   PRINT_EVENT(memoryState)
   DEINIT_EVENT(memoryState)
 
   konanFreeMemory(memoryState);
+  RTGC_LOG("}} deinitMemory %p done.\n", memoryState);
   ::memoryState = nullptr;
 }
 

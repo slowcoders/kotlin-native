@@ -51,11 +51,12 @@ CyclicNode* CyclicNode::create() {
     CyclicNode* node = rtgcMem->cyclicNodeAllocator.allocItem();
     memset(node, 0, sizeof(CyclicNode));
     if (RTGC_STATISTCS) RTGCGlobal::g_cntAddCyclicNode ++;
+    RTGC_LOG("## RTGC cyclic node created %p:%d\n", node, node->getId());
     return node;
 }
 
 void CyclicNode::dealloc() {
-    RTGC_LOG("## RTGC dealloc node %p:%d\n", this, this->getId());
+    RTGC_LOG("## RTGC cyclic node dealloc %p:%d\n", this, this->getId());
     //RuntimeAssert(isLocked(), "GCNode is not locked")
     externalReferrers.clear();
     rtgcMem->cyclicNodeAllocator.recycleItem(this);
@@ -101,7 +102,8 @@ void CyclicNode::removeCyclicTest(RTGCMemState* rtgcMem, GCObject* obj) {
 }
 
 void CyclicNode::mergeCyclicNode(GCObject* obj, int expiredNodeId) {
-    RTGC_LOG("      RTGC Merge Cycle %p:%d -> %d\n", obj, expiredNodeId, this->getId());
+    DebugAssert(obj->getNodeId() == expiredNodeId);
+    RTGC_LOG("      RTGC Merge Cycle %p/%d -> %d\n", obj, expiredNodeId, this->getId());
     obj->setNodeId(this->getId());
     assert(obj->isInCyclicNode() && obj->getNode() == this);
     RTGC_traverseObjectFields(obj, [this, expiredNodeId](GCObject* referent) {
@@ -204,7 +206,7 @@ void CyclicNodeDetector::buildCyclicNode(GCObject* referrer) {
             cyclicNode = CyclicNode::create();
         }
 
-        size_t start = traceStack.size();
+        int start = (int)traceStack.size();
         for (;;) {
             GCObject* obj = traceStack[--start]->obj();
             GCNode* node = obj->getNode();
@@ -214,15 +216,16 @@ void CyclicNodeDetector::buildCyclicNode(GCObject* referrer) {
                 break;
             }
         }
-        for (size_t idx = traceStack.size(); --idx >= start; ) {
+        for (int idx = (int)traceStack.size(); --idx >= start; ) {
             GCRefChain* pChain = traceStack[idx];
             GCObject* rookie = pChain->obj();
-            RTGC_LOG("  Cyclic add %p/%d:%d\n", rookie, cyclicNode->getId(), cnt++);
+            RTGC_LOG("  Cyclic add %p/%d %d)\n", rookie, cyclicNode->getId(), cnt++);
             addCyclicObject(cyclicNode, rookie);
             rookie->clearAcyclic_unsafe();
         }
-        RTGC_LOG("  Cyclic add last %p/%d:%d\n", referrer, cyclicNode->getId(), cnt);
-        addCyclicObject(cyclicNode, referrer);
+        DebugRefAssert(referrer, referrer->getNodeId() == cyclicNode->getId());
+        //RTGC_LOG("  Cyclic add last %p/%d:%d\n", referrer, cyclicNode->getId(), cnt);
+        //addCyclicObject(cyclicNode, referrer);
         cyclicNode->setTraceState(IN_TRACING);
 
     }
@@ -382,7 +385,7 @@ void CyclicNodeDetector::traceCyclic(GCObject* root) {
         //node->setTraceState(TRACE_REQUESTED);
         //tracingList.push(root);
         detectCyclicNodes(root);        
-        DebugAssert(root->getNode()->getTraceState() == TRACE_FINISHED);
+        DebugRefAssert(root, root->getNode()->getTraceState() == TRACE_FINISHED);
     }
     else {
         detectCyclicNodes(root);
@@ -404,7 +407,6 @@ void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
         GCRefChain root;
         root.obj_ = tracingObj;
         root.next_ = NULL;
-        traceStack.push_back(&root);
         
         GCRefChain* chain = &root;
         GCRefChain* tmpChain;
@@ -446,18 +448,19 @@ void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
 
             chain = chain->next();
             while (chain == nullptr) {
+                if (traceStack.empty()) {
+                    return;
+                }
                 chain = traceStack.back();
                 referrer = chain->obj();
-                DebugRefAssert(referrer, referrer->getNode()->getTraceState() != TRACE_FINISHED);
+                referrer_node = referrer->getNode();
+                DebugRefAssert(referrer, referrer_node->getTraceState() != TRACE_FINISHED);
                 traceStack.pop_back();                
-                if (traceStack.empty() || (referrer_node = referrer->getNode()) != traceStack.back()->obj()->getNode()) {
+                if (traceStack.empty() || referrer_node != traceStack.back()->obj()->getNode()) {
                     // tracingObj와 referent 를 경유하는 순환 경로가 발견되지 않은 경우
                     RTGC_LOG("## RTGC traceStack remove: %p/%d\n", referrer, referrer->getNodeId());
                     finishedList.push(referrer);
                     referrer_node->setTraceState(TRACE_FINISHED);
-                    if (traceStack.empty()) {
-                        return;
-                    }
                 }
                 chain = chain->next();
             }

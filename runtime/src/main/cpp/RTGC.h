@@ -15,10 +15,10 @@
 #define RTGC_NO_INLINE                    // NO_INLINE
 #define ENABLE_RTGC_LOG                   0
 #define ENABLE_RTGC_LOG_VERBOSE           (0 & ENABLE_RTGC_LOG)
-
-#define RTGC_LATE_DESTORY                 0
-#define RTGC_LATE_DESTROY_CYCLIC_SUSPECT  true
 #define DEBUG_RTGC_BUCKET                 0
+
+#define RTGC_LATE_DESTORY                 false
+#define RTGC_LATE_DESTROY_CYCLIC_SUSPECT  true
 
 typedef struct ContainerHeader GCObject;
 
@@ -351,6 +351,8 @@ struct SharedBucket {
     #if DEBUG_RTGC_BUCKET
     int cntRecycle = 0;
     #endif
+
+    BUCKET_LOG("recycleBucket[:%d] + %d => %d\n", id, cntRecycle, this->cntFreeItem)
     for (T* item = first; item != NULL; item = GET_NEXT_FREE(item)) {
       last = item;
       #if DEBUG_RTGC_BUCKET
