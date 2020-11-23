@@ -1279,12 +1279,12 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
       DebugAssert(container->objectCount() == 1);
       bool isOwnerPushed = isRoot;
       while (true) {//garbageNodeId == 0) {
-        // traverseObjectFields((ObjHeader*)(owner+1), [garbageNodeId, toRelease, &isOwnerPushed, owner](ObjHeader** location) {
+        // traverseContainerObjectFields(owner, [garbageNodeId, toRelease, &isOwnerPushed, owner](ObjHeader** location) {
         //   ObjHeader* old = *location;
         //   if (old == NULL) return;
         traverseReferredObjects((ObjHeader*)(owner+1), [garbageNodeId, toRelease, &isOwnerPushed, owner](ObjHeader* old) {
           ContainerHeader* deassigned = old->container();
-          DebugAssert(deassigned->objectCount() == 1);
+          DebugAssert(deassigned == NULL || deassigned->objectCount() == 1);
           RTGC_LOG_V("--- cleaning fields start %p(%p) IN %p(%d)\n", deassigned, old, owner, garbageNodeId);
           if (isFreeable(deassigned)) {
             //*location = NULL;
