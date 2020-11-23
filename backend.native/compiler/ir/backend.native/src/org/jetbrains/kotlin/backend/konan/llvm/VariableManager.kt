@@ -158,6 +158,9 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         val index = variables.size
         val type = functionGenerationContext.getLLVMType(valueDeclaration.type)
         val slotRec = SlotRecord(type, isVar, valueDeclaration.name.asString(), variableLocation);
+        if (isVar) {
+            slotRec.address();
+        }
         if (value != null) {
             slotRec.store(value);
         }
