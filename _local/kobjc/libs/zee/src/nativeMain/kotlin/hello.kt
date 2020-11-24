@@ -61,8 +61,8 @@ fun test(str: String) {
     try {
 printTime("start")
 
-//testCustomHook();
-//printTime("testCustomHook")
+testLazy3();
+printTime("testLazy3")
 
 runObjectExpression3Test()
 printTime("runObjectExpression3Test")

@@ -59,6 +59,9 @@ void CyclicNode::dealloc() {
     RTGC_LOG("## RTGC cyclic node dealloc %p:%d\n", this, this->getId());
     //RuntimeAssert(isLocked(), "GCNode is not locked")
     externalReferrers.clear();
+    if (RTGC_DEBUG) {
+      memset(this, -1, sizeof(CyclicNode));
+    }
     rtgcMem->cyclicNodeAllocator.recycleItem(this);
     if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveCyclicNode ++;
 }
@@ -95,6 +98,7 @@ void CyclicNode::removeCyclicTest(RTGCMemState* rtgcMem, GCObject* obj) {
     if (!obj->isEnquedCyclicTest()) return;
 
     obj->dequeueCyclicTest();
+    obj->getNode()->clearSuspectedCyclic()
     RTGC_LOG("## RTGC Remove Cyclic Test %p:%d\n", obj, obj->getNodeId());
     /* TODO ZZZZ replace tryRemove => remove */
     rtgcMem->g_cyclicTestNodes.tryRemove(obj, true);
@@ -287,6 +291,7 @@ void CyclicNode::garbageCollectCycles(void* freezing) {
 void ScheduleDestroyContainer(MemoryState* state, ContainerHeader* container, const char* msg="");
 
 void CyclicNodeDetector::checkCyclic(KStdVector<KRef>* freezing) {
+    RTGC_LOG("## RTGC 0\n");
     GCNode::rtgcLock(_DetectCylcles);
     if (freezing == nullptr) {
         this->checkFreezingOnly = false;
@@ -295,14 +300,15 @@ void CyclicNodeDetector::checkCyclic(KStdVector<KRef>* freezing) {
         while (!cyclicTestNodes->empty()) {
             GCObject* root = cyclicTestNodes->back();
             cyclicTestNodes->pop_back(); 
+            RTGC_LOG_V("detect cyclic %p destroyed=%d\n", root, root->isDestroyed());
             DebugAssert(isValidObjectContainer(root));
             DebugRefAssert(root, root->isEnquedCyclicTest() || (!root->freeable() && root->shared()));
             //DebugAssert(cyclicTestNodes->find(root) == nullptr);
+            root->dequeueCyclicTest();
             if (RTGC_LATE_DESTROY_CYCLIC_SUSPECT && root->isDestroyed()) {
-                root->dequeueCyclicTest();
                 ScheduleDestroyContainer((MemoryState*)rtgcMem, root, "in RTGC");
             }
-            else if (root->dequeueCyclicTest()) {
+            else if (root->getNode()->clearSuspectedCyclic()) {
                 this->traceCyclic(root);
             }
         }

@@ -302,10 +302,8 @@ public:
     return false;
   }
 
-  bool dequeueCyclicTest() {
-    bool needTest = this->getNode()->clearSuspectedCyclic();
+  void dequeueCyclicTest() {
     this->rtNode.flags_ &= ~NEED_CYCLIC_TEST;
-    return needTest;
   }
 
   bool isEnquedCyclicTest() {

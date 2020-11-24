@@ -2455,6 +2455,7 @@ void deinitMemory(MemoryState* memoryState) {
     garbageCollect(memoryState, true);
     memoryState->refChainAllocator.destroyAlloctor();
     memoryState->cyclicNodeAllocator.destroyAlloctor();
+    RTGC_LOG("deinitMemory RTGC allocators are destroyed")
 #if USE_CYCLIC_GC
    // If there are other pending deinits (rare situation) - just skip the leak checker.
    // This may happen when there're several threads with Kotlin runtimes created
@@ -2472,6 +2473,8 @@ void deinitMemory(MemoryState* memoryState) {
       garbageCollect(memoryState, true);
     } while (memoryState->toRelease->size() > 0 || !memoryState->foreignRefManager->tryReleaseRefOwned());
   }
+  RTGC_LOG("deinitMemory 2")
+
   RuntimeAssert(memoryState->toFree->size() == 0, "Some memory have not been released after GC");
   RuntimeAssert(memoryState->toRelease->size() == 0, "Some memory have not been released after GC");
   konanDestructInstance(memoryState->toFree);
@@ -3479,12 +3482,11 @@ void runFreezeHooksRecursive(ObjHeader* root, KStdVector<KRef>* toVisit) {
 void runFreezeHooksRecursive(ObjHeader* root) {
   KStdVector<KRef> seen;
 #endif
-  RTGC_LOG("runFreezeHooksRecursive %p\n", root);
+  RTGC_LOG("runFreezeHooksRecursive %p {{\n", root);
   toVisit->push_back(root);
   root->container()->markFreezing();
   for (size_t idx = 0; idx < toVisit->size(); idx ++) {
     KRef obj = (*toVisit)[idx];
-    //RTGC_LOG("runFreezeHooksRecursive 1 %p\n", obj);
     if (RTGC && obj->has_meta_object() && (obj->meta_object()->flags_ & MF_NEVER_FROZEN) != 0) {
       for (auto* o : *toVisit) {
         o->container()->clearFreezing();
@@ -3497,19 +3499,18 @@ void runFreezeHooksRecursive(ObjHeader* root) {
       RTGC_dumpRefInfo(obj->container());
     }
     runFreezeHooks(obj);
-    //RTGC_LOG("runFreezeHooksRecursive runFreezeHooks 2 %p\n", obj);
 
     traverseReferredObjects(obj, [toVisit](ObjHeader* field) {
       /**
        * runFreezeHooks() 수행 도중 side-effect 방지를 위해 mark() 대신에 seen set 를 이용(?!?)
        */
-      //RTGC_LOG("runFreezeHooks traverseReferredObjects %p\n", field);
       if (canFreeze(field->container())) {
         field->container()->markFreezing();
         toVisit->push_back(field);
       }
     });
   }
+  RTGC_LOG("}} runFreezeHooks done %p\n", root);
 }
 
 /**

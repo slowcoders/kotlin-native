@@ -310,6 +310,9 @@ struct SharedBucket {
 
   SharedBucket() {
     g_freeItemQ = _alocatedItems = new T[ITEM_COUNT*BUCKET_COUNT];
+    if (RTGC_DEBUG) {
+      memset(_alocatedItems, -1, ITEM_COUNT*BUCKET_COUNT*sizeof(T));
+    }
     T* item = _alocatedItems;
     for (int i = ITEM_COUNT*BUCKET_COUNT-1; --i > 0; item++) {
       SET_NEXT_FREE(item, item+1);
@@ -352,9 +355,11 @@ struct SharedBucket {
     int cntRecycle = 0;
     #endif
 
-    BUCKET_LOG("recycleBucket[:%d] + %d => %d\n", id, cntRecycle, this->cntFreeItem)
     for (T* item = first; item != NULL; item = GET_NEXT_FREE(item)) {
       last = item;
+      if (id > 1000) {
+        BUCKET_LOG("recycleBucket[:%d] + %p\n", id, item)
+      }
       #if DEBUG_RTGC_BUCKET
       cntRecycle ++;
       #endif

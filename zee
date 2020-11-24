@@ -1,4 +1,4 @@
-FAILURE: Build completed with 8 failures.
+FAILURE: Build completed with 5 failures.
 
 1: Task failed with an exception.
 -----------
@@ -19,121 +19,6 @@ Run with --stacktrace option to get the stack trace. Run with --info or --debug 
 2: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:interop_objc_tests'.
-> Test failed. Actual exit status doesn't match with exit status checker: 134
-  stdout:
-  [==========] Running 20 tests from 20 test cases.
-  [----------] Global test environment set-up.
-  [----------] 1 tests from KT38234_overrideKt
-  [ RUN      ] KT38234_overrideKt.testKT38234
-  [       OK ] KT38234_overrideKt.testKT38234 (0 ms)
-  [----------] 1 tests from KT38234_overrideKt (0 ms total)
-  
-  [----------] 1 tests from AllocNoRetainKt
-  [ RUN      ] AllocNoRetainKt.testAllocNoRetain
-  [       OK ] AllocNoRetainKt.testAllocNoRetain (0 ms)
-  [----------] 1 tests from AllocNoRetainKt (0 ms total)
-  
-  [----------] 1 tests from BlocksKt
-  [ RUN      ] BlocksKt.testBlocks
-  [       OK ] BlocksKt.testBlocks (0 ms)
-  [----------] 1 tests from BlocksKt (0 ms total)
-  
-  [----------] 1 tests from CallableReferencesKt
-  [ RUN      ] CallableReferencesKt.testCallableReferences
-  [       OK ] CallableReferencesKt.testCallableReferences (0 ms)
-  [----------] 1 tests from CallableReferencesKt (0 ms total)
-  
-  [----------] 1 tests from ClashingWithAnyKt
-  [ RUN      ] ClashingWithAnyKt.testClashingWithAny
-  [       OK ] ClashingWithAnyKt.testClashingWithAny (0 ms)
-  [----------] 1 tests from ClashingWithAnyKt (0 ms total)
-  
-  [----------] 1 tests from ConstructorReturnsNullKt
-  [ RUN      ] ConstructorReturnsNullKt.testConstructorReturnsNull
-  [       OK ] ConstructorReturnsNullKt.testConstructorReturnsNull (0 ms)
-  [----------] 1 tests from ConstructorReturnsNullKt (0 ms total)
-  
-  [----------] 1 tests from ConversionsKt
-  [ RUN      ] ConversionsKt.testConversions
-  [       OK ] ConversionsKt.testConversions (1 ms)
-  [----------] 1 tests from ConversionsKt (1 ms total)
-  
-  [----------] 1 tests from CustomStringKt
-  [ RUN      ] CustomStringKt.testCustomString
-  [       OK ] CustomStringKt.testCustomString (0 ms)
-  [----------] 1 tests from CustomStringKt (0 ms total)
-  
-  [----------] 1 tests from ExceptionsKt
-  [ RUN      ] ExceptionsKt.testExceptions
-  [       OK ] ExceptionsKt.testExceptions (0 ms)
-  [----------] 1 tests from ExceptionsKt (0 ms total)
-  
-  [----------] 1 tests from InitWithCustomSelectorKt
-  [ RUN      ] InitWithCustomSelectorKt.testInitWithCustomSelector
-  [       OK ] InitWithCustomSelectorKt.testInitWithCustomSelector (0 ms)
-  [----------] 1 tests from InitWithCustomSelectorKt (0 ms total)
-  
-  [----------] 1 tests from Kt36766Kt
-  [ RUN      ] Kt36766Kt.testKt36766
-  [       OK ] Kt36766Kt.testKt36766 (0 ms)
-  [----------] 1 tests from Kt36766Kt (0 ms total)
-  
-  [----------] 1 tests from ManglingKt
-  [ RUN      ] ManglingKt.testMangling
-  [       OK ] ManglingKt.testMangling (0 ms)
-  [----------] 1 tests from ManglingKt (0 ms total)
-  
-  [----------] 1 tests from MultipleInheritanceClashKt
-  [ RUN      ] MultipleInheritanceClashKt.testMultipleInheritanceClash
-  [       OK ] MultipleInheritanceClashKt.testMultipleInheritanceClash (0 ms)
-  [----------] 1 tests from MultipleInheritanceClashKt (0 ms total)
-  
-  [----------] 1 tests from NsOutputStreamKt
-  [ RUN      ] NsOutputStreamKt.testNSOutputStreamToMemoryConstructor
-  [       OK ] NsOutputStreamKt.testNSOutputStreamToMemoryConstructor (0 ms)
-  [----------] 1 tests from NsOutputStreamKt (0 ms total)
-  
-  [----------] 1 tests from ObjcWeakRefsKt
-  [ RUN      ] ObjcWeakRefsKt.testObjCWeakRef
-  [       OK ] ObjcWeakRefsKt.testObjCWeakRef (1 ms)
-  [----------] 1 tests from ObjcWeakRefsKt (1 ms total)
-  
-  [----------] 1 tests from OverrideInitKt
-  [ RUN      ] OverrideInitKt.testOverrideInit
-  [       OK ] OverrideInitKt.testOverrideInit (0 ms)
-  [----------] 1 tests from OverrideInitKt (0 ms total)
-  
-  [----------] 1 tests from SharingKt
-  [ RUN      ] SharingKt.testSharing
-  [       OK ] SharingKt.testSharing (0 ms)
-  [----------] 1 tests from SharingKt (0 ms total)
-  
-  [----------] 1 tests from StructWithNSObjectKt
-  [ RUN      ] StructWithNSObjectKt.testStructWithNSObject
-  [       OK ] StructWithNSObjectKt.testStructWithNSObject (0 ms)
-  [----------] 1 tests from StructWithNSObjectKt (0 ms total)
-  
-  [----------] 1 tests from VarargsKt
-  [ RUN      ] VarargsKt.testVarargs
-  [       OK ] VarargsKt.testVarargs (0 ms)
-  [----------] 1 tests from VarargsKt (0 ms total)
-  
-  [----------] 1 tests from WeakRefsKt
-  [ RUN      ] WeakRefsKt.testWeakRefs
-  0x7fefe66040d0-* ??? 0x7fefe670aa00:1 rc=0x1, flags=8002
-  
-  stderr:
-  Assertion failed: (RTGC_Check(referrer, referrer->getNode()->getTraceState() != TRACE_FINISHED)), function detectCyclicNodes, file /Users/zeedh/slowcoders/kotlin-native/runtime/src/main/cpp/RTGCCycle.cpp, line 451.
-
-
-* Try:
-Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
-==============================================================================
-
-3: Task failed with an exception.
------------
-* What went wrong:
 Execution failed for task ':backend.native:tests:kt-37572'.
 > Test failed. Actual exit status doesn't match with exit status checker: 134
   stdout:
@@ -147,42 +32,40 @@ Execution failed for task ':backend.native:tests:kt-37572'.
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
-4: Task failed with an exception.
+3: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':backend.native:tests:objectExpression3'.
-> Test failed. Expected output: 
-  1
-  2
-  , actual output: 
+Execution failed for task ':backend.native:tests:lazy3'.
+> Test failed. Actual exit status doesn't match with exit status checker: 139
+  stdout:
   
-  2
+  stderr:
 
 
 * Try:
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
-5: Task failed with an exception.
+4: Task failed with an exception.
 -----------
 * What went wrong:
 Execution failed for task ':backend.native:tests:stack_trace_inline'.
 > Test failed. Actual exit status doesn't match with exit status checker: 134
   stdout:
   Uncaught Kotlin exception: kotlin.AssertionError: Expected <5>, actual <4>.
-      at 0   stack_trace_inline.kexe             0x000000010d9d501f kfun:kotlin.Throwable#<init>(kotlin.String?){} + 95 (/Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/Throwable.kt:23:37)
-      at 1   stack_trace_inline.kexe             0x000000010d9cf14d kfun:kotlin.Error#<init>(kotlin.String?){} + 93 (/Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/Exceptions.kt:12:44)
-      at 2   stack_trace_inline.kexe             0x000000010d9cf77e kfun:kotlin.AssertionError#<init>(kotlin.Any?){} + 222 (/Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/Exceptions.kt:128:41)
-      at 3   stack_trace_inline.kexe             0x000000010d9bfb25 kfun:kotlin.test.DefaultAsserter#fail(kotlin.String?){}kotlin.Nothing + 261 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/DefaultAsserter.kt:16:19)
-      at 4   stack_trace_inline.kexe             0x000000010d9bc673 kfun:kotlin.test.Asserter#assertTrue(kotlin.Function0<kotlin.String?>;kotlin.Boolean){} + 291 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/Assertions.kt:226:13)
-      at 5   stack_trace_inline.kexe             0x000000010d9bca94 kfun:kotlin.test.Asserter#assertEquals(kotlin.String?;kotlin.Any?;kotlin.Any?){} + 580 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/Assertions.kt:245:9)
-      at 6   stack_trace_inline.kexe             0x000000010d9bf700 kfun:kotlin.test#assertEquals(0:0;0:0;kotlin.String?){0§<kotlin.Any?>} + 304 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/Assertions.kt:57:14)
-      at 7   stack_trace_inline.kexe             0x000000010d9bf87a kfun:kotlin.test#assertEquals$default(0:0;0:0;kotlin.String?;kotlin.Int){0§<kotlin.Any?&kotlin.Any?>} + 282 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/Assertions.kt:56:1)
-      at 8   stack_trace_inline.kexe             0x000000010da87f58 kfun:#checkFrame(kotlin.String){} + 1688 (/Users/zeedh/slowcoders/kotlin-native/test.output/local/stack_trace_inline/stack_trace_inline.kt:29:9)
-      at 9   stack_trace_inline.kexe             0x000000010da8777b kfun:#main(){} + 491 (/Users/zeedh/slowcoders/kotlin-native/test.output/local/stack_trace_inline/stack_trace_inline.kt:14:20)
-      at 10  stack_trace_inline.kexe             0x000000010da8807c Konan_start + 124 (/Users/zeedh/slowcoders/kotlin-native/test.output/local/stack_trace_inline/stack_trace_inline.kt:8:1)
-      at 11  stack_trace_inline.kexe             0x000000010da95243 Konan_run_start + 99
-      at 12  stack_trace_inline.kexe             0x000000010da951b0 Konan_main + 32
+      at 0   stack_trace_inline.kexe             0x000000010bc9800f kfun:kotlin.Throwable#<init>(kotlin.String?){} + 95 (/Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/Throwable.kt:23:37)
+      at 1   stack_trace_inline.kexe             0x000000010bc9213d kfun:kotlin.Error#<init>(kotlin.String?){} + 93 (/Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/Exceptions.kt:12:44)
+      at 2   stack_trace_inline.kexe             0x000000010bc9276e kfun:kotlin.AssertionError#<init>(kotlin.Any?){} + 222 (/Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/Exceptions.kt:128:41)
+      at 3   stack_trace_inline.kexe             0x000000010bc82a65 kfun:kotlin.test.DefaultAsserter#fail(kotlin.String?){}kotlin.Nothing + 261 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/DefaultAsserter.kt:16:19)
+      at 4   stack_trace_inline.kexe             0x000000010bc7f5b3 kfun:kotlin.test.Asserter#assertTrue(kotlin.Function0<kotlin.String?>;kotlin.Boolean){} + 291 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/Assertions.kt:226:13)
+      at 5   stack_trace_inline.kexe             0x000000010bc7f9d4 kfun:kotlin.test.Asserter#assertEquals(kotlin.String?;kotlin.Any?;kotlin.Any?){} + 580 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/Assertions.kt:245:9)
+      at 6   stack_trace_inline.kexe             0x000000010bc82640 kfun:kotlin.test#assertEquals(0:0;0:0;kotlin.String?){0§<kotlin.Any?>} + 304 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/Assertions.kt:57:14)
+      at 7   stack_trace_inline.kexe             0x000000010bc827ba kfun:kotlin.test#assertEquals$default(0:0;0:0;kotlin.String?;kotlin.Int){0§<kotlin.Any?&kotlin.Any?>} + 282 (/Users/zeedh/slowcoders/kotlin-native/backend.native/build/stdlib/kotlin/test/Assertions.kt:56:1)
+      at 8   stack_trace_inline.kexe             0x000000010bd4af48 kfun:#checkFrame(kotlin.String){} + 1688 (/Users/zeedh/slowcoders/kotlin-native/test.output/local/stack_trace_inline/stack_trace_inline.kt:29:9)
+      at 9   stack_trace_inline.kexe             0x000000010bd4a76b kfun:#main(){} + 491 (/Users/zeedh/slowcoders/kotlin-native/test.output/local/stack_trace_inline/stack_trace_inline.kt:14:20)
+      at 10  stack_trace_inline.kexe             0x000000010bd4b06c Konan_start + 124 (/Users/zeedh/slowcoders/kotlin-native/test.output/local/stack_trace_inline/stack_trace_inline.kt:8:1)
+      at 11  stack_trace_inline.kexe             0x000000010bd58233 Konan_run_start + 99
+      at 12  stack_trace_inline.kexe             0x000000010bd581a0 Konan_main + 32
       at 13  libdyld.dylib                       0x00007fff6f4f3cc9 start + 1
   
   stderr:
@@ -194,52 +77,11 @@ Execution failed for task ':backend.native:tests:stack_trace_inline'.
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
 ==============================================================================
 
-6: Task failed with an exception.
+5: Task failed with an exception.
 -----------
 * What went wrong:
 Execution failed for task ':backend.native:tests:stdlibTest'.
-> Test /Users/zeedh/slowcoders/kotlin-native/test.output/stdlib/stdlibTest/macos_x64/stdlibTest.kexe exited with 134
-
-* Try:
-Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
-==============================================================================
-
-7: Task failed with an exception.
------------
-* What went wrong:
-Execution failed for task ':backend.native:tests:testObjCExport'.
-> Execution of swiftTestExecutable failed with exit code: 139 
-
-* Try:
-Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
-==============================================================================
-
-8: Task failed with an exception.
------------
-* What went wrong:
-Execution failed for task ':backend.native:tests:testing_custom_main'.
-> Test failed. Actual exit status doesn't match with exit status checker: 139
-  stdout:
-  Custom main
-  Starting testing
-  Starting iteration: 1
-  Starting test suite: kotlin.test.tests.Custom_mainKt
-  Starting test case: test (kotlin.test.tests.Custom_mainKt)
-  test
-  Passed: test (kotlin.test.tests.Custom_mainKt)
-  Test suite finished: kotlin.test.tests.Custom_mainKt
-  Iteration finished: 1
-  Starting iteration: 2
-  Starting test suite: kotlin.test.tests.Custom_mainKt
-  Starting test case: test (kotlin.test.tests.Custom_mainKt)
-  test
-  Passed: test (kotlin.test.tests.Custom_mainKt)
-  Test suite finished: kotlin.test.tests.Custom_mainKt
-  Iteration finished: 2
-  Testing finished
-  
-  stderr:
-
+> Test /Users/zeedh/slowcoders/kotlin-native/test.output/stdlib/stdlibTest/macos_x64/stdlibTest.kexe exited with 139
 
 * Try:
 Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
@@ -251,8 +93,21 @@ Deprecated Gradle features were used in this build, making it incompatible with 
 Use '--warning-mode all' to show the individual deprecation warnings.
 See https://docs.gradle.org/6.6.1/userguide/command_line_interface.html#sec:command_line_warnings
 
-BUILD FAILED in 37m 13s
-1299 actionable tasks: 785 executed, 514 up-to-date
+BUILD FAILED in 41m 52s
+1299 actionable tasks: 790 executed, 509 up-to-date
 zeedh@DaeHoons-MacBook-Pro kotlin-native % 
-zeedh@DaeHoons-MacBook-Pro kotlin-native % 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -324,7 +324,11 @@ CyclicNode* CyclicNode::getNode(int nodeId) {
     if (nodeId < CYCLIC_NODE_ID_START) {
         return NULL;
     }
-    return rtgcMem->cyclicNodeAllocator.getItem(nodeId - CYCLIC_NODE_ID_START);
+    CyclicNode* node = rtgcMem->cyclicNodeAllocator.getItem(nodeId - CYCLIC_NODE_ID_START);
+    if (RTGC_DEBUG) {
+      DebugAssert(((int64_t*)node)[1] != -1);
+    }
+    return node;
 }
 
 static int cntMemory = 0; 
