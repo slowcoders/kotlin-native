@@ -185,7 +185,6 @@ public:
       flags |= CONTAINER_TAG_STACK_OR_PERMANANT | CONTAINER_TAG_ACYCLIC;
     }
     else {
-      DebugAssert(getNodeId() == 0 || !getNode()->isSuspectedCyclic());
       if (!isInCyclicNode()) {
         flags |= CONTAINER_TAG_ACYCLIC;
       }

@@ -1172,7 +1172,9 @@ bool hasExternalRefs(ContainerHeader* start, ContainerHeaderSet* visited) {
 void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container, const char* msg = "free") {
   RTGC_LOG("scheduleDestroyContainer %p isEnqueued=%d %s\n", container, container->isEnquedCyclicTest(), msg);
   if (true) {
-    if (RTGC_LATE_DESTROY_CYCLIC_SUSPECT && container->isEnquedCyclicTest()) return;
+    if (RTGC_LATE_DESTROY_CYCLIC_SUSPECT && container->isEnquedCyclicTest()) {
+      return;
+    }
 
     bool isShared = false; // container->shared();
     OnewayNode* node = container->getLocalOnewayNode();
@@ -1478,9 +1480,7 @@ inline void decrementRC(ContainerHeader* container) {
       if (0 == cyclic->decRootObjectCount<false>()
       &&  cyclic->externalReferrers.isEmpty()) {
         freeContainer(container, cyclic->getId());
-        if (/*!RTGC_LATE_DESTROY_CYCLIC_SUSPECT || */!cyclic->isSuspectedCyclic()) {
-          cyclic->dealloc();
-        }
+        cyclic->dealloc();
         break;
       }
     }
@@ -1533,7 +1533,7 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
       return;
     }
     
-    if (val_node->mayCreateCyclicReference()) {
+    if (!container->isEnquedCyclicTest()) {
       bool check_two_way_link = true;
       if (check_two_way_link && owner_node->externalReferrers.find(container)) {
         CyclicNode::createTwoWayLink(owner, container);
@@ -1591,14 +1591,12 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     if (cyclic->isGarbage()) {
       MEMORY_LOG("## RTGC garbage cyclic node free");
       freeContainer(container, cyclic->getId());
-      if (/*!RTGC_LATE_DESTROY_CYCLIC_SUSPECT || */!cyclic->isSuspectedCyclic()) {  
-        cyclic->dealloc();
-      }
+      cyclic->dealloc();
       return;
     }
   }
 
-  if (val_node->mayCreateCyclicReference() &&
+  if (!container->isEnquedCyclicTest() &&
     !val_node->externalReferrers.isEmpty()) {
       CyclicNode::addCyclicTest(container, false);
   }

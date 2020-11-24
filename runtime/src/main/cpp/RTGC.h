@@ -165,26 +165,6 @@ struct GCNode {
 
 public:
 
-  bool clearSuspectedCyclic() { 
-    if (isSuspectedCyclic()) {
-      if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveCyclicTest ++;
-      externalReferrers.flags_ &= ~NEED_CYCLIC_TEST; 
-      return true;
-    }
-    return false;
-  } 
-  void markSuspectedCyclic() { 
-    if (RTGC_STATISTCS && !isSuspectedCyclic()) RTGCGlobal::g_cntAddCyclicTest ++;
-    externalReferrers.flags_ |= NEED_CYCLIC_TEST; 
-  } 
-
-  bool mayCreateCyclicReference() {
-    return (externalReferrers.flags_ & (CONTAINER_TAG_FROZEN | NEED_CYCLIC_TEST)) == 0;
-  } 
-
-  bool isSuspectedCyclic() {
-    return (externalReferrers.flags_ & NEED_CYCLIC_TEST) != 0;
-  }
 
   void markFrozen() {
     externalReferrers.flags_ |= CONTAINER_TAG_FROZEN;
