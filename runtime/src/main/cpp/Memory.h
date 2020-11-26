@@ -259,7 +259,7 @@ public:
   GCNode* getNode() {
     DebugRefAssert(this, ref_.rtgc.node != 0);
     if (this->isInCyclicNode()) {
-      return CyclicNode::getNode(ref_.rtgc.node);
+      return CyclicNode::getNode(this);
     }
     else {
       return (OnewayNode*)&rtNode;
@@ -275,7 +275,7 @@ public:
   }
 
   CyclicNode* getLocalCyclicNode() {
-    return CyclicNode::getNode(getNodeId());
+    return CyclicNode::getNode(this);
   }
 
   bool isGCNodeAttached() {

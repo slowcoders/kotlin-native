@@ -1268,6 +1268,8 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
     return;
   }
 
+  const bool RTGC_LATE_DESTORY = false;
+
   RTGC_LOG("## RTGC free container %p/%d %p freeable=%d\n", container, garbageNodeId, memoryState, container->freeable());
   bool isRoot = memoryState->gcInProgress ++ == 0;
   auto toRelease = memoryState->toRelease;
@@ -1324,22 +1326,22 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
           }
           RTGC_LOG_V("--- cleaning fields done %p (%d)\n", old, garbageNodeId);
         });
-#if (RTGC_LATE_DESTORY)
-        if (!isRoot) {
-          break;
-        }
-        while (!toRelease->empty()) {
-          ContainerHeader* old = toRelease->front();
-          toRelease->pop_front();
-          if (((int64_t)old & 1) != 0) {
-            owner = (ContainerHeader*)((int64_t)old & ~1);
-            continue;
+        if (RTGC_LATE_DESTORY) {
+          if (!isRoot) {
+            break;
           }
-          if (old->freeable()) {
-            decrementMemberRC_internal(old, owner);
+          while (!toRelease->empty()) {
+            ContainerHeader* old = toRelease->front();
+            toRelease->pop_front();
+            if (((int64_t)old & 1) != 0) {
+              owner = (ContainerHeader*)((int64_t)old & ~1);
+              continue;
+            }
+            if (old->freeable()) {
+              decrementMemberRC_internal(old, owner);
+            }
           }
-        }
-#endif        
+        }        
         break;
       }
   }
@@ -1460,7 +1462,7 @@ inline void incrementRC(ContainerHeader* container) {
     RTGCRef ref = container->incRootCount<false>();
     if (ref.root != 1) break;
 
-    CyclicNode* cyclic = CyclicNode::getNode(ref.node);
+    CyclicNode* cyclic = CyclicNode::getNode(container);
     if (cyclic != NULL) {
       cyclic->incRootObjectCount<false>();
     }
@@ -1475,7 +1477,7 @@ inline void decrementRC(ContainerHeader* container) {
     RTGCRef ref = container->decRootCount<false>();
     if (ref.root != 0) break;
 
-    CyclicNode* cyclic = CyclicNode::getNode(ref.node);
+    CyclicNode* cyclic = CyclicNode::getNode(container);
     if (cyclic != NULL) {
       if (0 == cyclic->decRootObjectCount<false>()
       &&  cyclic->externalReferrers.isEmpty()) {

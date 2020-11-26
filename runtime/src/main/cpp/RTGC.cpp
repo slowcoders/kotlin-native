@@ -320,14 +320,16 @@ int CyclicNode::getId() {
     return rtgcMem->cyclicNodeAllocator.getItemIndex(this) + CYCLIC_NODE_ID_START; 
 }
 
-CyclicNode* CyclicNode::getNode(int nodeId) {
+CyclicNode* CyclicNode::getNode(GCObject* obj) {
+    int nodeId = obj->getNodeId();
     if (nodeId < CYCLIC_NODE_ID_START) {
         return NULL;
     }
     CyclicNode* node = rtgcMem->cyclicNodeAllocator.getItem(nodeId - CYCLIC_NODE_ID_START);
-    if (RTGC_DEBUG) {
-      DebugAssert(((int64_t*)node)[1] != -1);
+    if (RTGC_DEBUG && ((int64_t*)node)[1] == -1) {
+        RTGC_LOG("CyclicNode already deallocated. %p/%d node=%p\n", obj, nodeId, node);
     }
+    DebugAssert(((int64_t*)node)[1] != -1);
     return node;
 }
 

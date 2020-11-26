@@ -17,7 +17,6 @@
 #define ENABLE_RTGC_LOG_VERBOSE           (0 & ENABLE_RTGC_LOG)
 #define DEBUG_RTGC_BUCKET                 0
 
-#define RTGC_LATE_DESTORY                 false
 #define RTGC_LATE_DESTROY_CYCLIC_SUSPECT  true
 
 typedef struct ContainerHeader GCObject;
@@ -199,6 +198,7 @@ struct CyclicNode : GCNode {
   friend class CyclicNodeDetector;
 private:  
   int32_t rootObjectCount;
+  int32_t cntCyclicRefs;
   CyclicNode* nextDamaged;
   GCRefList garbageTestList;
 
@@ -207,7 +207,7 @@ public:
 
   int getId(); // { return (this - g_cyclicNodes) + CYCLIC_NODE_ID_START; }
 
-  static CyclicNode* getNode(int nodeId);
+  static CyclicNode* getNode(GCObject* ref);
 
   static CyclicNode* createTwoWayLink(GCObject* root, GCObject* rookie) RTGC_NO_INLINE;
 
