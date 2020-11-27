@@ -433,7 +433,7 @@ void CyclicNodeDetector::checkCyclic(KStdVector<KRef>* freezing) {
         CyclicNode* cyclic = obj_->getLocalCyclicNode();
         if (cyclic != NULL) {
             cyclic->clearDirtyReferrers();
-            if (cyclic->isGarbage()) {
+            if (cyclic->isCyclicGarbage()) {
                 //if (RTGC_STATISTCS) konan::consolePrintf("## RTGC Garbage Cycle detected in tracing obj:%p node:%p/%d \n", obj_, cyclic, cyclic->getId());
                 ::freeContainer(obj_, cyclic->getId());
                 cyclic->dealloc();

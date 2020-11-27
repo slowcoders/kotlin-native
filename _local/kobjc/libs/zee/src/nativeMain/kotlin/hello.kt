@@ -61,6 +61,12 @@ fun test(str: String) {
     try {
 printTime("start")
 
+val test_deep_recursive = false;
+if (test_deep_recursive) {
+    testDeepRecusive()
+    printTime("testDeepRecusive")
+}
+
 val test_gc_bug_in_worker_thread = true;
 if (test_gc_bug_in_worker_thread) {
     runWorkerBoundReference0Test()
@@ -70,12 +76,6 @@ if (test_gc_bug_in_worker_thread) {
     printTime("runAtomicTest")
 }
 
-
-val test_deep_recursive = true;
-if (test_deep_recursive) {
-    testDeepRecusive()
-    printTime("testDeepRecusive")
-}
 
 
 testLazy3();

@@ -322,6 +322,10 @@ int CyclicNode::getId() {
 
 CyclicNode* CyclicNode::getNode(GCObject* obj) {
     int nodeId = obj->getNodeId();
+    return getNode(nodeId);
+}
+
+CyclicNode* CyclicNode::getNode(int nodeId) {
     if (nodeId < CYCLIC_NODE_ID_START) {
         return NULL;
     }

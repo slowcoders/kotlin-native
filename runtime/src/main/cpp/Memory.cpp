@@ -1258,7 +1258,7 @@ ALWAYS_INLINE void runDeallocationHooks(ContainerHeader* container, ForeignRefMa
   }
 }
 } // namespace
-void decrementMemberRC_internal(ContainerHeader* deassigned, ContainerHeader* owner);
+int decrementMemberRC_internal(ContainerHeader* deassigned, ContainerHeader* owner);
 
 void freeContainer(ContainerHeader* container, int garbageNodeId) {
   RuntimeAssert(container != nullptr, "this kind of container shalln't be freed");
@@ -1471,34 +1471,51 @@ inline void incrementRC(ContainerHeader* container) {
 }
 
 template <bool Atomic, bool UseCycleCollector>
-inline void decrementRC(ContainerHeader* container) {
+inline int decrementRCtoZero(ContainerHeader* container) {
   if (Atomic) GCNode::rtgcLock(_DecrementRC);
-  do {
-    RTGCRef ref = container->decRootCount<false>();
-    if (ref.root != 0) break;
-
+  int freeNode = 0;
+  RTGCRef ref = container->decRootCount<false>();
+  if (ref.root == 0) {
     CyclicNode* cyclic = CyclicNode::getNode(container);
-    if (cyclic != NULL) {
-      if (0 == cyclic->decRootObjectCount<false>()
-      &&  cyclic->externalReferrers.isEmpty()) {
-        freeContainer(container, cyclic->getId());
-        cyclic->dealloc();
-        break;
-      }
+    if (cyclic != NULL &&
+        0 == cyclic->decRootObjectCount<false>() &&  
+        cyclic->externalReferrers.isEmpty()) {
+      freeNode = ref.node;
     }
-    if (ref.obj == 0) {
-      freeContainer(container, -1);
+    else if (ref.obj == 0) {
+      freeNode = -1;
     }
-  } while(false);
+  }
   if (Atomic) GCNode::rtgcUnlock();
+  return freeNode;
+}
+
+inline void checkGrabage(ContainerHeader* container, int freeNode) {
+  if (freeNode != 0) {    
+    freeContainer(container, freeNode);
+    if (freeNode > 1) {
+      CyclicNode::getNode(freeNode)->dealloc();
+    }
+  }
+}
+
+template <bool Atomic, bool UseCycleCollector>
+inline void decrementRC(ContainerHeader* container) {
+  int freeNode = decrementRCtoZero<Atomic, UseCycleCollector>(container);
+  checkGrabage(container, freeNode);
+}
+
+template <bool Atomic>
+inline int decrementAcyclicRCtoZero(ContainerHeader* container) {
+  int64_t rc = container->decRefCount<Atomic>();
+  return rc == 0 ? -1 : 0;
 }
 
 template <bool Atomic>
 inline void decrementAcyclicRC(ContainerHeader* container) {
-  int64_t rc = container->decRefCount<Atomic>();
-  if (rc == 0) {
+  if (decrementAcyclicRCtoZero<Atomic>(container) != 0) {
     if (Atomic) GCNode::rtgcLock(_DecrementAcyclicRC);
-    freeContainer(container, -1);
+    checkGrabage(container, -1);
     if (Atomic) GCNode::rtgcUnlock();
   }
 }
@@ -1554,7 +1571,7 @@ template <bool Atomic>
 void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) RTGC_NO_INLINE;
 
 template <bool Atomic>
-void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
+int decrementMemberRCtoZero(ContainerHeader* container, ContainerHeader* owner) {
   GCNode* owner_node = owner->getNode();
   GCNode* val_node = container->getNode();
 
@@ -1574,27 +1591,23 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     RuntimeAssert(cyclic != NULL, "no cylic node");
     if (container->isGarbage()) {
       cyclic->removeSuspectedGarbage(container);
-      freeContainer(container, -1);
+      return -1;
     }
     else {
       cyclic->markSuspectedGarbage(container);
+      return 0;
     }
-    return;
   }
 
   if (container->isGarbage()) {
-    freeContainer(container, -1);
-    return;
+    return -1;
   }
   
 
   if (container->isInCyclicNode()) {
     CyclicNode* cyclic = (CyclicNode*)val_node;
-    if (cyclic->isGarbage()) {
-      MEMORY_LOG("## RTGC garbage cyclic node free");
-      freeContainer(container, cyclic->getId());
-      cyclic->dealloc();
-      return;
+    if (cyclic->isCyclicGarbage()) {
+      return container->getNodeId();
     }
   }
 
@@ -1602,6 +1615,13 @@ void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     !val_node->externalReferrers.isEmpty()) {
       CyclicNode::addCyclicTest(container, false);
   }
+  return 0;
+}
+
+template <bool Atomic>
+void decrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
+  int freeNode = decrementMemberRCtoZero<Atomic>(container, owner);
+  checkGrabage(container, freeNode);
 }
 
 #elif !USE_GC
@@ -1710,7 +1730,7 @@ inline bool tryIncrementRC(ContainerHeader* container) {
       // Fortunately by this point reference counts have been made precise again.
     if (container->refCount() > 0) {
       CyclicNode* c = container->getLocalCyclicNode();
-      if (c == nullptr || !c->isGarbage()) {
+      if (c == nullptr || !c->isCyclicGarbage()) {
         if (container->isAcyclic()) {
           incrementAcyclicRC<false>(container);
         }
@@ -2574,25 +2594,27 @@ void zeroStackRef(ObjHeader** location) {
 } // namespace
 
 
-void decrementMemberRC_internal(ContainerHeader* deassigned, ContainerHeader* owner) {
-      if (deassigned->shared()) {
-          if (deassigned->isAcyclic()) {
-            decrementAcyclicRC</* Atomic = */ true>(deassigned);
-          }
-          else {
-            GCNode::rtgcLock(_DeassignRef);
-            decrementMemberRC</* Atomic = */ true>(deassigned, owner);
-            GCNode::rtgcUnlock();
-          }
+int decrementMemberRC_internal(ContainerHeader* deassigned, ContainerHeader* owner) {
+  int freeNode;
+  if (deassigned->shared()) {
+      if (deassigned->isAcyclic()) {
+        freeNode = decrementAcyclicRCtoZero</* Atomic = */ true>(deassigned);
       }
       else {
-          if (deassigned->isAcyclic()) {
-            decrementAcyclicRC</* Atomic = */ false>(deassigned);
-          }
-          else {
-            decrementMemberRC</* Atomic = */ false>(deassigned, owner);
-          }
+        GCNode::rtgcLock(_DeassignRef);
+        freeNode = decrementMemberRCtoZero</* Atomic = */ true>(deassigned, owner);
+        GCNode::rtgcUnlock();
       }
+  }
+  else {
+      if (deassigned->isAcyclic()) {
+        freeNode = decrementAcyclicRCtoZero</* Atomic = */ false>(deassigned);
+      }
+      else {
+        freeNode = decrementMemberRCtoZero</* Atomic = */ false>(deassigned, owner);
+      }
+  }
+  return freeNode;
 }
 
 void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner) {
@@ -2629,7 +2651,8 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
   if (reinterpret_cast<uintptr_t>(old) > 1 && old != owner) {
     ContainerHeader* container = old->container();
     if (isFreeable(container)) {
-        decrementMemberRC_internal(container, owner->container());
+        int freeNode = decrementMemberRC_internal(container, owner->container());
+        checkGrabage(container, freeNode);
     }
     //releaseRef<Strict>(old);
   }

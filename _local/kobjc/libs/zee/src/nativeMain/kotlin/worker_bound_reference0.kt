@@ -781,48 +781,48 @@ fun testDoubleFreezeWithFreezeBlocker() {
 }
 
 fun runWorkerBoundReference0Test() {
-collectCyclicGarbage()
-collectCyclicGarbageWithAtomicsFrozen()
-
-testGlobal()
-// for Strict mode Only
-testGlobalDenyAccessOnWorker()
-testGlobalAccessOnWorkerFrozenInitially()
-testGlobalAccessOnWorkerFrozenBeforePassing()
-testGlobalAccessOnWorkerFrozenBeforeAccess()
-testGlobalModification()
-testGlobalGetWorker()
-testLocal();
-testLocalFrozen();
-// for Strict mode Only
-testLocalDenyAccessOnWorkerFrozen();
-testLocalAccessOnWorkerFrozenInitiallyFrozen()
-testLocalAccessOnWorkerFrozenBeforePassingFrozen()
-testLocalAccessOnWorkerFrozenBeforeAccessFrozen()
-// for Strict mode Only
-testLocalAccessOnMainThread();
+//collectCyclicGarbage()
+//collectCyclicGarbageWithAtomicsFrozen()
+//
+//testGlobal()
+//// for Strict mode Only
+//testGlobalDenyAccessOnWorker()
+//testGlobalAccessOnWorkerFrozenInitially()
+//testGlobalAccessOnWorkerFrozenBeforePassing()
+//testGlobalAccessOnWorkerFrozenBeforeAccess()
+//testGlobalModification()
+//testGlobalGetWorker()
+//testLocal();
+//testLocalFrozen();
+//// for Strict mode Only
+//testLocalDenyAccessOnWorkerFrozen();
+//testLocalAccessOnWorkerFrozenInitiallyFrozen()
+//testLocalAccessOnWorkerFrozenBeforePassingFrozen()
+//testLocalAccessOnWorkerFrozenBeforeAccessFrozen()
+//// for Strict mode Only
+//testLocalAccessOnMainThread();
 // for Strict mode Only
 testLocalDenyAccessOnMainThreadFrozen();
-testLocalModificationFrozen()
-testLocalGetWorkerFrozen()
-testLocalForeignGetWorker()
-testLocalForeignGetWorkerFrozen()
-testLocalWithWrapperFrozen()
+//testLocalModificationFrozen()
+//testLocalGetWorkerFrozen()
+//testLocalForeignGetWorker()
+//testLocalForeignGetWorkerFrozen()
+//testLocalWithWrapperFrozen()
+//// for Strict mode Only
+//// testLocalDenyAccessWithWrapperFrozen()
+//testCollect()
+//testCollectFrozen();
+//testCollectInWorkerFrozen()
+//testDoNotCollectInWorkerFrozen()
+//doesNotCollectCyclicGarbageFrozen()
+//doesNotCollectCrossThreadCyclicGarbageFrozen()
+//doesNotCollectCyclicGarbageWithAtomicsFrozen()
+//doesNotCollectCrossThreadCyclicGarbageWithAtomicsFrozen()
+//collectCrossThreadCyclicGarbageWithAtomicsFrozen()
+//testDoubleFreeze();
+//testDoubleFreezeWithFreezeBlocker();
 // for Strict mode Only
-// testLocalDenyAccessWithWrapperFrozen()
-testCollect()
-testCollectFrozen();
-testCollectInWorkerFrozen()
-testDoNotCollectInWorkerFrozen()
-doesNotCollectCyclicGarbageFrozen()
-doesNotCollectCrossThreadCyclicGarbageFrozen()
-doesNotCollectCyclicGarbageWithAtomicsFrozen()
-doesNotCollectCrossThreadCyclicGarbageWithAtomicsFrozen()
-collectCrossThreadCyclicGarbageWithAtomicsFrozen()
-testDoubleFreeze();
-testDoubleFreezeWithFreezeBlocker();
-// for Strict mode Only
-// concurrentAccessFrozen()
+ concurrentAccessFrozen()
 // for Strict mode Only ??
-// testExceptionMessageFrozen()
+ testExceptionMessageFrozen()
 }

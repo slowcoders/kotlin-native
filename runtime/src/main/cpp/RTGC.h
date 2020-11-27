@@ -207,6 +207,8 @@ public:
 
   int getId(); // { return (this - g_cyclicNodes) + CYCLIC_NODE_ID_START; }
 
+  static CyclicNode* getNode(int nodeId);
+
   static CyclicNode* getNode(GCObject* ref);
 
   static CyclicNode* createTwoWayLink(GCObject* root, GCObject* rookie) RTGC_NO_INLINE;
@@ -228,7 +230,7 @@ public:
 
   char* addCyclicObject(GCObject* rookie);
 
-  bool isGarbage() {
+  bool isCyclicGarbage() {
     return rootObjectCount == 0 && externalReferrers.topChain() == 0;
   }  
 
