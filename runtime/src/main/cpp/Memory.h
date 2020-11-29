@@ -46,7 +46,7 @@ typedef enum {
   CONTAINER_TAG_STACK_OR_PERMANANT = CONTAINER_TAG_NOT_FREEABLE,//1 << 7, // Unused, Reserved
   CONTAINER_TAG_FREEZING    = 0x80,
   
-  CONTAINER_TAG_reserved     = 0x100,
+  SUSPECTED_GARBAGE_IN_CYCLE     = 0x100,
   // If indeed has more that one object.
   CONTAINER_TAG_GC_HAS_OBJECT_COUNT = 0x200,
 
@@ -296,12 +296,18 @@ public:
   bool enqueueCyclicTest() {
     if (!this->isEnquedCyclicTest()) {
       this->rtNode.flags_ |= NEED_CYCLIC_TEST;
+      if (RTGC_STATISTCS) {
+        RTGCGlobal::g_cntAddCyclicTest ++;
+      }
       return true;
     }
     return false;
   }
 
   void dequeueCyclicTest() {
+      if (RTGC_STATISTCS) {
+        RTGCGlobal::g_cntRemoveCyclicTest ++;
+      }
     this->rtNode.flags_ &= ~NEED_CYCLIC_TEST;
   }
 
@@ -309,6 +315,28 @@ public:
     return (this->rtNode.flags_ & NEED_CYCLIC_TEST) != 0;
   }
 
+  bool markSuspectedGarbageInCycle() {
+    if ((this->rtNode.flags_ & SUSPECTED_GARBAGE_IN_CYCLE) == 0) {
+      this->rtNode.flags_ |= SUSPECTED_GARBAGE_IN_CYCLE;
+      if (RTGC_STATISTCS) {
+        RTGCGlobal::g_cntAddSuspectedGarbageInClyce ++;
+      }
+      return true;
+    }
+    return false;
+  }
+
+
+  bool clearSuspectedGarbageInCycle() {
+    if ((this->rtNode.flags_ & SUSPECTED_GARBAGE_IN_CYCLE) != 0) {
+      this->rtNode.flags_ &= ~SUSPECTED_GARBAGE_IN_CYCLE;
+      if (RTGC_STATISTCS) {
+        RTGCGlobal::g_cntRemoveSuspectedGarbageInClyce ++;
+      }
+      return true;
+    }
+    return false;
+  }
 
   void markDestroyed() {
     this->rtNode.flags_ |= CONTAINER_TAG_NOT_FREEABLE | 3;
@@ -887,16 +915,5 @@ inline bool isPermanentOrLocal(ObjHeader* obj) {
     return container == nullptr || !container->shared();
 }
 
-#ifdef RTGC
-
-inline bool isValidObjectContainer(ContainerHeader* container) {
-  ObjHeader* obj = (ObjHeader*)(container + 1);
-  return obj->container() == container;
-}
-
-
-void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const ObjHeader* owner) RTGC_NO_INLINE;
-void freeContainer(ContainerHeader* header, int garbageNodeId=-1) RTGC_NO_INLINE;
-#endif
 
 #endif // RUNTIME_MEMORY_H

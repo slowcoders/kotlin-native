@@ -107,69 +107,22 @@ void CyclicNode::removeCyclicTest(RTGCMemState* rtgcMem, GCObject* obj) {
     }
 }
 
-struct ReferentIterator {
-    ObjHeader* ptr;
-    union {
-        const int32_t* offsets;
-        KRef* pItem;
-    };
-    int idxField;
-    bool isArray;
-
-    ReferentIterator(ObjHeader* obj) {
-        this->ptr = obj;
-        const TypeInfo* typeInfo = obj->type_info();
-        this->isArray = typeInfo == theArrayTypeInfo;
-        if (isArray) {
-            ArrayHeader* array = obj->array();
-            idxField = array->count_;
-            pItem = ArrayAddressOfElementAt(array, 0);
-        }
-        else {
-            idxField = typeInfo->objOffsetsCount_;
-            offsets = typeInfo->objOffsets_;
-        }
-    }
-
-    KRef next() {
-        if (isArray) {
-            while (--idxField >= 0) {
-                KRef ref = *pItem++;
-                if (ref != nullptr) {
-                    return ref;
-                }
-            }
-        }
-        else {
-            while (--idxField >= 0) {
-                ObjHeader** location = reinterpret_cast<ObjHeader**>(
-                    reinterpret_cast<uintptr_t>(ptr) + *offsets++);
-                KRef ref = *location;
-                if (ref != nullptr) {
-                    return ref;
-                }
-            }
-        }
-        return nullptr;
-    }
-};
-
 
 void CyclicNode::mergeCyclicNode(GCObject* obj, int expiredNodeId) {
     int this_id = this->getId();
     obj->setNodeId(this_id);
 
-    std::deque<ReferentIterator> queue;
-    queue.push_back((ObjHeader*)(obj+1));
-    while (!queue.empty()) {
-        ReferentIterator* it = &queue.back();
+    std::deque<ReferentIterator> traceStack;
+    traceStack.push_back((ObjHeader*)(obj+1));
+    while (!traceStack.empty()) {
+        ReferentIterator* it = &traceStack.back();
         ObjHeader* obj = it->next();
         if (obj == nullptr) {
-            queue.pop_back();
+            traceStack.pop_back();
         }
         else if (obj->container()->getNodeId() == expiredNodeId) {
             obj->container()->setNodeId(this_id);
-            queue.push_back(obj);
+            traceStack.push_back(obj);
         }
 
     }
@@ -386,6 +339,7 @@ void CyclicNodeDetector::checkCyclic(KStdVector<KRef>* freezing) {
                 ScheduleDestroyContainer((MemoryState*)rtgcMem, root, "in RTGC");
             }
             else {
+                DebugRefAssert(root, !root->isDestroyed());
                 this->traceCyclic(root);
             }
         }

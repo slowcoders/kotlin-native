@@ -24,6 +24,11 @@ int RTGCGlobal::g_cntAddRefChain = 0;
 int RTGCGlobal::g_cntRemoveRefChain = 0;
 int RTGCGlobal::g_cntAddCyclicNode = 0;
 int RTGCGlobal::g_cntRemoveCyclicNode = 0;
+int RTGCGlobal::g_cntAddCyclicTest = 0;
+int RTGCGlobal::g_cntRemoveCyclicTest = 0;
+int RTGCGlobal::g_cntAddSuspectedGarbageInClyce = 0;
+int RTGCGlobal::g_cntRemoveSuspectedGarbageInClyce = 0;
+int RTGCGlobal::g_cntFreezed = 0;
 void* RTGC_debugInstance = NULL;
 
 CyclicNode lastDummy;
@@ -35,9 +40,6 @@ CyclicBucket g_cyclicBucket;
 // GCRefChain* RTGCGlobal::g_freeRefChain;
 // CyclicNode* GCNode::g_cyclicNodes = NULL;
 
-int RTGCGlobal::g_cntAddCyclicTest = 0;
-int RTGCGlobal::g_cntRemoveCyclicTest = 0;
-int RTGCGlobal::g_cntFreezed = 0;
 
 static pthread_t g_lockThread = NULL;
 static int g_cntLock = 0;
@@ -266,7 +268,7 @@ void OnewayNode::dealloc() {
 void GCNode::dumpGCLog() {
     if (!RTGC_STATISTCS) return;
     printf("** RTGCLock FreeContainer %d\n", g_cntRTGCLocks[_FreeContainer]);
-    printf("** RTGCLock _ProcessFinalizerQueue %d\n", g_cntRTGCLocks[_ProcessFinalizerQueue]);
+    printf("** RTGCLock ProcessFinalizerQueue %d\n", g_cntRTGCLocks[_ProcessFinalizerQueue]);
     printf("** RTGCLock IncrementRC %d\n", g_cntRTGCLocks[_IncrementRC]);
     printf("** RTGCLock TryIncrementRC %d\n", g_cntRTGCLocks[_TryIncrementRC]);
     printf("** RTGCLock IncrementAcyclicRC %d\n", g_cntRTGCLocks[_IncrementAcyclicRC]);
@@ -277,8 +279,8 @@ void GCNode::dumpGCLog() {
     printf("** RTGCLock UpdateHeapRef %d\n", g_cntRTGCLocks[_UpdateHeapRef]);
     printf("** RTGCLock PopBucket %d\n", g_cntRTGCLocks[_PopBucket]);
     printf("** RTGCLock RecycleBucket %d\n", g_cntRTGCLocks[_RecycleBucket]);
-    printf("** RTGCLock _DetectCylcles %d\n", g_cntRTGCLocks[_DetectCylcles]);
-    printf("** RTGCLock _SetHeapRefLocked %d\n", g_cntRTGCLocks[_SetHeapRefLocked]);
+    printf("** RTGCLock DetectCylcles %d\n", g_cntRTGCLocks[_DetectCylcles]);
+    printf("** RTGCLock SetHeapRefLocked %d\n", g_cntRTGCLocks[_SetHeapRefLocked]);
 
     printf("** cntRefChain %d = %d - %d\n", RTGCGlobal::g_cntAddRefChain - RTGCGlobal::g_cntRemoveRefChain,
         RTGCGlobal::g_cntAddRefChain, RTGCGlobal::g_cntRemoveRefChain);
@@ -286,11 +288,14 @@ void GCNode::dumpGCLog() {
         RTGCGlobal::g_cntAddCyclicNode, RTGCGlobal::g_cntRemoveCyclicNode);
     printf("** cntCyclicTest %d = %d - %d\n", RTGCGlobal::g_cntAddCyclicTest - RTGCGlobal::g_cntRemoveCyclicTest,
         RTGCGlobal::g_cntAddCyclicTest, RTGCGlobal::g_cntRemoveCyclicTest);
+    printf("** cntCyclicTest %d = %d - %d\n", RTGCGlobal::g_cntAddSuspectedGarbageInClyce - RTGCGlobal::g_cntRemoveSuspectedGarbageInClyce,
+        RTGCGlobal::g_cntAddSuspectedGarbageInClyce, RTGCGlobal::g_cntRemoveSuspectedGarbageInClyce);
     printf("** cntFreezed %d\n", RTGCGlobal::g_cntFreezed);
 
     RTGCGlobal::g_cntAddRefChain = RTGCGlobal::g_cntRemoveRefChain = 0;
     RTGCGlobal::g_cntAddCyclicNode = RTGCGlobal::g_cntRemoveCyclicNode = 0;
     RTGCGlobal::g_cntAddCyclicTest = RTGCGlobal::g_cntRemoveCyclicTest = 0;
+    RTGCGlobal::g_cntAddSuspectedGarbageInClyce = RTGCGlobal::g_cntRemoveSuspectedGarbageInClyce = 0;
     RTGCGlobal::g_cntFreezed = 0;
     
     g_cntRTGCLocks[_FreeContainer] = 0;
@@ -322,7 +327,14 @@ int CyclicNode::getId() {
 
 CyclicNode* CyclicNode::getNode(GCObject* obj) {
     int nodeId = obj->getNodeId();
-    return getNode(nodeId);
+    CyclicNode* node = getNode(nodeId);
+    if (RTGC_DEBUG && node != NULL) {
+        if (((int64_t*)node)[1] == -1) {
+            RTGC_LOG("CyclicNode already deallocated. %p/%d node=%p\n", obj, nodeId, node);
+        }
+        DebugAssert(((int64_t*)node)[1] != -1);
+    }
+    return node;
 }
 
 CyclicNode* CyclicNode::getNode(int nodeId) {
@@ -330,10 +342,6 @@ CyclicNode* CyclicNode::getNode(int nodeId) {
         return NULL;
     }
     CyclicNode* node = rtgcMem->cyclicNodeAllocator.getItem(nodeId - CYCLIC_NODE_ID_START);
-    if (RTGC_DEBUG && ((int64_t*)node)[1] == -1) {
-        RTGC_LOG("CyclicNode already deallocated. %p/%d node=%p\n", obj, nodeId, node);
-    }
-    DebugAssert(((int64_t*)node)[1] != -1);
     return node;
 }
 

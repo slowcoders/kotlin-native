@@ -44,6 +44,7 @@
 #include "Memory.h"
 #include "MemoryPrivate.hpp"
 #include "Natives.h"
+#include "RTGCPrivate.h"
 #include "Porting.h"
 #include "Runtime.h"
 #include "Utils.h"
@@ -599,7 +600,6 @@ struct MemoryState : RTGCMemState {
   int gcInProgress;
   // Objects to be released.
   KStdDeque<ContainerHeader*>* toRelease;
-
   ForeignRefManager* foreignRefManager;
 
   bool gcErgonomics;
@@ -1194,7 +1194,7 @@ void scheduleDestroyContainer(MemoryState* state, ContainerHeader* container, co
   state->finalizerQueue = container;
   state->finalizerQueueSize++;
   // We cannot clean finalizer queue while in GC.
-  if (!state->gcInProgress && state->finalizerQueueSuspendCount == 0 &&
+  if (!RTGC && !state->gcInProgress && state->finalizerQueueSuspendCount == 0 &&
       state->finalizerQueueSize >= kFinalizerQueueThreshold) {
     RTGC_LOG("scheduleDestroyContainer finalize %p\n", container);
     processFinalizerQueue(state);
@@ -1226,6 +1226,9 @@ void freeAggregatingFrozenContainer(ContainerHeader* container) {
   --state->finalizerQueueSuspendCount;
 #endif
   scheduleDestroyContainer(state, container);
+#if RTGC
+  processFinalizerQueue(state);
+#endif 
   MEMORY_LOG("Freeing subcontainers done\n");
 }
 
@@ -1268,17 +1271,51 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
     return;
   }
 
-  const bool RTGC_LATE_DESTORY = false;
+  //const bool RTGC_LATE_DESTORY = false;
+  MemoryState* memState = memoryState;
 
-  RTGC_LOG("## RTGC free container %p/%d %p freeable=%d\n", container, garbageNodeId, memoryState, container->freeable());
-  bool isRoot = memoryState->gcInProgress ++ == 0;
-  auto toRelease = memoryState->toRelease;
+  RTGC_LOG("## start free container %p/%d %p freeable=%d\n", container, garbageNodeId, memState, container->freeable());
   runDeallocationHooks(container, nullptr);
 
   bool doFree = container->freeable();
   if (RTGC && doFree) {
+    container->markDestroyed();
+    std::deque<ReferentIterator> traceStack;
+    traceStack.push_back((ObjHeader*)(container+1));
+    ReferentIterator* it = &traceStack.back();
+    while (true) {
+      ContainerHeader* deassigned;
+      ObjHeader* obj = it->next();
+      if (obj == nullptr) {
+        scheduleDestroyContainer(memState, container);
+        traceStack.pop_back();
+        if (traceStack.empty()) break;
 
-      container->markDestroyed();
+        CyclicNode* cyclic = container->getLocalCyclicNode();
+        it = &traceStack.back();
+        container = it->ptr->container();
+
+        if (cyclic != NULL && cyclic != container->getNode() && cyclic->isCyclicGarbage()) {
+          cyclic->dealloc();
+        }
+      }
+      else if (isFreeable((deassigned = obj->container()))) {
+        CyclicNode* cycle = deassigned->getLocalCyclicNode();
+        if ((cycle != nullptr && cycle->isCyclicGarbage())
+        ||  decrementMemberRC_internal(deassigned, container)) {
+          RTGC_LOG_V("  %d cleaning fields in cyclicNode %p (%d)\n", traceStack.size(), deassigned, deassigned->getNodeId());
+          runDeallocationHooks(deassigned, nullptr);
+          DebugRefAssert(deassigned, !isAggregatingFrozenContainer(deassigned));
+          deassigned->markDestroyed();
+          traceStack.push_back(obj);
+          it = &traceStack.back();
+          container = it->ptr->container();
+        }
+      }
+    }
+    processFinalizerQueue(memState);
+#if 0
+
       ContainerHeader* owner = container;
       DebugAssert(container->objectCount() == 1);
       bool isOwnerPushed = isRoot;
@@ -1344,6 +1381,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
         }        
         break;
       }
+#endif
   }
   else {
     // Now let's clean all object's fields in this container.
@@ -1355,17 +1393,14 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
 
   RTGC_LOG_V("--- free container check free %p\n", container);
   // And release underlying memory.
-  memoryState->gcInProgress --;
-  if (doFree) {
 #if !RTGC
     container->setColorEvenIfGreen(CONTAINER_TAG_GC_BLACK);
-#endif
-    if (RTGC || !container->buffered()) {
-      scheduleDestroyContainer(memoryState, container);
+    if (!container->buffered()) {
+      scheduleDestroyContainer(memState, container);
     }
-  }
+#endif
 
-  RTGC_LOG_V("## RTGC free container done %p(%d) gcDepth=(%d)\n", container, garbageNodeId, memoryState->gcInProgress);
+  RTGC_LOG_V("## RTGC free container done %p(%d) gcDepth=(%d)\n", container, garbageNodeId, memState->gcInProgress);
 }
 
 namespace {
@@ -1553,7 +1588,7 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     }
     
     if (!container->isEnquedCyclicTest()) {
-      bool check_two_way_link = true;
+      bool check_two_way_link = false;
       if (check_two_way_link && owner_node->externalReferrers.find(container)) {
         CyclicNode::createTwoWayLink(owner, container);
         return;
@@ -1590,11 +1625,15 @@ int decrementMemberRCtoZero(ContainerHeader* container, ContainerHeader* owner) 
     CyclicNode* cyclic = container->getLocalCyclicNode();
     RuntimeAssert(cyclic != NULL, "no cylic node");
     if (container->isGarbage()) {
-      cyclic->removeSuspectedGarbage(container);
+      if (container->clearSuspectedGarbageInCycle()) {
+        cyclic->removeSuspectedGarbage(container);
+      }
       return -1;
     }
     else {
-      cyclic->markSuspectedGarbage(container);
+      if (container->markSuspectedGarbageInCycle()) {
+        cyclic->addSuspectedGarbage(container);
+      }
       return 0;
     }
   }

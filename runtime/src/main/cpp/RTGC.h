@@ -17,7 +17,7 @@
 #define ENABLE_RTGC_LOG_VERBOSE           (0 & ENABLE_RTGC_LOG)
 #define DEBUG_RTGC_BUCKET                 0
 
-#define RTGC_LATE_DESTROY_CYCLIC_SUSPECT  true
+#define RTGC_LATE_DESTROY_CYCLIC_SUSPECT  false
 
 typedef struct ContainerHeader GCObject;
 
@@ -92,6 +92,8 @@ struct RTGCGlobal {
   static int g_cntAddCyclicTest;
   static int g_cntRemoveCyclicTest;
   static int g_cntFreezed;
+  static int g_cntAddSuspectedGarbageInClyce;
+  static int g_cntRemoveSuspectedGarbageInClyce;
 
   static void validateMemPool();
 
@@ -236,13 +238,13 @@ public:
 
   void markDamaged();
 
-  void markSuspectedGarbage(GCObject* suspectedGarbage) {
+  void addSuspectedGarbage(GCObject* suspectedGarbage) {
       garbageTestList.push(suspectedGarbage);
       markDamaged();
   }
 
-  void removeSuspectedGarbage(GCObject* obj) {
-      garbageTestList.tryRemove(obj, true);
+  void removeSuspectedGarbage(GCObject* obj) RTGC_NO_INLINE {
+      garbageTestList.remove(obj);
   }
 
   int getRootObjectCount() {
@@ -409,6 +411,7 @@ struct RTGCMemState {
   KStdDeque<GCObject*> g_cyclicTestNodes;
   //GCRefList g_cyclicTestNodes;
 };
+
 
 using RTGC_FIELD_TRAVERSE_CALLBACK = std::function<void(GCObject*)>;
 
