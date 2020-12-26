@@ -12,7 +12,7 @@
 #define RTGC                              1
 #define RTGC_DEBUG                        1
 #define RTGC_STATISTCS                    1
-#define RTGC_NO_INLINE                    NO_INLINE
+#define RTGC_NO_INLINE                    // NO_INLINE
 #define ENABLE_RTGC_LOG                   0
 #define ENABLE_RTGC_LOG_VERBOSE           (1 & ENABLE_RTGC_LOG)
 #define DEBUG_RTGC_BUCKET                 0
@@ -410,7 +410,7 @@ struct RTGCMemState {
 
   CyclicNode* g_damagedCylicNodes;
   KStdDeque<GCObject*> g_cyclicTestNodes;
-  //GCRefList g_cyclicTestNodes;
+  int inProgressFreeContainer;
 };
 
 

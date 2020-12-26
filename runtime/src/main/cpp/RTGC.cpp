@@ -357,6 +357,7 @@ void GCNode::initMemory(RTGCMemState* memState) {
     cntMemory ++;
     g_memDebug = cntMemory > 1;
     RTGC_LOG("initMemory: %p, %d\n", memState, cntMemory);
+    memState->inProgressFreeContainer = 0;
     memState->refChainAllocator.init(&g_refBucket, cntMemory);
     memState->cyclicNodeAllocator.init(&g_cyclicBucket, cntMemory + 1000);
     rtgcMem = memState;

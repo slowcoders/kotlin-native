@@ -1273,6 +1273,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
 
   //const bool RTGC_LATE_DESTORY = false;
   MemoryState* memState = memoryState;
+  memState->inProgressFreeContainer ++;
 
   RTGC_LOG("## start free container %p/%d %p freeable=%d\n", container, garbageNodeId, memState, container->freeable());
   runDeallocationHooks(container, nullptr);
@@ -1390,6 +1391,7 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
           ZeroHeapRef(location);
     });
   }
+  memState->inProgressFreeContainer --;
 
   RTGC_LOG_V("--- free container check free %p\n", container);
   // And release underlying memory.
@@ -1587,14 +1589,14 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
       return;
     }
     
-    if (!container->isEnquedCyclicTest() &&
-      !owner_node->externalReferrers.isEmpty()) {
-      if (val_node->externalReferrers.isEmpty()) {
-        bool check_two_way_link = true;
-        if (check_two_way_link && owner_node->externalReferrers.find(container)) {
-          CyclicNode::createTwoWayLink(owner, container);
-          return;
-        }
+    if (!container->isEnquedCyclicTest()) {
+      bool check_two_way_link = false;
+      if (check_two_way_link && owner_node->externalReferrers.find(container)) {
+        CyclicNode::createTwoWayLink(owner, container);
+        return;
+      }
+      if (!owner_node->externalReferrers.isEmpty() &&
+      val_node->externalReferrers.isEmpty()) {
         CyclicNode::addCyclicTest(container, true);
       }
     }

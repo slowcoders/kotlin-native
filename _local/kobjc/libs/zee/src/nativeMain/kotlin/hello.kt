@@ -61,6 +61,9 @@ fun test(str: String) {
     try {
 printTime("start")
 
+runHashMap0Test();
+printTime("runHashMap0Test")
+
 runPattern2Test()
 printTime("runPattern2Test")
 
@@ -117,9 +120,6 @@ printTime("testInitializer6")
 runWeakTest1()
 runWeakTest2()
 printTime("runWeakTest1,2")
-
-runHashMap0Test();
-printTime("runHashMap0Test")
 
 
 

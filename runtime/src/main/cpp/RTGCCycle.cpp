@@ -79,7 +79,13 @@ void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
     DebugRefAssert(obj, !obj->isAcyclic());
     RTGC_LOG("addCyclicTest %p %p\n", obj, rtgcMem);
     if (obj->enqueueCyclicTest()) {
-        rtgcMem->g_cyclicTestNodes.push_back(obj);
+        RTGCMemState* memState = rtgcMem;
+        memState->g_cyclicTestNodes.push_back(obj);
+        if (memState->inProgressFreeContainer == 0) {
+            if (rtgcMem->g_cyclicTestNodes.size() > 512) {
+                garbageCollectCycles(nullptr);
+            }
+        }
     }
     else {
         DebugRefAssert(obj, obj->frozen());
