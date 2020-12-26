@@ -61,7 +61,11 @@ fun test(str: String) {
     try {
 printTime("start")
 
-val test_deep_recursive = false;
+runPattern2Test()
+printTime("runPattern2Test")
+
+
+val test_deep_recursive = true;
 if (test_deep_recursive) {
     testDeepRecusive()
     printTime("testDeepRecusive")
@@ -87,9 +91,6 @@ printTime("runObjectExpression3Test")
 runFreezeStressTest();
 printTime("runFreezeStressTest")
 
-
-runPattern2Test()
-printTime("runPattern2Test")
 
 runPatternTest()
 printTime("runPatternTest")

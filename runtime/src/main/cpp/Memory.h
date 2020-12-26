@@ -375,6 +375,11 @@ public:
         __sync_add_and_fetch(&ref_.count, RTGC_MEMBER_REF_INCREEMENT) : ref_.count += RTGC_MEMBER_REF_INCREEMENT;
     DebugAssert(ignoreAcyclic || !isAcyclic());
     DebugAssert(((RTGCRef*)&value)->obj != 0);
+    if (ENABLE_RTGC_LOG) {
+      if (((RTGCRef*)&value)->obj % 0x400 == 0) {
+        RTGC_dumpRefInfo(this, "M");
+      }
+    }
 #endif
   }
 

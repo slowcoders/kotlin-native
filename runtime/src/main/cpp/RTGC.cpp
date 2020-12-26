@@ -147,6 +147,7 @@ void GCRefList::remove(GCObject* item) {
 
 static GCRefChain* const NOT_CHANGED = (GCRefChain*)(void*)-1;
 void GCRefList::removeChains(GCNode* node) {
+    int cntChain __attribute__((unused)) = 0;
     GCRefChain* top = NOT_CHANGED;
     GCRefChain* prev = NULL;
     GCRefChain* next;
@@ -155,6 +156,9 @@ void GCRefList::removeChains(GCNode* node) {
         next = chain->next();
         if (referrer->getNode() != node) {
             prev = chain;
+            #if RTGC_STATISTCS
+            cntChain ++;
+            #endif
             continue;
         }
         if (prev == NULL) {
@@ -168,6 +172,9 @@ void GCRefList::removeChains(GCNode* node) {
     if (top != NOT_CHANGED) {
         this->first_ = getRefChainIndex(top);
     }
+    #if RTGC_STATISTCS
+    RTGC_LOG("external refferers of %d -> cnt %d\n", ((CyclicNode*)node)->getId(), cntChain);
+    #endif
 }
 
 
@@ -204,7 +211,7 @@ GCObject* GCRefList::pop() {
     return obj;
 }
 
-void GCRefList::tryRemove(GCObject* item, bool isUnique) {
+bool GCRefList::tryRemove(GCObject* item) {
     GCRefChain* prev = NULL;
     GCRefChain* next;
     for (GCRefChain* chain = topChain(); chain != NULL; chain = next) {
@@ -221,10 +228,9 @@ void GCRefList::tryRemove(GCObject* item, bool isUnique) {
             prev->next_ = chain->next_;
         }
         recycleChain(chain, "first");
-        if (isUnique) {
-            break;
-        }
+        return true;
     }
+    return false;
 }
 
 GCRefChain* GCRefList::find(GCObject* item) {
@@ -288,7 +294,7 @@ void GCNode::dumpGCLog() {
         RTGCGlobal::g_cntAddCyclicNode, RTGCGlobal::g_cntRemoveCyclicNode);
     printf("** cntCyclicTest %d = %d - %d\n", RTGCGlobal::g_cntAddCyclicTest - RTGCGlobal::g_cntRemoveCyclicTest,
         RTGCGlobal::g_cntAddCyclicTest, RTGCGlobal::g_cntRemoveCyclicTest);
-    printf("** cntCyclicTest %d = %d - %d\n", RTGCGlobal::g_cntAddSuspectedGarbageInClyce - RTGCGlobal::g_cntRemoveSuspectedGarbageInClyce,
+    printf("** cntSuspectedGarbageInCycle %d = %d - %d\n", RTGCGlobal::g_cntAddSuspectedGarbageInClyce - RTGCGlobal::g_cntRemoveSuspectedGarbageInClyce,
         RTGCGlobal::g_cntAddSuspectedGarbageInClyce, RTGCGlobal::g_cntRemoveSuspectedGarbageInClyce);
     printf("** cntFreezed %d\n", RTGCGlobal::g_cntFreezed);
 
@@ -358,6 +364,7 @@ void GCNode::initMemory(RTGCMemState* memState) {
         // To make sure RTGC_dumpRefInfo is included in executable binary;
         RTGC_dumpRefInfo(NULL);
         RTGC_dumpRefInfo0(NULL);
+        RTGC_dumpReferrers(NULL);
     }
 }
 
@@ -383,6 +390,17 @@ bool RTGC_Check(GCObject* obj, bool isValid) {
     return isValid;
 }
 
+void RTGC_dumpReferrers(GCObject* obj) {
+    if (obj == nullptr) {
+        RTGC_dumpTypeInfo("*", NULL, obj);
+    }
+    else {
+        for (GCRefChain* c = obj->getNode()->externalReferrers.topChain(); c != NULL; c = c->next()) {
+            RTGC_dumpRefInfo(c->obj(), "      ");
+        }
+    }
+}
+
 void RTGC_dumpRefInfo0(GCObject* obj) {
     RTGC_dumpTypeInfo("-", NULL, obj);
 }
@@ -394,17 +412,35 @@ void RTGC_dumpRefInfo(GCObject* obj, const char* msg) {
 
 
 void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj) {
-    static const char* UNKNOWN = "???";
-    const char* classname = (typeInfo != NULL && typeInfo->relativeName_ != NULL)
-        ? CreateCStringFromString(typeInfo->relativeName_) : UNKNOWN;
+    const char* classname = "??";
+    const char* package_ = "??";
+    const char* super_classname = "??";
+    const char* super_package_ = "??";
+    if (typeInfo != NULL) {
+        if (typeInfo->relativeName_ != NULL) {
+            classname = CreateCStringFromString(typeInfo->relativeName_);
+        }
+        if (typeInfo->packageName_ != NULL) {
+            package_ = CreateCStringFromString(typeInfo->packageName_);
+        }
+        if (typeInfo->superType_ != NULL) {
+            if (typeInfo->superType_->relativeName_ != NULL) {
+                super_classname = CreateCStringFromString(typeInfo->superType_->relativeName_);
+            }
+            if (typeInfo->superType_->packageName_ != NULL) {
+                super_package_ = CreateCStringFromString(typeInfo->superType_->packageName_);
+            }
+        }
+    }
+
     if (obj == NULL) {
         konan::consolePrintf("%s %s %p \n", msg, classname, obj);
     }
     else {
-        konan::consolePrintf("%p-%s %s %p:%d rc=%p, flags=%x\n", 
-            rtgcMem, msg, classname, obj, obj->getNodeId(), 
+        konan::consolePrintf("%p-%s %s.%s extends %s.%s %p:%d rc=%p, flags=%x\n", 
+            rtgcMem, msg, package_, classname, super_package_, super_classname, obj, obj->getNodeId(), 
             (void*)obj->refCount(), obj->getFlags());
     }
-    if (classname != UNKNOWN) konan::free((void*)classname);
+    if (classname[0] != '?') konan::free((void*)classname);
     rtgc_trap(NULL);
 }

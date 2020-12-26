@@ -12,9 +12,9 @@
 #define RTGC                              1
 #define RTGC_DEBUG                        1
 #define RTGC_STATISTCS                    1
-#define RTGC_NO_INLINE                    // NO_INLINE
+#define RTGC_NO_INLINE                    NO_INLINE
 #define ENABLE_RTGC_LOG                   0
-#define ENABLE_RTGC_LOG_VERBOSE           (0 & ENABLE_RTGC_LOG)
+#define ENABLE_RTGC_LOG_VERBOSE           (1 & ENABLE_RTGC_LOG)
 #define DEBUG_RTGC_BUCKET                 0
 
 #define RTGC_LATE_DESTROY_CYCLIC_SUSPECT  false
@@ -58,6 +58,7 @@ bool rtgc_trap(void* pObj) NO_INLINE;
 
 void RTGC_dumpRefInfo(GCObject* container, const char* msg = "*") NO_INLINE;
 void RTGC_dumpRefInfo0(GCObject* container) NO_INLINE;
+void RTGC_dumpReferrers(GCObject* container) NO_INLINE;
 void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj);
 bool RTGC_Check(GCObject* obj, bool isValid) NO_INLINE;
 extern void* RTGC_debugInstance;
@@ -129,7 +130,7 @@ public:
   void push(GCObject* obj)  RTGC_NO_INLINE;
   void remove(GCObject* obj)  RTGC_NO_INLINE;
   void moveTo(GCObject* retiree, GCRefList* receiver)  RTGC_NO_INLINE;
-  void tryRemove(GCObject* obj, bool isUnique)  RTGC_NO_INLINE;
+  bool tryRemove(GCObject* obj)  RTGC_NO_INLINE;
   void removeChains(GCNode* node)  RTGC_NO_INLINE;
   bool isEmpty() { return first_ == 0; }
   void setFirst(GCRefChain* last)  RTGC_NO_INLINE;

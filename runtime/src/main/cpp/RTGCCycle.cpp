@@ -26,10 +26,10 @@ class CyclicNodeDetector {
     GCRefList tracingList;
     GCRefList finishedList;
     KStdDeque<char*> destroyedNodes;
-    bool checkFreezingOnly;
     KStdDeque<GCRefChain*> traceStack;
     // GCRefList finishedList_;
 public:
+    bool checkFreezingOnly;
     CyclicNodeDetector() {}
 
     GCNode* markInTracing(GCObject* tracingObj) RTGC_NO_INLINE;
@@ -43,7 +43,7 @@ public:
 
     void detectCyclicNodes(GCObject* tracingObj) RTGC_NO_INLINE;
 
-    void destroyNode(GCNode* node) RTGC_NO_INLINE;
+    void cleanUp() RTGC_NO_INLINE;
 };
 
 
@@ -78,9 +78,6 @@ void CyclicNode::markDamaged() {
 void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
     DebugRefAssert(obj, !obj->isAcyclic());
     RTGC_LOG("addCyclicTest %p %p\n", obj, rtgcMem);
-    if (false && (char*)obj < (char*)0x10000a914bd0) {
-        RTGC_dumpRefInfo(obj);
-    }
     if (obj->enqueueCyclicTest()) {
         rtgcMem->g_cyclicTestNodes.push_back(obj);
     }
@@ -200,6 +197,10 @@ GCNode* CyclicNodeDetector::markInTracing(GCObject* tracingObj) {
 
 CyclicNode* CyclicNode::createTwoWayLink(GCObject* root, GCObject* rookie) {
     RTGC_LOG("twoWay detected: %p/%d, %p/%d\n", root, root->getNodeId(), rookie, rookie->getNodeId());
+    if (ENABLE_RTGC_LOG) {
+        RTGC_dumpRefInfo(root, "M1");
+        RTGC_dumpRefInfo(rookie, "M2");
+    }
     CyclicNode* cyclicNode = root->getLocalCyclicNode();
     CyclicNode* cyclicNode2 = rookie->getLocalCyclicNode();
     if (cyclicNode == nullptr) {
@@ -215,6 +216,14 @@ CyclicNode* CyclicNode::createTwoWayLink(GCObject* root, GCObject* rookie) {
     root->clearAcyclic_unsafe();
     rookie->clearAcyclic_unsafe();
     cyclicNode->clearDirtyReferrers();
+    if (!root->isEnquedCyclicTest()) {
+        addCyclicTest(rookie, true);
+    }
+
+    // CyclicNodeDetector detector;
+    // detector.checkFreezingOnly = false;
+    // detector.detectCyclicNodes(rookie);
+    // detector.cleanUp();
     return cyclicNode;
 }
 
@@ -300,9 +309,7 @@ void CyclicNodeDetector::buildCyclicNode(GCObject* referrer) {
         cnt = 1;
         RTGC_LOG("  rootObjCount of cyclic node: %d cntRoot %d\n", referrer->getNodeId(), 
             ((CyclicNode*)referrer->getNode())->getRootObjectCount());
-        for (GCRefChain* c = referrer->getNode()->externalReferrers.topChain(); c != NULL; c = c->next()) {
-            RTGC_LOG("    External Referrer of cyclic node: %d, %d:%p\n", referrer->getNodeId(), ++cnt, c->obj());
-        }
+        RTGC_dumpReferrers(referrer);
     }
 }
 
@@ -373,6 +380,13 @@ void CyclicNodeDetector::checkCyclic(KStdVector<KRef>* freezing) {
         }
     }
 
+    cleanUp();
+    GCNode::rtgcUnlock();
+    RTGC_LOG("## RTGC CYCLE DETECTER END %p\n", rtgcMem);
+
+}
+
+void CyclicNodeDetector::cleanUp() {
     for (GCRefChain* chain = finishedList.topChain(); chain != NULL; chain = chain->next()) {
         /**
          * garbage cyclic node 를 삭제하는 동안 해당 노드에 연결된 다른 순환 참조 노드가 garbage 상태로 변경되어 삭제될 수 있다.
@@ -394,9 +408,6 @@ void CyclicNodeDetector::checkCyclic(KStdVector<KRef>* freezing) {
             }
         }
     }
-    GCNode::rtgcUnlock();
-    RTGC_LOG("## RTGC CYCLE DETECTER END %p\n", rtgcMem);
-
 }
 
 void CyclicNodeDetector::traceCyclic(GCObject* root) {
@@ -439,6 +450,8 @@ void CyclicNodeDetector::traceCyclic(GCObject* root) {
 }
 
 void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
+
+    RTGC_LOG("detectCyclicNodes start: %p(mem:%p)\n", tracingObj, rtgcMem);
 
     if (NO_RECURSIVE_TRACING) {
         GCRefChain root;

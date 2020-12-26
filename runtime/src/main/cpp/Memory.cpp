@@ -1587,14 +1587,14 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
       return;
     }
     
-    if (!container->isEnquedCyclicTest()) {
-      bool check_two_way_link = false;
-      if (check_two_way_link && owner_node->externalReferrers.find(container)) {
-        CyclicNode::createTwoWayLink(owner, container);
-        return;
-      }
-      else if (val_node->externalReferrers.isEmpty() &&
-              !owner_node->externalReferrers.isEmpty()) {
+    if (!container->isEnquedCyclicTest() &&
+      !owner_node->externalReferrers.isEmpty()) {
+      if (val_node->externalReferrers.isEmpty()) {
+        bool check_two_way_link = true;
+        if (check_two_way_link && owner_node->externalReferrers.find(container)) {
+          CyclicNode::createTwoWayLink(owner, container);
+          return;
+        }
         CyclicNode::addCyclicTest(container, true);
       }
     }
@@ -1624,13 +1624,19 @@ int decrementMemberRCtoZero(ContainerHeader* container, ContainerHeader* owner) 
   else {
     CyclicNode* cyclic = container->getLocalCyclicNode();
     RuntimeAssert(cyclic != NULL, "no cylic node");
-    if (container->isGarbage()) {
+    if (container->refCount() == 0) {
       if (container->clearSuspectedGarbageInCycle()) {
         cyclic->removeSuspectedGarbage(container);
       }
       return -1;
     }
     else {
+      // if (container->refCount() == RTGC_MEMBER_REF_INCREEMENT) {
+      //   traverseContainerReferredObjects((ObjHeader*)(container+1), [&queue](ObjHeader* obj) {
+      //   if (val_node->externalReferrers.topChain()->obj()->getNode()->externalReferrers.find(container)) {
+      //     return -1;
+      //   }
+      // }      
       if (container->markSuspectedGarbageInCycle()) {
         cyclic->addSuspectedGarbage(container);
       }
@@ -1638,7 +1644,7 @@ int decrementMemberRCtoZero(ContainerHeader* container, ContainerHeader* owner) 
     }
   }
 
-  if (container->isGarbage()) {
+  if (container->refCount() == 0) {
     return -1;
   }
   
@@ -1649,9 +1655,15 @@ int decrementMemberRCtoZero(ContainerHeader* container, ContainerHeader* owner) 
       return container->getNodeId();
     }
   }
+  else if (container->refCount() == RTGC_MEMBER_REF_INCREEMENT) {
+    if (val_node->externalReferrers.topChain()->obj()->getNode()->externalReferrers.find(container)) {
+      return -1;
+    }
+  }
 
   if (!container->isEnquedCyclicTest() &&
     !val_node->externalReferrers.isEmpty()) {
+      
       CyclicNode::addCyclicTest(container, false);
   }
   return 0;
