@@ -1522,8 +1522,7 @@ inline int decrementRCtoZero(ContainerHeader* container) {
     else if (ref.obj == 0) {
       freeNode = -1;
     }
-
-    if (cyclic == NULL && container->refCount() == RTGC_MEMBER_REF_INCREEMENT) {
+    else if (!DETECT_TWOWAY_LINK_EARLY && cyclic == NULL && ref.obj == 1) {
         ContainerHeader* referrer = container->getNode()->externalReferrers.topChain()->obj();
         if (referrer->refCount() == RTGC_MEMBER_REF_INCREEMENT &&
             referrer->getNode()->externalReferrers.topChain()->obj() == container) {
@@ -1598,13 +1597,12 @@ void incrementMemberRC(ContainerHeader* container, ContainerHeader* owner) {
     }
     
     if (!container->isEnquedCyclicTest()) {
-      bool check_two_way_link = false;
-      if (check_two_way_link && owner_node->externalReferrers.find(container)) {
+      if (DETECT_TWOWAY_LINK_EARLY && owner_node->externalReferrers.find(container)) {
         CyclicNode::createTwoWayLink(owner, container);
         return;
       }
       if (!owner_node->externalReferrers.isEmpty() &&
-      val_node->externalReferrers.isEmpty()) {
+          val_node->externalReferrers.isEmpty()) {
         CyclicNode::addCyclicTest(container, true);
       }
     }
@@ -1665,7 +1663,7 @@ int decrementMemberRCtoZero(ContainerHeader* container, ContainerHeader* owner) 
       return container->getNodeId();
     }
   }
-  else if (container->refCount() == RTGC_MEMBER_REF_INCREEMENT) {
+  else if (!DETECT_TWOWAY_LINK_EARLY && container->refCount() == RTGC_MEMBER_REF_INCREEMENT) {
     ContainerHeader* referrer = val_node->externalReferrers.topChain()->obj();
     if (referrer->refCount() == RTGC_MEMBER_REF_INCREEMENT &&
         referrer->getNode()->externalReferrers.topChain()->obj() == container) {

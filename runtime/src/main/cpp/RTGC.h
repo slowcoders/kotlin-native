@@ -16,6 +16,7 @@
 #define ENABLE_RTGC_LOG                   0
 #define ENABLE_RTGC_LOG_VERBOSE           (1 & ENABLE_RTGC_LOG)
 #define DEBUG_RTGC_BUCKET                 0
+#define DETECT_TWOWAY_LINK_EARLY          0
 
 #define RTGC_LATE_DESTROY_CYCLIC_SUSPECT  false
 

@@ -82,7 +82,7 @@ void CyclicNode::addCyclicTest(GCObject* obj, bool isLocalTest) {
         RTGCMemState* memState = rtgcMem;
         memState->g_cyclicTestNodes.push_back(obj);
         if (memState->inProgressFreeContainer == 0) {
-            if (rtgcMem->g_cyclicTestNodes.size() > 1024) {
+            if (rtgcMem->g_cyclicTestNodes.size() >= 8192) {
                 garbageCollectCycles(nullptr);
             }
         }
