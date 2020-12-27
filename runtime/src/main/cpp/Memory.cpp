@@ -1522,6 +1522,14 @@ inline int decrementRCtoZero(ContainerHeader* container) {
     else if (ref.obj == 0) {
       freeNode = -1;
     }
+
+    if (cyclic == NULL && container->refCount() == RTGC_MEMBER_REF_INCREEMENT) {
+        ContainerHeader* referrer = container->getNode()->externalReferrers.topChain()->obj();
+        if (referrer->refCount() == RTGC_MEMBER_REF_INCREEMENT &&
+            referrer->getNode()->externalReferrers.topChain()->obj() == container) {
+          freeNode = -1;
+        }    
+    }
   }
   if (Atomic) GCNode::rtgcUnlock();
   return freeNode;
@@ -1658,7 +1666,9 @@ int decrementMemberRCtoZero(ContainerHeader* container, ContainerHeader* owner) 
     }
   }
   else if (container->refCount() == RTGC_MEMBER_REF_INCREEMENT) {
-    if (val_node->externalReferrers.topChain()->obj()->getNode()->externalReferrers.find(container)) {
+    ContainerHeader* referrer = val_node->externalReferrers.topChain()->obj();
+    if (referrer->refCount() == RTGC_MEMBER_REF_INCREEMENT &&
+        referrer->getNode()->externalReferrers.topChain()->obj() == container) {
       return -1;
     }
   }
