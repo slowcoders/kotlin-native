@@ -58,6 +58,8 @@ CyclicNode* CyclicNode::create() {
 void CyclicNode::dealloc() {
     RTGC_LOG("## RTGC cyclic node dealloc %p:%d\n", this, this->getId());
     //RuntimeAssert(isLocked(), "GCNode is not locked")
+
+
     externalReferrers.clear();
     if (RTGC_DEBUG) {
       memset(this, -1, sizeof(CyclicNode));
@@ -410,7 +412,7 @@ void CyclicNodeDetector::cleanUp() {
             if (cyclic->isCyclicGarbage()) {
                 //if (RTGC_STATISTCS) konan::consolePrintf("## RTGC Garbage Cycle detected in tracing obj:%p node:%p/%d \n", obj_, cyclic, cyclic->getId());
                 ::freeContainer(obj_, cyclic->getId());
-                cyclic->dealloc();
+                // cyclic->dealloc();
             }
         }
     }

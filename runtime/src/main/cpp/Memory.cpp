@@ -1280,38 +1280,52 @@ void freeContainer(ContainerHeader* container, int garbageNodeId) {
 
   bool doFree = container->freeable();
   if (RTGC && doFree) {
-    container->markDestroyed();
     std::deque<ReferentIterator> traceStack;
+    if (garbageNodeId > 1) {
+      CyclicNode* cyclic = CyclicNode::getNode(container);
+      cyclic->markDestroyed();
+      traceStack.push_back(cyclic);
+    }
+    container->markDestroyed();
     traceStack.push_back((ObjHeader*)(container+1));
     ReferentIterator* it = &traceStack.back();
     while (true) {
       ContainerHeader* deassigned;
       ObjHeader* obj = it->next();
       if (obj == nullptr) {
-        scheduleDestroyContainer(memState, container);
+        if (it->type != ReferentIterator::Chain) {
+          scheduleDestroyContainer(memState, container);
+        }
         traceStack.pop_back();
         if (traceStack.empty()) break;
 
-        CyclicNode* cyclic = container->getLocalCyclicNode();
+        //CyclicNode* cyclic = container->getLocalCyclicNode();
         it = &traceStack.back();
-        container = it->ptr->container();
-
-        if (cyclic != NULL && cyclic != container->getNode() && cyclic->isCyclicGarbage()) {
-          cyclic->dealloc();
+        if (it->type != ReferentIterator::Chain) {
+          container = it->ptr->container();
         }
+        //if (cyclic != NULL && cyclic != container->getNode() && cyclic->isCyclicGarbage()) {
+        //  cyclic->dealloc();
+        //}
       }
       else if (isFreeable((deassigned = obj->container()))) {
         CyclicNode* cycle = deassigned->getLocalCyclicNode();
-        if ((cycle != nullptr && cycle->isCyclicGarbage())
-        ||  decrementMemberRC_internal(deassigned, container)) {
-          RTGC_LOG_V("  %d cleaning fields in cyclicNode %p (%d)\n", traceStack.size(), deassigned, deassigned->getNodeId());
-          runDeallocationHooks(deassigned, nullptr);
-          DebugRefAssert(deassigned, !isAggregatingFrozenContainer(deassigned));
-          deassigned->markDestroyed();
-          traceStack.push_back(obj);
-          it = &traceStack.back();
-          container = it->ptr->container();
+        if (cycle != nullptr && cycle->isCyclicGarbage()) {
+          if (!cycle->isDestroyed()) {
+            cycle->markDestroyed();
+            traceStack.push_back(cycle);
+          }
         }
+        else if (!decrementMemberRC_internal(deassigned, container)) {
+          continue;
+        }
+        RTGC_LOG_V("  %d cleaning fields in cyclicNode %p (%d)\n", traceStack.size(), deassigned, deassigned->getNodeId());
+        runDeallocationHooks(deassigned, nullptr);
+        DebugRefAssert(deassigned, !isAggregatingFrozenContainer(deassigned));
+        deassigned->markDestroyed();
+        traceStack.push_back(obj);
+        it = &traceStack.back();
+        container = it->ptr->container();
       }
     }
     processFinalizerQueue(memState);
@@ -1538,7 +1552,7 @@ inline void checkGrabage(ContainerHeader* container, int freeNode) {
   if (freeNode != 0) {    
     freeContainer(container, freeNode);
     if (freeNode > 1) {
-      CyclicNode::getNode(freeNode)->dealloc();
+      //CyclicNode::getNode(freeNode)->dealloc();
     }
   }
 }

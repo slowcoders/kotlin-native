@@ -221,6 +221,14 @@ public:
     return nextDamaged != 0;
   }
 
+  void markDestroyed() {
+    cntCyclicRefs = -1;
+  }
+
+  bool isDestroyed() {
+    return cntCyclicRefs < 0;
+  }
+
   void markDirtyReferrerList() {
     this->externalReferrers.flags_ |= DIRTY_CYCLIC_REFERRERS;
   }
@@ -243,6 +251,10 @@ public:
   void addSuspectedGarbage(GCObject* suspectedGarbage) {
       garbageTestList.push(suspectedGarbage);
       markDamaged();
+  }
+
+  GCRefList* getGarbageTestList() {
+    return &garbageTestList;
   }
 
   void removeSuspectedGarbage(GCObject* obj) RTGC_NO_INLINE {

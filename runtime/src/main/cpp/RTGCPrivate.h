@@ -13,19 +13,35 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
 void freeContainer(ContainerHeader* header, int garbageNodeId=-1) RTGC_NO_INLINE;
 
 struct ReferentIterator {
-    ObjHeader* ptr;
+    enum Type {
+        Object,
+        Array,
+        Chain
+    };
+
+    union {
+        ObjHeader* ptr;
+        CyclicNode* cylicNode;
+    };
     union {
         const int32_t* offsets;
         KRef* pItem;
+        GCRefChain* chain;
     };
     int idxField;
-    bool isArray;
+    Type type;
+
+    ReferentIterator(CyclicNode* cylicNode) {
+        this->cylicNode = cylicNode;
+        this->chain = cylicNode->getGarbageTestList()->topChain();
+        this->type = Chain;
+    }
 
     ReferentIterator(ObjHeader* obj) {
         this->ptr = obj;
         const TypeInfo* typeInfo = obj->type_info();
-        this->isArray = typeInfo == theArrayTypeInfo;
-        if (isArray) {
+        this->type = typeInfo == theArrayTypeInfo ? Array : Object;
+        if (this->type == Array) {
             ArrayHeader* array = obj->array();
             idxField = array->count_;
             pItem = ArrayAddressOfElementAt(array, 0);
@@ -37,15 +53,16 @@ struct ReferentIterator {
     }
 
     KRef next() {
-        if (isArray) {
+        switch (this->type) {
+        case Array:
             while (--idxField >= 0) {
                 KRef ref = *pItem++;
                 if (ref != nullptr) {
                     return ref;
                 }
             }
-        }
-        else {
+            break;
+        case Object:
             while (--idxField >= 0) {
                 ObjHeader** location = reinterpret_cast<ObjHeader**>(
                     reinterpret_cast<uintptr_t>(ptr) + *offsets++);
@@ -54,6 +71,21 @@ struct ReferentIterator {
                     return ref;
                 }
             }
+            break;
+        case Chain:
+            GCRefChain* c = this->chain;
+            while (c != nullptr) {
+                ContainerHeader* container = c->obj();
+                c = c->next();
+                if (!container->isDestroyed()) {
+                    this->chain = c;
+                    KRef ref = (KRef)(container + 1);
+                    konan::consolePrintf("pop supected garbage in cycle %p\n", container);
+                    return ref;
+                }
+            }
+            this->chain = nullptr;
+            cylicNode->dealloc();
         }
         return nullptr;
     }
