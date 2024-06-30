@@ -276,7 +276,7 @@ internal class StackLocalsManagerImpl(
                         if (refsOnly)
                             storeStackRef(kNullObjHeaderPtr, fieldPtr)
                         else
-                            call(context.llvm.zeroStackRefFunction, listOf(fieldPtr))
+                            call(context.llvm.rtgc_zeroStackRefFunction, listOf(fieldPtr))
                     } else {
                         if (refsOnly)
                             storeHeapRef(kNullObjHeaderPtr, fieldPtr)

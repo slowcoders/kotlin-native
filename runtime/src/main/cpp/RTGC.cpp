@@ -1,0 +1,447 @@
+#include <string.h>
+#include <stdio.h>
+
+#include <cstddef> // for offsetof
+
+#include "Alloc.h"
+#include "KAssert.h"
+#include "Atomic.h"
+#include "Exceptions.h"
+#include "KString.h"
+#include "Memory.h"
+#include "MemoryPrivate.hpp"
+#include "Natives.h"
+#include "Porting.h"
+#include "Runtime.h"
+#include "RTGCPrivate.h"
+#include "KDebug.h"
+#include "assert.h"
+#include <pthread.h>
+
+THREAD_LOCAL_VARIABLE RTGCMemState* rtgcMem;
+
+int RTGCGlobal::g_cntAddRefChain = 0;
+int RTGCGlobal::g_cntRemoveRefChain = 0;
+int RTGCGlobal::g_cntAddCyclicNode = 0;
+int RTGCGlobal::g_cntRemoveCyclicNode = 0;
+int RTGCGlobal::g_cntAddCyclicTest = 0;
+int RTGCGlobal::g_cntRemoveCyclicTest = 0;
+int RTGCGlobal::g_cntAddSuspectedGarbageInClyce = 0;
+int RTGCGlobal::g_cntRemoveSuspectedGarbageInClyce = 0;
+int RTGCGlobal::g_cntFreezed = 0;
+void* RTGC_debugInstance = NULL;
+
+CyclicNode lastDummy;
+
+RefBucket g_refBucket;
+CyclicBucket g_cyclicBucket;
+// CyclicNode* RTGCGlobal::g_freeCyclicNode;
+// GCRefChain* GCRefList::g_refChains;
+// GCRefChain* RTGCGlobal::g_freeRefChain;
+// CyclicNode* GCNode::g_cyclicNodes = NULL;
+
+
+static pthread_t g_lockThread = NULL;
+static int g_cntLock = 0;
+THREAD_LOCAL_VARIABLE int32_t isHeapLocked = 0;
+static const bool RECURSIVE_LOCK = true;
+static const bool SKIP_REMOVE_ERROR = true;
+int g_memDebug = false;
+int g_cntRTGCLocks[16];
+
+void GCNode::rtgcLock(LockType type) {
+    if (RECURSIVE_LOCK) {
+        pthread_t curr_thread = pthread_self();
+        if (curr_thread != g_lockThread) {
+            while (!__sync_bool_compare_and_swap(&g_lockThread, NULL, curr_thread)) {}
+        }
+    }
+    g_cntLock ++;
+    if (RTGC_STATISTCS) {
+        g_cntRTGCLocks[type] ++;
+    }
+    if (DEBUG_RTGC_BUCKET && (g_memDebug || g_lockThread != pthread_self())) {
+        BUCKET_LOG("g_lockThread =%p(%p) ++%d\n", g_lockThread, pthread_self(), g_cntLock)
+    }
+}
+
+void GCNode::rtgcUnlock() {
+    if (RECURSIVE_LOCK) {
+        //RuntimeAssert(pthread_self() == g_lockThread, "unlock in wrong thread");
+    }
+    if (DEBUG_RTGC_BUCKET && (g_memDebug || g_lockThread != pthread_self())) {
+        BUCKET_LOG("g_lockThread =%p(%p) %d--\n", g_lockThread, pthread_self(), g_cntLock)
+    }
+    if (--g_cntLock == 0) {
+        if (RECURSIVE_LOCK) {
+            g_lockThread = NULL;
+        }
+    }
+}
+
+bool GCNode::isLocked() {
+    if (RECURSIVE_LOCK) {
+        pthread_t curr_thread = pthread_self();
+        return curr_thread == g_lockThread;
+    }
+    else {
+        return g_cntLock > 0;
+    }
+}
+
+static int dump_recycle_log = 0;//ENABLE_RTGC_LOG;
+static GCRefChain* popFreeChain() {
+    if (RTGC_STATISTCS) RTGCGlobal::g_cntAddRefChain ++;
+    return rtgcMem->refChainAllocator.allocItem();
+}
+
+static void recycleChain(GCRefChain* expired, const char* type) {
+    if (RTGC_STATISTCS) RTGCGlobal::g_cntRemoveRefChain ++;
+    rtgcMem->refChainAllocator.recycleItem(expired);
+}
+
+static int getRefChainIndex(GCRefChain* chain) {
+    return chain == NULL ? 0 : rtgcMem->refChainAllocator.getItemIndex(chain);
+}
+
+GCRefChain* GCRefList::topChain() { 
+    return first_ == 0 ? NULL : rtgcMem->refChainAllocator.getItem(first_); 
+}
+
+void GCRefList::push(GCObject* item) {
+    GCRefChain* chain = popFreeChain();
+    chain->obj_ = item;
+    chain->next_ = this->topChain();
+    first_ = getRefChainIndex(chain);
+}
+
+void GCRefList::remove(GCObject* item) {
+    RuntimeAssert(this->first_ != 0, "RefList is empty");
+    GCRefChain* prev = topChain();
+    if (SKIP_REMOVE_ERROR && prev == NULL) {
+        RTGC_LOG("can't remove item 0 %p", item);
+        return;
+    }
+    if (prev->obj_ == item) {
+        first_ = getRefChainIndex(prev->next_);
+        recycleChain(prev, "first");
+        return;
+    }
+
+    GCRefChain* chain = prev->next_;
+    if (SKIP_REMOVE_ERROR && chain == NULL) {
+        RTGC_LOG("can't remove item 1 %p", item);
+        return;
+    }
+    while (chain->obj_ != item) {
+        prev = chain;
+        chain = chain->next_;
+        if (SKIP_REMOVE_ERROR && chain == NULL) {
+            RTGC_LOG("can't remove item 2 %p", item);
+            return;
+        }
+    }
+    prev->next_ = chain->next_;
+    recycleChain(chain, "next");
+}
+
+static GCRefChain* const NOT_CHANGED = (GCRefChain*)(void*)-1;
+void GCRefList::removeChains(GCNode* node) {
+    int cntChain __attribute__((unused)) = 0;
+    GCRefChain* top = NOT_CHANGED;
+    GCRefChain* prev = NULL;
+    GCRefChain* next;
+    for(GCRefChain* chain = this->topChain(); chain != NULL; chain = next) {
+        GCObject* referrer = chain->obj();
+        next = chain->next();
+        if (referrer->getNode() != node) {
+            prev = chain;
+            #if RTGC_STATISTCS
+            cntChain ++;
+            #endif
+            continue;
+        }
+        if (prev == NULL) {
+            top = next;
+        }
+        else {
+            prev->next_ = next;
+        }
+        recycleChain(chain, "removeChains");
+    }
+    if (top != NOT_CHANGED) {
+        this->first_ = getRefChainIndex(top);
+    }
+    #if RTGC_STATISTCS
+    RTGC_LOG("external refferers of %d -> cnt %d\n", ((CyclicNode*)node)->getId(), cntChain);
+    #endif
+}
+
+
+void GCRefList::moveTo(GCObject* item, GCRefList* receiver) {
+    RuntimeAssert(this->first_ != 0, "RefList is empty");
+    GCRefChain* prev = topChain();
+    if (prev->obj_ == item) {
+        first_ = getRefChainIndex(prev->next_);
+        // move to receiver;
+        prev->next_ = receiver->topChain();
+        receiver->first_ = getRefChainIndex(prev);
+        return;
+    }
+
+    GCRefChain* chain = prev->next_;
+    while (chain->obj_ != item) {
+        prev = chain;
+        chain = chain->next_;
+    }
+    prev->next_ = chain->next_;
+    // move to receiver;
+    chain->next_ = receiver->topChain();
+    receiver->first_ = getRefChainIndex(chain);
+}
+
+GCObject* GCRefList::pop() { 
+    GCRefChain* chain = topChain(); 
+    if (chain == NULL) { 
+        return NULL;
+    }
+    first_ = getRefChainIndex(chain->next_); 
+    GCObject* obj = chain->obj();
+    recycleChain(chain, "pop");
+    return obj;
+}
+
+bool GCRefList::tryRemove(GCObject* item) {
+    GCRefChain* prev = NULL;
+    GCRefChain* next;
+    for (GCRefChain* chain = topChain(); chain != NULL; chain = next) {
+        next = chain->next();
+        if (chain->obj_ != item) {
+            prev = chain;
+            continue;
+        }
+
+        if (prev == NULL) {
+            first_ = getRefChainIndex(chain->next_);
+        }
+        else {
+            prev->next_ = chain->next_;
+        }
+        recycleChain(chain, "first");
+        return true;
+    }
+    return false;
+}
+
+GCRefChain* GCRefList::find(GCObject* item) {
+    for (GCRefChain* chain = topChain(); chain != NULL; chain = chain->next_) {
+        if (chain->obj_ == item) {
+            return chain;
+        }
+    }
+    return NULL;
+}
+
+GCRefChain* GCRefList::find(int node_id) {    
+    for (GCRefChain* chain = topChain(); chain != NULL; chain = chain->next_) {
+        if (chain->obj_->getNodeId() == node_id) {
+            return chain;
+        }
+    }
+    return NULL;
+}
+
+void GCRefList::setFirst(GCRefChain* newFirst) {
+    if (ENABLE_RTGC_LOG && dump_recycle_log > 0) {//} || node_id % 1000 == 0) {
+         RTGC_LOG("RTGC setFirst %p, top %p\n", newFirst, topChain());
+    }
+    for (GCRefChain* chain = topChain(); chain != newFirst; ) {
+        GCRefChain* next = chain->next_;
+        recycleChain(chain, "setLast");
+        chain = next;
+    }
+    this->first_ = getRefChainIndex(newFirst);
+}
+
+void OnewayNode::dealloc() {
+    // RuntimeAssert(isLocked(), "GCNode is not locked")
+    if (ENABLE_RTGC_LOG && dump_recycle_log > 0) {//} || node_id % 1000 == 0) {
+         RTGC_LOG("OnewayNode::dealloc, top %p\n", externalReferrers.topChain());
+    }
+    externalReferrers.clear();
+}
+
+void GCNode::dumpGCLog() {
+    if (!RTGC_STATISTCS) return;
+    printf("** RTGCLock FreeContainer %d\n", g_cntRTGCLocks[_FreeContainer]);
+    printf("** RTGCLock ProcessFinalizerQueue %d\n", g_cntRTGCLocks[_ProcessFinalizerQueue]);
+    printf("** RTGCLock IncrementRC %d\n", g_cntRTGCLocks[_IncrementRC]);
+    printf("** RTGCLock TryIncrementRC %d\n", g_cntRTGCLocks[_TryIncrementRC]);
+    printf("** RTGCLock IncrementAcyclicRC %d\n", g_cntRTGCLocks[_IncrementAcyclicRC]);
+    printf("** RTGCLock DecrementRC %d\n", g_cntRTGCLocks[_DecrementRC]);
+    printf("** RTGCLock DecrementAcyclicRC %d\n", g_cntRTGCLocks[_DecrementAcyclicRC]);
+    printf("** RTGCLock AssignRef %d\n", g_cntRTGCLocks[_AssignRef]);
+    printf("** RTGCLock DeassignRef %d\n", g_cntRTGCLocks[_DeassignRef]);
+    printf("** RTGCLock UpdateHeapRef %d\n", g_cntRTGCLocks[_UpdateHeapRef]);
+    printf("** RTGCLock PopBucket %d\n", g_cntRTGCLocks[_PopBucket]);
+    printf("** RTGCLock RecycleBucket %d\n", g_cntRTGCLocks[_RecycleBucket]);
+    printf("** RTGCLock DetectCylcles %d\n", g_cntRTGCLocks[_DetectCylcles]);
+    printf("** RTGCLock SetHeapRefLocked %d\n", g_cntRTGCLocks[_SetHeapRefLocked]);
+
+    printf("** cntRefChain %d = %d - %d\n", RTGCGlobal::g_cntAddRefChain - RTGCGlobal::g_cntRemoveRefChain,
+        RTGCGlobal::g_cntAddRefChain, RTGCGlobal::g_cntRemoveRefChain);
+    printf("** cntCyclicNode %d = %d - %d\n", RTGCGlobal::g_cntAddCyclicNode - RTGCGlobal::g_cntRemoveCyclicNode,
+        RTGCGlobal::g_cntAddCyclicNode, RTGCGlobal::g_cntRemoveCyclicNode);
+    printf("** cntCyclicTest %d = %d - %d\n", RTGCGlobal::g_cntAddCyclicTest - RTGCGlobal::g_cntRemoveCyclicTest,
+        RTGCGlobal::g_cntAddCyclicTest, RTGCGlobal::g_cntRemoveCyclicTest);
+    printf("** cntSuspectedGarbageInCycle %d = %d - %d\n", RTGCGlobal::g_cntAddSuspectedGarbageInClyce - RTGCGlobal::g_cntRemoveSuspectedGarbageInClyce,
+        RTGCGlobal::g_cntAddSuspectedGarbageInClyce, RTGCGlobal::g_cntRemoveSuspectedGarbageInClyce);
+    printf("** cntFreezed %d\n", RTGCGlobal::g_cntFreezed);
+
+    RTGCGlobal::g_cntAddRefChain = RTGCGlobal::g_cntRemoveRefChain = 0;
+    RTGCGlobal::g_cntAddCyclicNode = RTGCGlobal::g_cntRemoveCyclicNode = 0;
+    RTGCGlobal::g_cntAddCyclicTest = RTGCGlobal::g_cntRemoveCyclicTest = 0;
+    RTGCGlobal::g_cntAddSuspectedGarbageInClyce = RTGCGlobal::g_cntRemoveSuspectedGarbageInClyce = 0;
+    RTGCGlobal::g_cntFreezed = 0;
+    
+    g_cntRTGCLocks[_FreeContainer] = 0;
+    g_cntRTGCLocks[_IncrementRC] = 0;
+    g_cntRTGCLocks[_DecrementRC] = 0;
+    g_cntRTGCLocks[_AssignRef] = 0;
+    g_cntRTGCLocks[_DeassignRef] = 0;
+    g_cntRTGCLocks[_UpdateHeapRef] = 0;
+    g_cntRTGCLocks[_PopBucket] = 0;
+    g_cntRTGCLocks[_RecycleBucket] = 0;
+}
+
+extern "C" {
+
+void Kotlin_native_internal_GC_rtgcLog(KRef __unused) {
+    GCNode::dumpGCLog();
+}
+
+KInt Kotlin_native_internal_GC_refCount(KRef __unused, KRef obj) {
+    if (obj == NULL) return -1;
+    return obj->container()->refCount();
+}
+};
+
+
+int CyclicNode::getId() { 
+    return rtgcMem->cyclicNodeAllocator.getItemIndex(this) + CYCLIC_NODE_ID_START; 
+}
+
+CyclicNode* CyclicNode::getNode(GCObject* obj) {
+    int nodeId = obj->getNodeId();
+    CyclicNode* node = getNode(nodeId);
+    if (RTGC_DEBUG && node != NULL) {
+        if (((int64_t*)node)[1] == -1) {
+            RTGC_LOG("CyclicNode already deallocated. %p/%d node=%p\n", obj, nodeId, node);
+        }
+        DebugAssert(((int64_t*)node)[1] != -1);
+    }
+    return node;
+}
+
+CyclicNode* CyclicNode::getNode(int nodeId) {
+    if (nodeId < CYCLIC_NODE_ID_START) {
+        return NULL;
+    }
+    CyclicNode* node = rtgcMem->cyclicNodeAllocator.getItem(nodeId - CYCLIC_NODE_ID_START);
+    return node;
+}
+
+static int cntMemory = 0; 
+
+void GCNode::initMemory(RTGCMemState* memState) {
+    cntMemory ++;
+    g_memDebug = cntMemory > 1;
+    RTGC_LOG("initMemory: %p, %d\n", memState, cntMemory);
+    memState->inProgressFreeContainer = 0;
+    memState->refChainAllocator.init(&g_refBucket, cntMemory);
+    memState->cyclicNodeAllocator.init(&g_cyclicBucket, cntMemory + 1000);
+    rtgcMem = memState;
+    if (cntMemory < 0) {
+        // To make sure RTGC_dumpRefInfo is included in executable binary;
+        RTGC_dumpRefInfo(NULL);
+        RTGC_dumpRefInfo0(NULL);
+        RTGC_dumpReferrers(NULL);
+    }
+}
+
+void RTGCGlobal::validateMemPool() {
+    // CyclicNode* node = g_freeCyclicNode;
+    // for (; node != NULL; node ++) {
+    //     if (GET_NEXT_FREE(node) == NULL) break;
+    //     assert(GET_NEXT_FREE(node) == node +1);
+    // }
+    // assert(node == g_cyclicNodes + CNT_CYCLIC_NODE - 1);
+}
+
+
+bool enable_rtgc_trap = ENABLE_RTGC_LOG;
+bool rtgc_trap(void* pObj) {
+    return enable_rtgc_trap;
+}
+
+bool RTGC_Check(GCObject* obj, bool isValid) {
+    if (!isValid) {
+        RTGC_dumpRefInfo(obj);
+    }
+    return isValid;
+}
+
+void RTGC_dumpReferrers(GCObject* obj) {
+    if (obj == nullptr) {
+        RTGC_dumpTypeInfo("*", NULL, obj);
+    }
+    else {
+        for (GCRefChain* c = obj->getNode()->externalReferrers.topChain(); c != NULL; c = c->next()) {
+            RTGC_dumpRefInfo(c->obj(), "      ");
+        }
+    }
+}
+
+void RTGC_dumpRefInfo0(GCObject* obj) {
+    RTGC_dumpTypeInfo("-", NULL, obj);
+}
+
+void RTGC_dumpRefInfo(GCObject* obj, const char* msg) {
+    const TypeInfo* typeInfo = ((ObjHeader*)(obj+1))->type_info();
+    RTGC_dumpTypeInfo(msg, typeInfo, obj);
+}
+
+
+void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj) {
+    const char* classname = "??";
+    const char* package_ = "??";
+    const char* super_classname = "??";
+    const char* super_package_ = "??";
+    if (typeInfo != NULL) {
+        if (typeInfo->relativeName_ != NULL) {
+            classname = CreateCStringFromString(typeInfo->relativeName_);
+        }
+        if (typeInfo->packageName_ != NULL) {
+            package_ = CreateCStringFromString(typeInfo->packageName_);
+        }
+        if (typeInfo->superType_ != NULL) {
+            if (typeInfo->superType_->relativeName_ != NULL) {
+                super_classname = CreateCStringFromString(typeInfo->superType_->relativeName_);
+            }
+            if (typeInfo->superType_->packageName_ != NULL) {
+                super_package_ = CreateCStringFromString(typeInfo->superType_->packageName_);
+            }
+        }
+    }
+
+    if (obj == NULL) {
+        konan::consolePrintf("%s %s %p \n", msg, classname, obj);
+    }
+    else {
+        konan::consolePrintf("%p-%s %s.%s extends %s.%s %p:%d rc=%p, flags=%x\n", 
+            rtgcMem, msg, package_, classname, super_package_, super_classname, obj, obj->getNodeId(), 
+            (void*)obj->refCount(), obj->getFlags());
+    }
+    if (classname[0] != '?') konan::free((void*)classname);
+    rtgc_trap(NULL);
+}

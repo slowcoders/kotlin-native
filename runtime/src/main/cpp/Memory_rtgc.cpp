@@ -37,7 +37,7 @@
 #include "KAssert.h"
 #include "Atomic.h"
 #if USE_CYCLIC_GC
-#include "CyclicCollector.h"
+#include "CyclicCollector_rtgc.h"
 #endif  // USE_CYCLIC_GC
 #include "Exceptions.h"
 #include "KString.h"
