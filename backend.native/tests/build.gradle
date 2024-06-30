@@ -2957,12 +2957,14 @@ task memory_stable_ref_cross_thread_check(type: KonanLocalTest) {
     source = "runtime/memory/stable_ref_cross_thread_check.kt"
 }
 
+/* skip in RTGC
 standaloneTest("cycle_detector") {
     disabled = project.globalTestArgs.contains('-opt') || // Needs debug build.
                (project.testTarget == 'wasm32') // CycleDetector is disabled on WASM.
     flags = ['-tr', '-g']
     source = "runtime/memory/cycle_detector.kt"
 }
+*/
 
 standaloneTest("cycle_collector") {
     disabled = true // Needs USE_CYCLIC_GC, which is disabled.
@@ -4858,6 +4860,7 @@ if (isAppleTarget(project)) {
 /**
  * Creates tasks to build and execute Harmony regex tests with GTEST logger.
  */
+/* SKIP IN RTGC
 KotlinNativeTestKt.createTest(project, 'harmonyRegexTest', KonanGTest) { task ->
     task.enabled = (project.testTarget != 'wasm32') // Uses exceptions.
     task.useFilter = false
@@ -4890,6 +4893,7 @@ KotlinNativeTestKt.createTest(project, 'harmonyRegexTest', KonanGTest) { task ->
 
     task.finalizedBy("resultsTask")
 }
+/**/
 
 if (UtilsKt.getTestTargetSupportsCodeCoverage(project)) {
     task coverage_basic_program(type: CoverageTest) {

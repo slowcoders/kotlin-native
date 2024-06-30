@@ -27,14 +27,14 @@
 
 OBJ_GETTER(setupArgs, int argc, const char** argv) {
   // The count is one less, because we skip argv[0] which is the binary name.
-  ObjHeader* result = AllocArrayInstance(theArrayTypeInfo, argc - 1, OBJ_RESULT);
-  ArrayHeader* array = result->array();
+  ObjHeader* result0 = AllocArrayInstance(theArrayTypeInfo, argc - 1, OBJ_RESULT);
+  ArrayHeader* array = result0->array();
   for (int index = 1; index < argc; index++) {
     ObjHolder result;
     CreateStringFromCString(argv[index], result.slot());
-    UpdateHeapRef(ArrayAddressOfElementAt(array, index - 1), result.obj());
+    UpdateHeapRef(ArrayAddressOfElementAt(array, index - 1), result.obj(), result0);
   }
-  return result;
+  return result0;
 }
 
 //--- main --------------------------------------------------------------------//

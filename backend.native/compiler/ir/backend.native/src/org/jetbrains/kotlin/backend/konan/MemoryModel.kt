@@ -7,5 +7,6 @@ package org.jetbrains.kotlin.backend.konan
 enum class MemoryModel {
     STRICT,
     RELAXED,
+    RTGC,
     EXPERIMENTAL,
 }

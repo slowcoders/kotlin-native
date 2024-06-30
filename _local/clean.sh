@@ -1,0 +1,1 @@
+./gradlew clean dependencies:update

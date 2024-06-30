@@ -94,6 +94,7 @@ enum GlobalRuntimeStatus {
 volatile GlobalRuntimeStatus globalRuntimeStatus = kGlobalRuntimeUninitialized;
 
 RuntimeState* initRuntime() {
+  RTGC_LOG("initRuntime");
   SetKonanTerminateHandler();
   RuntimeState* result = konanConstructInstance<RuntimeState>();
   if (!result) return kInvalidRuntime;
@@ -138,6 +139,7 @@ RuntimeState* initRuntime() {
 }
 
 void deinitRuntime(RuntimeState* state, bool destroyRuntime) {
+  RTGC_LOG("deinitRuntime 0")
   RuntimeAssert(state->status == RuntimeStatus::kRunning, "Runtime must be in the running state");
   state->status = RuntimeStatus::kDestroying;
   // This may be called after TLS is zeroed out, so ::runtimeState and ::memoryState in Memory cannot be trusted.
@@ -159,12 +161,15 @@ void deinitRuntime(RuntimeState* state, bool destroyRuntime) {
   auto workerId = GetWorkerId(state->worker);
   WorkerDeinit(state->worker);
   DeinitMemory(state->memoryState, destroyRuntime);
+  RTGC_LOG("deinitRuntime 2")
   konanDestructInstance(state);
   WorkerDestroyThreadDataIfNeeded(workerId);
   ::runtimeState = kInvalidRuntime;
+  RTGC_LOG("deinitRuntime done")
 }
 
 void Kotlin_deinitRuntimeCallback(void* argument) {
+  RTGC_LOG("%%% Kotlin_deinitRuntimeCallback");
   auto* state = reinterpret_cast<RuntimeState*>(argument);
   deinitRuntime(state, false);
 }
@@ -192,6 +197,7 @@ void Kotlin_initRuntimeIfNeeded() {
 }
 
 void Kotlin_deinitRuntimeIfNeeded() {
+  RTGC_LOG("%%% Kotlin_deinitRuntimeIfNeeded");
   if (isValidRuntime()) {
     deinitRuntime(::runtimeState, false);
   }
@@ -314,6 +320,7 @@ KInt Konan_Platform_getCpuArchitecture() {
 }
 
 KInt Konan_Platform_getMemoryModel() {
+  // return IsStrictMemoryModel ? 0 : (RTGC ? 2 : 1);
     return static_cast<KInt>(CurrentMemoryModel);
 }
 

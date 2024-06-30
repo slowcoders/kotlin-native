@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#if 1
+#include "Memory_rtgc.h"
+#else
 #ifndef RUNTIME_MEMORY_H
 #define RUNTIME_MEMORY_H
 
@@ -353,3 +356,4 @@ class ExceptionObjHolder {
 };
 
 #endif // RUNTIME_MEMORY_H
+#endif

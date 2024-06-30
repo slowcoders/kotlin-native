@@ -35,6 +35,7 @@ import org.jetbrains.kotlin.library.KotlinLibrary
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.descriptorUtil.classId
+import org.jetbrains.kotlin.backend.konan.llvm.ContextUtils
 
 internal enum class FieldStorageKind {
     GLOBAL, // In the old memory model these are only accessible from the "main" thread.
@@ -453,7 +454,11 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                                     val address = context.llvmDeclarations.forStaticField(irField).storageAddressAccess.getAddress(
                                             functionGenerationContext
                                     )
-                                    storeAny(initialization, address, false)
+                                    if (RTGC) {
+                                        rtgc_storeGlobalVar(initialization, address)
+                                    } else {
+                                        storeAny(initialization, address, false)
+                                    }
                                 }
                             }
                     ret(null)
@@ -476,11 +481,19 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                                     val address = context.llvmDeclarations.forStaticField(irField).storageAddressAccess.getAddress(
                                             functionGenerationContext
                                     )
-                                    storeHeapRef(codegen.kNullObjHeaderPtr, address)
+                                    if (RTGC) {
+                                        rtgc_storeGlobalVar(codegen.kNullObjHeaderPtr, address)
+                                    } else {
+                                        storeHeapRef(codegen.kNullObjHeaderPtr, address);
+                                    }
                                 }
                             }
                     context.llvm.globalSharedObjects.forEach { address ->
-                        storeHeapRef(codegen.kNullObjHeaderPtr, address)
+                        if (RTGC) {
+                            rtgc_storeGlobalVar(codegen.kNullObjHeaderPtr, address)
+                        } else {
+                            storeHeapRef(codegen.kNullObjHeaderPtr, address)                            
+                        }
                     }
                     ret(null)
                 }
@@ -1301,6 +1314,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         context.log{"evaluateSetValue               : ${ir2string(value)}"}
         val result = evaluateExpression(value.value)
         val variable = currentCodeContext.getDeclaredValue(value.symbol.owner)
+        /// --- ZZZZ -----
         functionGenerationContext.vars.store(result, variable)
         assert(value.type.isUnit())
         return functionGenerationContext.theUnitInstanceRef.llvm
@@ -1344,6 +1358,21 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
 
     private fun generateVariable(variable: IrVariable) {
         context.log{"generateVariable               : ${ir2string(variable)}"}
+
+        var rtgc_idxVar = -1;
+        val rtgc_oldAnonymousVar = functionGenerationContext.rtgc_anonymousRetValue;
+        functionGenerationContext.rtgc_anonymousRetValue = -1;
+        if (functionGenerationContext.RTGC) {
+
+            val type = functionGenerationContext.getLLVMType(variable.type)
+            if (functionGenerationContext.isObjectType(type)) {
+                rtgc_idxVar = currentCodeContext.genDeclareVariable(
+                    variable, null, debugInfoIfNeeded(
+                    (currentCodeContext.functionScope() as FunctionScope).declaration, variable))
+                functionGenerationContext.rtgc_anonymousRetValue = rtgc_idxVar;
+            }
+        }
+
         val value = variable.initializer?.let {
             val callSiteOrigin = (it as? IrBlock)?.origin as? InlinerExpressionLocationHint
             val inlineAtFunctionSymbol = callSiteOrigin?.inlineAtSymbol as? IrFunctionSymbol
@@ -1353,9 +1382,24 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 }
             } ?: evaluateExpression(it)
         }
-        currentCodeContext.genDeclareVariable(
+
+        /// ------ ZZZZZZ !!!! -----
+
+        if (!functionGenerationContext.RTGC || rtgc_idxVar < 0) {
+            currentCodeContext.genDeclareVariable(
                 variable, value, debugInfoIfNeeded(
                 (currentCodeContext.functionScope() as FunctionScope).declaration, variable))
+        }
+        else if (value != null) {
+            if (functionGenerationContext.rtgc_anonymousRetValue < 0 && value == functionGenerationContext.vars.rtgc_getAttachedReturnValue(rtgc_idxVar)) {
+                // returnSlot consumed
+                // println("*** return consumed " + value);
+            }
+            else {
+                functionGenerationContext.vars.store(value, rtgc_idxVar)
+            }
+        }        
+        functionGenerationContext.rtgc_anonymousRetValue = rtgc_oldAnonymousVar;
     }
 
     //-------------------------------------------------------------------------//
@@ -1584,9 +1628,15 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         context.log { "evaluateGetField               : ${ir2string(value)}" }
         return if (!value.symbol.owner.isStatic) {
             val thisPtr = evaluateExpression(value.receiver!!)
-            functionGenerationContext.loadSlot(
+            if (functionGenerationContext.RTGC) {
+                val isPermanent = functionGenerationContext.rtgc_permanentRefs.get(thisPtr) != null;
+                if (isPermanent) println("## permanent owner =" + value.symbol.owner)
+                functionGenerationContext.rtgc_loadSlotEx(
+                        fieldPtrOfClass(thisPtr, value.symbol.owner), !isPermanent && !value.symbol.owner.isFinal)
+            } else {
+                functionGenerationContext.loadSlot(
                     fieldPtrOfClass(thisPtr, value.symbol.owner), !value.symbol.owner.isFinal)
-        } else {
+            }        } else {
             assert(value.receiver == null)
             if (value.symbol.owner.correspondingPropertySymbol?.owner?.isConst == true) {
                 evaluateConst(value.symbol.owner.initializer?.expression as IrConst<*>)
@@ -1597,7 +1647,14 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 val ptr = context.llvmDeclarations.forStaticField(value.symbol.owner).storageAddressAccess.getAddress(
                         functionGenerationContext
                 )
-                functionGenerationContext.loadSlot(ptr, !value.symbol.owner.isFinal)
+                if (functionGenerationContext.RTGC) {
+                    val isPermanent = false;
+                    // = functionGenerationContext.context.permanentAddrs.contains(ptr);
+                    // if (isPermanent) println("## permanent static =" + value.symbol.owner)
+                    functionGenerationContext.rtgc_loadSlotEx(ptr, !isPermanent && !value.symbol.owner.isFinal)
+                } else {
+                    functionGenerationContext.loadSlot(ptr, !value.symbol.owner.isFinal)
+                }
             }
         }.also {
             if (value.type.classifierOrNull?.isClassWithFqName(vectorType) == true)
@@ -1654,7 +1711,18 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 if (functionGenerationContext.isObjectType(valueToAssign.type))
                     functionGenerationContext.call(context.llvm.checkLifetimesConstraint, listOf(thisPtr, valueToAssign))
             }
-            functionGenerationContext.storeAny(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), false)
+            if (functionGenerationContext.RTGC) {
+                val isObjC = value.symbol.owner.parentAsClass.isObjCClass();
+                if (functionGenerationContext.RTGC && !isObjC) {
+                    /* @zeedh Can't circular test into ObjC object until to implement custom memory allocation feature. */
+                    functionGenerationContext.rtgc_storeMemberVar(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), thisPtr)
+                }
+                else {
+                    functionGenerationContext.rtgc_storeGlobalVar(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner))
+                }
+            } else {
+                functionGenerationContext.storeAny(valueToAssign, fieldPtrOfClass(thisPtr, value.symbol.owner), false)
+            }
         } else {
             assert(value.receiver == null)
             val globalAddress = context.llvmDeclarations.forStaticField(value.symbol.owner).storageAddressAccess.getAddress(
@@ -1664,7 +1732,11 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 functionGenerationContext.checkGlobalsAccessible(currentCodeContext.exceptionHandler)
             if (value.symbol.owner.storageKind == FieldStorageKind.SHARED_FROZEN)
                 functionGenerationContext.freeze(valueToAssign, currentCodeContext.exceptionHandler)
-            functionGenerationContext.storeAny(valueToAssign, globalAddress, false)
+            if (functionGenerationContext.RTGC) {
+                functionGenerationContext.rtgc_storeGlobalVar(valueToAssign, globalAddress)
+            } else {
+                functionGenerationContext.storeAny(valueToAssign, globalAddress, false)
+            }
         }
         if (store != null && value.value.type.classifierOrNull?.isClassWithFqName(vectorType) == true) {
             LLVMSetAlignment(store, 8)
@@ -1706,7 +1778,13 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
             IrConstKind.Short  -> return Int16(value.value as Short).llvm
             IrConstKind.Int    -> return Int32(value.value as Int).llvm
             IrConstKind.Long   -> return Int64(value.value as Long).llvm
-            IrConstKind.String -> return evaluateStringConst(value as IrConst<String>)
+            IrConstKind.String -> {
+                var str = evaluateStringConst(value as IrConst<String>)
+                if (functionGenerationContext.RTGC && currentCodeContext.functionScope() is FunctionScope) {
+                    functionGenerationContext.rtgc_permanentRefs.put(str, str);
+                }
+                return str;
+            }
             IrConstKind.Float  -> return Float32(value.value as Float).llvm
             IrConstKind.Double -> return Float64(value.value as Double).llvm
         }
@@ -2054,15 +2132,36 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
 
     private fun IrFunction.returnsUnit() = returnType.isUnit() && !isSuspend
 
+    private fun rtgc_evaluateArgExpression(expr: IrExpression) : LLVMValueRef {
+        val arg = evaluateExpression(expr);
+        return arg;
+    }
+
     /**
      * Evaluates all arguments of [expression] that are explicitly represented in the IR.
      * Returns results in the same order as LLVM function expects, assuming that all explicit arguments
      * exactly correspond to a tail of LLVM parameters.
      */
     private fun evaluateExplicitArgs(expression: IrFunctionAccessExpression): List<LLVMValueRef> {
-        val result = expression.getArgumentsWithIr().map { (_, argExpr) ->
-            evaluateExpression(argExpr)
+        var result: List<LLVMValueRef>;
+        if (!functionGenerationContext.RTGC_ENABLE_ALTER_ARGS) {
+            result = expression.getArgumentsWithIr().map { (_, argExpr) ->
+                evaluateExpression(argExpr)
+            }
         }
+        else {
+            // not tested!!!!
+            var argList = mutableListOf<Pair<IrValueParameter, LLVMValueRef>>();
+            functionGenerationContext.vars.rtgc_pushArgList(argList);
+            expression.getArgumentsWithIr().map { (param, argExpr) ->
+                argList.add(param to rtgc_evaluateArgExpression(argExpr))
+            }
+            var evaluatedArgs: Map<IrValueParameter, LLVMValueRef> = argList.toMap();
+            functionGenerationContext.vars.rtgc_popArgList(argList);
+            result = expression.symbol.owner.allParameters.dropWhile { it !in evaluatedArgs }.map {
+            evaluatedArgs[it]!!
+        }
+        }        
         val explicitParametersCount = expression.symbol.owner.explicitParametersCount
         if (result.size != explicitParametersCount) {
             error("Number of arguments explicitly represented in the IR ${result.size} differs from expected " +

@@ -1,0 +1,1 @@
+./gradlew --continue backend.native:tests:run

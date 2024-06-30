@@ -11,6 +11,8 @@ import org.jetbrains.kotlin.backend.konan.Context
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrValueDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrVariable
+import org.jetbrains.kotlin.ir.declarations.IrValueParameter
+import org.jetbrains.kotlin.ir.declarations.impl.IrValueParameterImpl
 import org.jetbrains.kotlin.name.Name
 
 internal fun IrElement.needDebugInfo(context: Context) = context.shouldContainDebugInfo() || (this is IrVariable && this.isVar)
@@ -20,15 +22,67 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         fun load() : LLVMValueRef
         fun store(value: LLVMValueRef)
         fun address() : LLVMValueRef
+        fun rtgc_attachReturnValue(value: LLVMValueRef) { throw Error("writing to immutable: ") }
+        fun rtgc_getAttachedReturnValue() : LLVMValueRef? { throw Error("no attached value: ") }
     }
 
-    inner class SlotRecord(val address: LLVMValueRef, val refSlot: Boolean, val isVar: Boolean) : Record {
-        override fun load() : LLVMValueRef = functionGenerationContext.loadSlot(address, isVar)
-        override fun store(value: LLVMValueRef) {
-            functionGenerationContext.storeAny(value, address, true)
+    inner class SlotRecord(val type: LLVMTypeRef, val isVar: Boolean, 
+        val name: String, val variableLocation: VariableDebugLocation?) : Record {
+        var loadedValues = mutableListOf<Pair<Int, LLVMValueRef>>();
+        var attachedRetValue: LLVMValueRef? = null
+        var permanentValue: LLVMValueRef? = null;
+        var slotAddr: LLVMValueRef? = null;
+        override fun load() : LLVMValueRef {
+            if (!functionGenerationContext.RTGC) {
+                return functionGenerationContext.loadSlot(address(), isVar)            
+            } else {
+                if (!functionGenerationContext.RTGC_ENABLE_ALTER_ARGS) {
+                    return functionGenerationContext.loadSlot(address(), !functionGenerationContext.RTGC && isVar)
+                }
+                val layer = functionGenerationContext.vars.rtgc_argLists.size;
+                val value = if (this.permanentValue == null) {
+                    functionGenerationContext.loadSlot(address(), !functionGenerationContext.RTGC && isVar);
+                }
+                else {
+                    this.permanentValue!!;
+                }
+
+                if (layer > 0) {
+                    loadedValues.add(layer to value);
+                }
+                return value;
+            }
         }
-        override fun address() : LLVMValueRef = this.address
-        override fun toString() = (if (refSlot) "refslot" else "slot") + " for ${address}"
+        override fun store(value: LLVMValueRef) {
+            if (!functionGenerationContext.RTGC) {
+                functionGenerationContext.storeAny(value, address(), true)
+            } else {
+                if (functionGenerationContext.RTGC_ENABLE_ALTER_ARGS && loadedValues.size > 0) rtgc_alterPushedVariable(loadedValues);
+                //if (!isVar) throw Error("var is not mutable");
+                if (this.slotAddr == null) {
+                    permanentValue = functionGenerationContext.rtgc_permanentRefs.get(value);
+                    //this.value = value;
+                }
+                if (permanentValue == null) {
+                    functionGenerationContext.storeStackRef(value, address())
+                }
+                else {
+                    // print("## load permanent slot")
+                }
+            }
+        }
+        override fun address() : LLVMValueRef {
+            if (functionGenerationContext.RTGC) {
+                if (permanentValue != null) throw Error("permanentValue is not null");
+                if (this.slotAddr == null) {
+                    this.slotAddr = functionGenerationContext.alloca(this.type, this.name, this.variableLocation)
+                }
+            }
+            return this.slotAddr!!;
+        }
+        override fun toString() = (if (functionGenerationContext.isObjectType(type)) "refslot" else "slot") + " for ${slotAddr}"
+        override fun rtgc_attachReturnValue(value: LLVMValueRef) { attachedRetValue = value }
+        override fun rtgc_getAttachedReturnValue() : LLVMValueRef? = attachedRetValue
     }
 
     inner class ParameterRecord(val address: LLVMValueRef, val refSlot: Boolean) : Record {
@@ -47,6 +101,46 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
 
     val variables: ArrayList<Record> = arrayListOf()
     val contextVariablesToIndex: HashMap<IrValueDeclaration, Int> = hashMapOf()
+    val rtgc_argLists: ArrayList<MutableList<Pair<IrValueParameter, LLVMValueRef>>> = arrayListOf()
+
+    fun rtgc_pushArgList(argList: MutableList<Pair<IrValueParameter, LLVMValueRef>>) {
+        rtgc_argLists.add(argList)
+    }
+
+    fun rtgc_popArgList(argList: MutableList<Pair<IrValueParameter, LLVMValueRef>>) {
+        val layer = rtgc_argLists.size;
+        for (v in variables) {
+            if (!(v is SlotRecord)) continue;
+            val values = v.loadedValues;
+            var i = values.size;
+            while ( --i >= 0 ) {
+                val vr = values.get(i);
+                if (vr.first == layer) {
+                    values.removeAt(i);
+                }
+            }
+        }
+        rtgc_argLists.remove(argList)
+    }
+    
+    fun rtgc_alterPushedVariable(values : List<Pair<Int, LLVMValueRef>>) {
+        var alterVariable: LLVMValueRef? = null;
+        for (argList in rtgc_argLists) {
+            for (i in 0 until argList.size) {
+                val arg = argList[i];
+                for (v in values) {
+                    if (arg.second == v.second) {
+                        if (alterVariable == null) {
+                            val slot_addr = createAnonymousSlot(v.second);
+                            alterVariable = functionGenerationContext.loadSlot(slot_addr, false);
+                            // println("****************** " + alterVariable);
+                        }
+                        argList[i] = (arg.first to alterVariable)
+                    }
+                }
+            }
+        }
+    }
 
     // Clears inner state of variable manager.
     fun clear() {
@@ -73,10 +167,22 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
         assert(!contextVariablesToIndex.contains(valueDeclaration))
         val index = variables.size
         val type = functionGenerationContext.getLLVMType(valueDeclaration.type)
-        val slot = functionGenerationContext.alloca(type, valueDeclaration.name.asString(), variableLocation)
-        if (value != null)
-            functionGenerationContext.storeAny(value, slot, true)
-        variables.add(SlotRecord(slot, functionGenerationContext.isObjectType(type), isVar))
+        if (functionGenerationContext.RTGC) {
+            val slotRec = SlotRecord(type, isVar, valueDeclaration.name.asString(), variableLocation);
+            if (isVar) {
+                slotRec.address();
+            }
+            if (value != null) {
+                slotRec.store(value);
+            }
+            variables.add(slotRec)
+        } else {
+            // Not implemented!!!
+            // val slot = functionGenerationContext.alloca(type, valueDeclaration.name.asString(), variableLocation)
+            // if (value != null)
+            //     functionGenerationContext.storeAny(value, slot, true)
+            // variables.add(SlotRecord(slot, /*functionGenerationContext.isObjectType(type),*/ isVar))    
+        }
         contextVariablesToIndex[valueDeclaration] = index
         return index
     }
@@ -105,10 +211,19 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
 
     private fun createAnonymousMutable(type: LLVMTypeRef, value: LLVMValueRef? = null) : Int {
         val index = variables.size
-        val slot = functionGenerationContext.alloca(type, variableLocation = null)
-        if (value != null)
-            functionGenerationContext.storeAny(value, slot, true)
-        variables.add(SlotRecord(slot, functionGenerationContext.isObjectType(type), true))
+        if (functionGenerationContext.RTGC) {
+            val slotRec = SlotRecord(type, true, "", null);
+            if (value != null) {
+                slotRec.store(value);
+            }
+            variables.add(slotRec)
+        } else {
+            // Not implemented!!!
+            // val slot = functionGenerationContext.alloca(type, variableLocation = null)
+            // if (value != null)
+            //     functionGenerationContext.storeAny(value, slot, true)
+            // variables.add(SlotRecord(slot, /*functionGenerationContext.isObjectType(type),*/ true))
+        }
         return index
     }
 
@@ -136,6 +251,9 @@ internal class VariableManager(val functionGenerationContext: FunctionGeneration
     fun store(value: LLVMValueRef, index: Int) {
         variables[index].store(value)
     }
+
+    fun rtgc_attachReturnValue(value: LLVMValueRef, index: Int) { variables[index].rtgc_attachReturnValue(value) }
+    fun rtgc_getAttachedReturnValue(index: Int) : LLVMValueRef? { return variables[index].rtgc_getAttachedReturnValue() }
 }
 
 internal data class VariableDebugLocation(val localVariable: DILocalVariableRef, val location:DILocationRef?, val file:DIFileRef, val line:Int)

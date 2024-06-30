@@ -199,6 +199,8 @@ class K2Native : CLICompiler<K2NativeCompilerArguments>() {
                         configuration.report(STRONG_WARNING, "Relaxed memory model is not yet fully functional")
                         MemoryModel.RELAXED
                     }
+                    // RTGC!!!
+                    "rtgc" -> MemoryModel.RTGC
                     "strict" -> MemoryModel.STRICT
                     "experimental" -> MemoryModel.EXPERIMENTAL
                     else -> {

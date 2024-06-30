@@ -85,11 +85,12 @@ OBJ_GETTER(Konan_WeakReferenceCounter_get, ObjHeader* counter) {
   RETURN_OBJ(*referredAddress);
 #else
   auto* weakCounter = asWeakReferenceCounter(counter);
-  RETURN_RESULT_OF(ReadHeapRefLocked, referredAddress,  &weakCounter->lock,  &weakCounter->cookie);
+  RETURN_RESULT_OF(ReadHeapRefLocked, referredAddress,  &weakCounter->lock, counter, &weakCounter->cookie);
 #endif
 }
 
 void WeakReferenceCounterClear(ObjHeader* counter) {
+  RTGC_LOG("WeakReferenceCounterClear %p", counter);
   ObjHeader** referredAddress = &asWeakReferenceCounter(counter)->referred;
   // Note, that we don't do UpdateRef here, as reference is weak.
 #if KONAN_NO_THREADS

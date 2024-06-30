@@ -1,0 +1,2398 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bucket
+   uuid = "2D4D5E27-65F4-4C1F-BDA5-22B42D7162F9"
+   type = "1"
+   version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "F2A1747A-8B9C-4582-908C-A077D3097425"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/hello.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "99"
+            endingLineNumber = "99"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "C7C1A339-0E05-4F97-A67C-982F30FE9637"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/hello.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "53"
+            endingLineNumber = "53"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "DFDD3662-A3CA-4F5E-8890-89D579D37F0C"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/hello.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "99"
+            endingLineNumber = "99"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "907974DB-74FD-43F5-A45F-97760C60BDAD"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/hello.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "62"
+            endingLineNumber = "62"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "987DD80B-A00F-4C12-8465-2D4B89E91732"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/hello.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "96"
+            endingLineNumber = "96"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "4D0A6C15-8868-4065-9527-496A00E02676"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/PatternTest2.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "1208"
+            endingLineNumber = "1208"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "C54A398C-04C2-4FE2-8139-13BD8BA48899"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../runtime/src/main/kotlin/kotlin/text/Regex.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "139"
+            endingLineNumber = "139"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "B66B9D40-8496-4B91-B23F-8EC5F4FC36AA"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../runtime/src/main/kotlin/kotlin/text/Regex.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "137"
+            endingLineNumber = "137"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "6A009B48-9EF0-4706-B7FA-AE2CBDF68B8B"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../runtime/src/main/kotlin/kotlin/text/Regex.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "143"
+            endingLineNumber = "143"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "20DFF4AD-94CE-447E-92B0-44123ABE4C63"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/freeze_stress.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "140"
+            endingLineNumber = "140"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "1E6BC81B-8061-4EA8-AB8A-D70051592734"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/freeze_stress.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "148"
+            endingLineNumber = "148"
+            landmarkName = "unknown"
+            landmarkType = "0">
+            <Locations>
+               <Location
+                  uuid = "1E6BC81B-8061-4EA8-AB8A-D70051592734 - dd6550fe7fb199b"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.freeze_stress.$runFreezeStressTest$FUNCTION_REFERENCE$107.$&lt;bridge-UNN&gt;invoke(){}#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/freeze_stress.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "148"
+                  endingLineNumber = "148"
+                  offsetFromSymbolStart = "18">
+               </Location>
+               <Location
+                  uuid = "1E6BC81B-8061-4EA8-AB8A-D70051592734 - c69c6940474a8240"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:example#test(kotlin.String){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/freeze_stress.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "148"
+                  endingLineNumber = "148"
+                  offsetFromSymbolStart = "192">
+               </Location>
+               <Location
+                  uuid = "1E6BC81B-8061-4EA8-AB8A-D70051592734 - 63520a9004855ca9"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "objc2kotlin.917"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/freeze_stress.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "148"
+                  endingLineNumber = "148"
+                  offsetFromSymbolStart = "16">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "DF7C5E6C-8F11-49F9-919A-7BABDE65490F"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/freeze_stress.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "141"
+            endingLineNumber = "141"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "33"
+            endingLineNumber = "33"
+            landmarkName = "unknown"
+            landmarkType = "0">
+            <Locations>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - d72c3297faa2067"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.collections.State.$OBJECT.&lt;init&gt;#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "514">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - cd5fb99b65d7b391"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.coroutines.intrinsics.CoroutineSingletons.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "426">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 473851e072f0bcf5"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.reflect.KVariance.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "426">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - c51b4ec6957ace8b"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.Throwable.$&lt;init&gt;$lambda-0$FUNCTION_REFERENCE$249.invoke#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "479">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 9e971953ad99a4a5"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.native.OsFamily.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "994">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - ec69df988291f152"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.native.MemoryModel.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "426">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 657056aab3bad2dc"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.native.concurrent.FutureState.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "938">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 1f25f37af7113b5f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.native.concurrent.FreezeAwareLazyImpl.getOrInit#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "882">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - c7beefa8077fc54c"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.native.concurrent.UNINITIALIZED#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "35"
+                  endingLineNumber = "35"
+                  offsetFromSymbolStart = "19">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - a8d1e1d87ee563df"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.native.concurrent.INITIALIZING#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 435f08f0d8706ed7"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.native.concurrent.CurrentThread.&lt;init&gt;#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "49">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 149e3ffb4e86178f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.native.concurrent.TransferMode.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "481">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - b6c9449a2525f3fc"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.native.internal.test.TestFunctionKind.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "514">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - f733620c2f8f09dd"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.text.CharCategory.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "3064">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 9c2e786a2ee1c714"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.text.RegexOption.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "1231">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - c04041b60a1f30ed"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.text.Regex.Mode.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "347">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - a6944ad1a364a123"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.text.regex.AbstractCharClass.Companion.CharClasses.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "25860">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 26c1a119650abb69"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.text.regex.AbstractCharClass.Companion#getPredefinedClass(kotlin.String;kotlin.Boolean){}kotlin.text.regex.AbstractCharClass"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "702">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - f08bee83d7826e81"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.text.regex.Lexer.Mode.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "426">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 5c372ac1a0c87cab"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.text.regex.SpecialToken.Type.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "347">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - d5a4f590b8424636"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:kotlin.text.regex.Pattern.processRangeSet#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "760">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 1c808c8c42ca0cfd"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:objcSmoke.ForwardDeclaredEnum.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "627">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - b08ff853382ba39a"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.atomic0.$&lt;bridge-UNNN&gt;test3$lambda-5(kotlin.Pair&lt;kotlin.native.concurrent.AtomicReference&lt;runtime.workers.atomic0.Data?&gt;,kotlin.Int&gt;){}#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "173">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 949464330040b8bd"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.atomic0#test5(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "561">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 949465bf1576a023"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.atomic0#test7(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "619">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 949465bf1576a023"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.atomic0#test7(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "1528">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 25f155e4f9b179d0"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.enum_identity.A.$OBJECT#&lt;init&gt;(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "347">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - edfa95067d7ec637"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.freeze6#ensureNeverFrozenNoFreezeChild(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "164">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - db1f0b7e1bc41de5"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.freeze6#ensureNeverFrozenFailsTarget(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "197">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - d481688d8f5861d0"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.freeze6#createRef1(){}kotlin.native.concurrent.FreezableAtomicReference&lt;kotlin.Any?&gt;"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "76">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 8df5ad8933c8d2d9"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.freeze6#createRef2(){}kotlin.Pair&lt;kotlin.native.concurrent.FreezableAtomicReference&lt;runtime.workers.freeze6.Node?&gt;,kotlin.Any&gt;"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "195">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - fd3e70f3dc99e3d6"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.freeze6#createRef3(){}kotlin.native.concurrent.FreezableAtomicReference&lt;kotlin.Any?&gt;"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "109">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - f1f5c42ac2393cd7"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.freeze6#createRef4(){}kotlin.native.concurrent.FreezableAtomicReference&lt;kotlin.Any?&gt;"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "210">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - bc23f8a69edb2b9d"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.freeze6#createRef5(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "358">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 1fa90e2182a60ae7"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.freeze_stress#freezeOneGraph(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "300">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 9f4534662120ab7a"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:illegal_sharing.$runInWorker$lambda-0$FUNCTION_REFERENCE$112.invoke#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "61">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 403bcab9c2d4994b"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.lazy.$test1$lambda-2$FUNCTION_REFERENCE$121.invoke#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "82">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 188f3e1eb289a433"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.lazy.$test2$lambda-5$FUNCTION_REFERENCE$125.invoke#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "85">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 1173781c4b9c3609"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.lazy.$ensureGetsCollectedFrozenAndNotFrozen$lambda-6$FUNCTION_REFERENCE$126.invoke#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "106">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - c558e1cec7815e15"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.worker6#runTest2(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "108">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 52f3a4bdd8b30a13"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testGlobalAccessOnWorkerFrozenBeforePassing(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "247">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 9beaad4797e92aaf"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testGlobalAccessOnWorkerFrozenBeforeAccess(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "474">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - aa036692d99609ec"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testLocalFrozen(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "211">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 37c20d4733cfda2b"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testLocalDenyAccessOnWorkerFrozen(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "163">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - c01bc0badda24d1c"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testLocalAccessOnWorkerFrozenInitiallyFrozen(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "160">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - c01bc0badda24d1c"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testLocalAccessOnWorkerFrozenInitiallyFrozen(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "244">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 6046a822c5eb29ed"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testLocalAccessOnWorkerFrozenBeforePassingFrozen(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "186">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 6046a822c5eb29ed"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testLocalAccessOnWorkerFrozenBeforePassingFrozen(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "355">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 3dabe3207208f0e1"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testLocalAccessOnWorkerFrozenBeforeAccessFrozen(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "231">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 3dabe3207208f0e1"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testLocalAccessOnWorkerFrozenBeforeAccessFrozen(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "701">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - b5622b17b1918562"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testLocalModificationFrozen(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "234">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 48e965739dcfb7a3"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testLocalGetWorkerFrozen(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "169">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 44643b669da4191"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0.$&lt;bridge-NNNB&gt;testLocalForeignGetWorkerFrozen$lambda-35(kotlin.Int){}kotlin.native.concurrent.WorkerBoundReference&lt;runtime.concurrent.worker_bound_reference0.A&gt;#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "187">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 28b2a9662724afc4"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testLocalWithWrapperFrozen(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "230">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 1bd1fdda5098bed0"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testLocalDenyAccessWithWrapperFrozen(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "205">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 8b3635c1a2369a81"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#getOwnerAndWeaksFrozen(kotlin.Int){}kotlin.Triple&lt;kotlin.native.concurrent.AtomicReference&lt;kotlin.native.concurrent.WorkerBoundReference&lt;runtime.concurrent.worker_bound_reference0.A&gt;?&gt;,kotlin.native.ref.WeakReference&lt;kotlin.native.concurrent.WorkerBoundReference&lt;runtime.concurrent.worker_bound_reference0.A&gt;&gt;,kotlin.native.ref.WeakReference&lt;runtime.concurrent.worker_bound_reference0.A&gt;&gt;"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "163">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 87f04a6dfd6e2b3f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#doNotCollectInWorkerFrozen(kotlin.native.concurrent.Worker;kotlin.native.concurrent.AtomicInt){}kotlin.native.concurrent.Future&lt;kotlin.native.concurrent.WorkerBoundReference&lt;runtime.concurrent.worker_bound_reference0.A&gt;&gt;"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "164">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 28c1d071bb4b0a32"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#createCyclicGarbageFrozen(){}kotlin.Triple&lt;kotlin.native.concurrent.AtomicReference&lt;kotlin.native.concurrent.WorkerBoundReference&lt;runtime.concurrent.worker_bound_reference0.B1&gt;?&gt;,kotlin.native.ref.WeakReference&lt;runtime.concurrent.worker_bound_reference0.B1&gt;,kotlin.native.ref.WeakReference&lt;runtime.concurrent.worker_bound_reference0.B2&gt;&gt;"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "125">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 28c1d071bb4b0a32"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#createCyclicGarbageFrozen(){}kotlin.Triple&lt;kotlin.native.concurrent.AtomicReference&lt;kotlin.native.concurrent.WorkerBoundReference&lt;runtime.concurrent.worker_bound_reference0.B1&gt;?&gt;,kotlin.native.ref.WeakReference&lt;runtime.concurrent.worker_bound_reference0.B1&gt;,kotlin.native.ref.WeakReference&lt;runtime.concurrent.worker_bound_reference0.B2&gt;&gt;"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "396">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 62d111006d1f1c1f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#createCrossThreadCyclicGarbageFrozen(kotlin.native.concurrent.Worker){}kotlin.Triple&lt;kotlin.native.concurrent.AtomicReference&lt;kotlin.native.concurrent.WorkerBoundReference&lt;runtime.concurrent.worker_bound_reference0.B1&gt;?&gt;,kotlin.native.ref.WeakReference&lt;runtime.concurrent.worker_bound_reference0.B1&gt;,kotlin.native.ref.WeakReference&lt;runtime.concurrent.worker_bound_reference0.B2&gt;&gt;"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "136">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - f37f3cc8d9c23fb4"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#createCyclicGarbageWithAtomicsFrozen(){}kotlin.Triple&lt;kotlin.native.concurrent.AtomicReference&lt;kotlin.native.concurrent.WorkerBoundReference&lt;runtime.concurrent.worker_bound_reference0.C1&gt;?&gt;,kotlin.native.ref.WeakReference&lt;runtime.concurrent.worker_bound_reference0.C1&gt;,kotlin.native.ref.WeakReference&lt;runtime.concurrent.worker_bound_reference0.C2&gt;&gt;"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "132">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - f37f3cc8d9c23fb4"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#createCyclicGarbageWithAtomicsFrozen(){}kotlin.Triple&lt;kotlin.native.concurrent.AtomicReference&lt;kotlin.native.concurrent.WorkerBoundReference&lt;runtime.concurrent.worker_bound_reference0.C1&gt;?&gt;,kotlin.native.ref.WeakReference&lt;runtime.concurrent.worker_bound_reference0.C1&gt;,kotlin.native.ref.WeakReference&lt;runtime.concurrent.worker_bound_reference0.C2&gt;&gt;"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "414">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - e0dfc93b406ae4ab"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#createCrossThreadCyclicGarbageWithAtomicsFrozen(kotlin.native.concurrent.Worker){}kotlin.Triple&lt;kotlin.native.concurrent.AtomicReference&lt;kotlin.native.concurrent.WorkerBoundReference&lt;runtime.concurrent.worker_bound_reference0.C1&gt;?&gt;,kotlin.native.ref.WeakReference&lt;runtime.concurrent.worker_bound_reference0.C1&gt;,kotlin.native.ref.WeakReference&lt;runtime.concurrent.worker_bound_reference0.C2&gt;&gt;"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "135">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - ad0d21b0c6d7ea6d"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#concurrentAccessFrozen(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "283">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - c49a516f37e1583e"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testDoubleFreeze(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "229">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - c49a516f37e1583e"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testDoubleFreeze(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "284">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - c49a516f37e1583e"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testDoubleFreeze(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "337">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 1d81f9986e26a72e"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testDoubleFreezeWithFreezeBlocker(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "461">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 1d81f9986e26a72e"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0#testDoubleFreezeWithFreezeBlocker(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "582">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 5547981660942983"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0.testLocalDenyAccessOnMainThreadFrozen$lambda-27#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "153">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 25416081a105621f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0.createCrossThreadCyclicGarbageFrozen$lambda-45#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "108">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - a5f9995e9555473"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0.createCrossThreadCyclicGarbageWithAtomicsFrozen$lambda-49#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "146">
+               </Location>
+               <Location
+                  uuid = "176BE70A-1746-4031-9971-728C3C8EFD9B - 4f1ba13324149043"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.concurrent.worker_bound_reference0.testExceptionMessageFrozen$lambda-57#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/runtime/src/main/kotlin/kotlin/native/concurrent/Freezing.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "33"
+                  endingLineNumber = "33"
+                  offsetFromSymbolStart = "153">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "C9036776-E867-42BD-AF84-DEF92A43CAB6"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/freeze_stress.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "150"
+            endingLineNumber = "150"
+            landmarkName = "unknown"
+            landmarkType = "0">
+            <Locations>
+               <Location
+                  uuid = "C9036776-E867-42BD-AF84-DEF92A43CAB6 - dd6550fe7fb19d9"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:runtime.workers.freeze_stress.$runFreezeStressTest$FUNCTION_REFERENCE$107.$&lt;bridge-UNN&gt;invoke(){}#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/freeze_stress.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "150"
+                  endingLineNumber = "150"
+                  offsetFromSymbolStart = "31">
+               </Location>
+               <Location
+                  uuid = "C9036776-E867-42BD-AF84-DEF92A43CAB6 - c69c6940474a8202"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:example#test(kotlin.String){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/freeze_stress.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "150"
+                  endingLineNumber = "150"
+                  offsetFromSymbolStart = "47">
+               </Location>
+               <Location
+                  uuid = "C9036776-E867-42BD-AF84-DEF92A43CAB6 - 63520a9004855ceb"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "objc2kotlin.917"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/freeze_stress.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "150"
+                  endingLineNumber = "150"
+                  offsetFromSymbolStart = "31">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "C1397599-5BA5-403C-ADFA-C945EC5DA9C0"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/freeze_stress.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "120"
+            endingLineNumber = "120"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "9FAD0345-0DD4-47D3-ADAA-171F89D6B946"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/worker_bound_reference0.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "538"
+            endingLineNumber = "538"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "429F4046-1320-4C4A-A96F-639EE1D0EA9A"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "kobjc/cpu_test2.mm"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "59"
+            endingLineNumber = "59"
+            landmarkName = "lzay_delloc_test()"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "CC81EE28-1A1B-43EF-812E-2AAA1A410009"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "kobjc/cpu_test2.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "67"
+            endingLineNumber = "67"
+            landmarkName = "lzay_delloc_test()"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "1153C106-AB9F-4B2E-BD5C-1824B454EEDC"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "kobjc/cpu_test2.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "50"
+            endingLineNumber = "50"
+            landmarkName = "testB()"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "8578C6F7-8AE0-46E5-A8E9-A8BD652A0977"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "kobjc/cpu_test2.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "48"
+            endingLineNumber = "48"
+            landmarkName = "testB()"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "46460725-6EEB-43A9-AA98-257447878E3D"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "kobjc/cpu_test2.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "52"
+            endingLineNumber = "52"
+            landmarkName = "testB()"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "327A3DC1-04B7-4182-B2B8-D8CD211DCBCD"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/PatternTest2.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "1207"
+            endingLineNumber = "1207"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "935B1239-0F81-47BF-A767-811A3A003ABC"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/PatternTest2.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "1206"
+            endingLineNumber = "1206"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "623FCAD8-AD8A-49BF-B8A4-D4E575CE7E8D"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/worker_bound_reference0.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "784"
+            endingLineNumber = "784"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "D3643F52-833E-4773-8F0D-8D2E35902A75"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/worker_bound_reference0.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "543"
+            endingLineNumber = "543"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "A74E86E8-226A-45FC-94E0-1BCB6951C8EF"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/hello.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "90"
+            endingLineNumber = "90"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "0E277F09-442D-4550-8EE5-CF5F4B3651CE"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/custom_hook.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "23"
+            endingLineNumber = "23"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "3DCD111F-BD17-4478-8A63-5C316479F75B"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/custom_hook.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "15"
+            endingLineNumber = "15"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "F7E0F6FE-30A1-47CC-952F-52C426F9AB72"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/custom_hook.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "21"
+            endingLineNumber = "21"
+            landmarkName = "unknown"
+            landmarkType = "0">
+            <Locations>
+               <Location
+                  uuid = "F7E0F6FE-30A1-47CC-952F-52C426F9AB72 - 5428f82e6e18d88f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:custom_hook#testCustomHook(){}"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/custom_hook.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "21"
+                  endingLineNumber = "21"
+                  offsetFromSymbolStart = "959">
+               </Location>
+               <Location
+                  uuid = "F7E0F6FE-30A1-47CC-952F-52C426F9AB72 - 9c698e60a198c73d"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:custom_hook.testCustomHook$lambda-0#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/custom_hook.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "21"
+                  endingLineNumber = "21"
+                  offsetFromSymbolStart = "16">
+               </Location>
+               <Location
+                  uuid = "F7E0F6FE-30A1-47CC-952F-52C426F9AB72 - 5628278626071cc9"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:custom_hook.$testCustomHook$lambda-0$FUNCTION_REFERENCE$99.&lt;init&gt;#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/custom_hook.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "21"
+                  endingLineNumber = "21"
+                  offsetFromSymbolStart = "27">
+               </Location>
+               <Location
+                  uuid = "F7E0F6FE-30A1-47CC-952F-52C426F9AB72 - 8ca44e960a0db32b"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:custom_hook.$testCustomHook$lambda-0$FUNCTION_REFERENCE$99.invoke#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/custom_hook.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "21"
+                  endingLineNumber = "21"
+                  offsetFromSymbolStart = "28">
+               </Location>
+               <Location
+                  uuid = "F7E0F6FE-30A1-47CC-952F-52C426F9AB72 - 4f015e730ac7273a"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "kfun:custom_hook.$testCustomHook$lambda-0$FUNCTION_REFERENCE$99.$&lt;bridge-UNNN&gt;invoke(-1:0){}#internal"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zeedh/slowcoders/kotlin-native/_local/kobjc/libs/zee/src/nativeMain/kotlin/custom_hook.kt"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "21"
+                  endingLineNumber = "21"
+                  offsetFromSymbolStart = "32">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "0C4341D3-ADC8-456D-8C17-7020CAECB97C"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/custom_hook.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "28"
+            endingLineNumber = "28"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "8D82136B-F278-4090-A23D-8011F199454A"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/custom_hook.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "26"
+            endingLineNumber = "26"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "F579ECA7-9CB1-44AF-B8C3-9E60F52DE480"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/worker_bound_reference0.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "298"
+            endingLineNumber = "298"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "03A3311D-3DDF-45EF-94CE-408CDFCB4EDD"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/expr3.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "12"
+            endingLineNumber = "12"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "2AE754A9-2833-4E40-A333-36BB7E18626B"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/expr3.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "17"
+            endingLineNumber = "17"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "ED1D170F-EFE3-4399-99BE-919A086E7E77"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/expr3.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "22"
+            endingLineNumber = "22"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "229078F1-1895-4FF9-9CAC-BC16211C7DA4"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/hello.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "88"
+            endingLineNumber = "88"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "955B2DE5-738F-4503-9ECF-3DE5E1B8D6E5"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/hello.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "85"
+            endingLineNumber = "85"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "EE68598A-E8FA-4D63-BAEB-4B353DE95B20"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/lazy3.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "8"
+            endingLineNumber = "8"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "4D5F2A31-72EB-404E-9CAA-5581FEC726A9"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/hello.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "74"
+            endingLineNumber = "74"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "D431FA49-FFA6-4D1A-BAA1-E7D6E71D5219"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursiveTest.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "46"
+            endingLineNumber = "46"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "34F92D1F-AB29-4510-81AF-FA4913A1C3BD"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursiveTest.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "149"
+            endingLineNumber = "149"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "3BEE91FB-DA80-48E9-BCFA-EC32ABBA9768"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursiveTest.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "150"
+            endingLineNumber = "150"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "D31CFAE0-18FD-49B2-BFD7-74C5CF6A8237"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bfe1b4">
+            <Locations>
+               <Location
+                  uuid = "D31CFAE0-18FD-49B2-BFD7-74C5CF6A8237 - 1223d9c6c2c58963"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "freeItems"
+                  moduleName = "kobjc"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "6640036">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "F81574E1-85CF-4C37-A769-498D692AD2E3"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bfe1aa">
+            <Locations>
+               <Location
+                  uuid = "F81574E1-85CF-4C37-A769-498D692AD2E3 - 9f7ae92e7ff045b8"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "GCRefList::tryRemove(ContainerHeader*, bool)"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "58">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "3FF834B8-FB72-4E66-8016-667A2319F000"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bfe356">
+            <Locations>
+               <Location
+                  uuid = "3FF834B8-FB72-4E66-8016-667A2319F000 - 1223d9c6c2c58963"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "freeItems"
+                  moduleName = "kobjc"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "6640454">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "54D23B0D-9775-4AC8-9ABE-E7E000B00643"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bfe34a">
+            <Locations>
+               <Location
+                  uuid = "54D23B0D-9775-4AC8-9ABE-E7E000B00643 - 1223d9c6c2c58963"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "freeItems"
+                  moduleName = "kobjc"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "6640442">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "DCAFC37F-90F4-46D2-81CD-E66840746478"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bfe976">
+            <Locations>
+               <Location
+                  uuid = "DCAFC37F-90F4-46D2-81CD-E66840746478 - 1223d9c6c2c58963"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "freeItems"
+                  moduleName = "kobjc"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "6642022">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "831E7E68-22F0-4A53-A5C0-14031C37C514"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bfe96a">
+            <Locations>
+               <Location
+                  uuid = "831E7E68-22F0-4A53-A5C0-14031C37C514 - 9f7ae92e7ff045b8"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "GCRefList::tryRemove(ContainerHeader*, bool)"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "58">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "30106A57-99D2-4366-A06A-C4E489F5A1EF"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bfe974">
+            <Locations>
+               <Location
+                  uuid = "30106A57-99D2-4366-A06A-C4E489F5A1EF - 1223d9c6c2c58963"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "freeItems"
+                  moduleName = "kobjc"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "6642020">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "A7269377-0222-4032-A730-5C36690302EF"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bfe60b">
+            <Locations>
+               <Location
+                  uuid = "A7269377-0222-4032-A730-5C36690302EF - 1223d9c6c2c58963"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "freeItems"
+                  moduleName = "kobjc"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "6641147">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "64C9E5B5-1BC7-4E4E-9481-88F434E19650"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursive.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "165"
+            endingLineNumber = "165"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "5C79037A-2065-48DE-91EE-95E0293727CB"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursive.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "162"
+            endingLineNumber = "162"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "0AA0C454-B288-4930-A2AC-075EFECEDD7F"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursiveTest.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "33"
+            endingLineNumber = "33"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "4054A036-5F3E-453A-AE26-EB07B25E1195"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursive.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "177"
+            endingLineNumber = "177"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "F0636A91-E0E2-4B1F-9C64-08426BD96187"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursive.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "167"
+            endingLineNumber = "167"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "2EF070AD-8CB4-489D-A1E7-0BBF8FB293FF"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursive.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "170"
+            endingLineNumber = "170"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "5CBD019C-C89A-459A-B437-522C2D8E9C0F"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursive.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "173"
+            endingLineNumber = "173"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "466E2472-B1D4-4248-8E6C-180DB325A348"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursive.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "184"
+            endingLineNumber = "184"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "9520755B-E688-4238-A52D-610DDC309D4C"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursive.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "175"
+            endingLineNumber = "175"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "C786ED68-7B39-4490-993E-24130425B13E"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursive.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "187"
+            endingLineNumber = "187"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "1322555A-9777-40BC-A58D-DCE4C8B8F3CF"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursive.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "203"
+            endingLineNumber = "203"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "A055619B-3058-4FEE-A639-B636976D6ED3"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../runtime/src/main/kotlin/kotlin/coroutines/ContinuationImpl.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "74"
+            endingLineNumber = "74"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "65BA90AD-DCDB-4F3F-84AA-BBAE2553EB34"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bfdf28">
+            <Locations>
+               <Location
+                  uuid = "65BA90AD-DCDB-4F3F-84AA-BBAE2553EB34 - 54efe558483323f0"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "GCRefList::remove(ContainerHeader*)"
+                  moduleName = "Test2"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "72">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "DBA036AA-930A-478C-AFAE-6ACACE215DB8"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bfdf60">
+            <Locations>
+               <Location
+                  uuid = "DBA036AA-930A-478C-AFAE-6ACACE215DB8 - 1223d9c6c2c58963"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "freeItems"
+                  moduleName = "kobjc"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "6639440">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "8F79634C-0D1D-4B77-9295-2468CB870E7B"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bfdf25">
+            <Locations>
+               <Location
+                  uuid = "8F79634C-0D1D-4B77-9295-2468CB870E7B - 1223d9c6c2c58963"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "freeItems"
+                  moduleName = "kobjc"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "6639381">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "30DDAB79-9913-46A7-ADD9-FAA6A8BE3A6F"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "libs/zee/src/nativeMain/kotlin/DeepRecursive.kt"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "176"
+            endingLineNumber = "176"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
+</Bucket>

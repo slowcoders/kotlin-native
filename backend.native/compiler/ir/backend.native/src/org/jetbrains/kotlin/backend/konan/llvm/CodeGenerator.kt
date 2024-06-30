@@ -263,7 +263,7 @@ internal class StackLocalsManagerImpl(
     private fun clean(stackLocal: StackLocal, refsOnly: Boolean) = with(functionGenerationContext) {
         if (stackLocal.isArray) {
             if (stackLocal.irClass.symbol == context.ir.symbols.array)
-                call(context.llvm.zeroArrayRefsFunction, listOf(stackLocal.objHeaderPtr))
+                call(context.llvm.rtgc_ZeroStackLocalArrayRefsFunction/*zeroArrayRefsFunction*/, listOf(stackLocal.objHeaderPtr))
         } else {
             val type = context.llvmDeclarations.forClass(stackLocal.irClass).bodyType
             for (field in context.getLayoutBuilder(stackLocal.irClass).fields) {
@@ -272,10 +272,17 @@ internal class StackLocalsManagerImpl(
 
                 if (isObjectType(fieldType)) {
                     val fieldPtr = LLVMBuildStructGEP(builder, stackLocal.bodyPtr, fieldIndex, "")!!
-                    if (refsOnly)
-                        storeHeapRef(kNullObjHeaderPtr, fieldPtr)
-                    else
-                        call(context.llvm.zeroHeapRefFunction, listOf(fieldPtr))
+                    if (context.memoryModel == MemoryModel.RTGC) {
+                        if (refsOnly)
+                            storeStackRef(kNullObjHeaderPtr, fieldPtr)
+                        else
+                            call(context.llvm.zeroStackRefFunction, listOf(fieldPtr))
+                    } else {
+                        if (refsOnly)
+                            storeHeapRef(kNullObjHeaderPtr, fieldPtr)
+                        else
+                            call(context.llvm.zeroHeapRefFunction, listOf(fieldPtr))
+                    }
                 }
             }
 
@@ -310,6 +317,12 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
                                          internal val irFunction: IrFunction? = null): ContextUtils {
 
     override val context = codegen.context
+    val RTGC:Boolean = context.memoryModel == MemoryModel.RTGC;
+    var RTGC_ENABLE_ALTER_ARGS:Boolean = true;
+    val RTGC_ENABLE_STACK_LOCAL:Boolean = true;
+    val rtgc_permanentRefs: HashMap<LLVMValueRef, LLVMValueRef> = hashMapOf();
+    //val permanentAddrs: HashSet<LLVMValueRef> = hashSetOf();
+
     val vars = VariableManager(this)
     private val basicBlockToLastLocation = mutableMapOf<LLVMBasicBlockRef, LocationInfoRange>()
 
@@ -323,6 +336,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     val constructedClass: IrClass?
         get() = (irFunction as? IrConstructor)?.constructedClass
     private var returnSlot: LLVMValueRef? = null
+    var rtgc_anonymousRetValue: Int = -1
     private var slotsPhi: LLVMValueRef? = null
     private val frameOverlaySlotCount =
             (LLVMStoreSizeOfType(llvmTargetData, runtime.frameOverlayType) / runtime.pointerSize).toInt()
@@ -433,22 +447,61 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         return value
     }
 
+    fun rtgc_loadSlotEx(address: LLVMValueRef, isVar: Boolean, name: String = ""): LLVMValueRef {
+        val value = loadSlot(address, isVar, name)
+        if (isObjectRef(value)) {
+            if (!isVar) {
+                //rtgc_permanentRefs.put(value, value);
+            }
+        }
+        return value
+    }
+
     fun store(value: LLVMValueRef, ptr: LLVMValueRef) {
         LLVMBuildStore(builder, value, ptr)
     }
 
     fun storeHeapRef(value: LLVMValueRef, ptr: LLVMValueRef) {
+        // obsolete in RTGC
         updateRef(value, ptr, onStack = false)
     }
 
-    fun storeStackRef(value: LLVMValueRef, ptr: LLVMValueRef) {
+    fun storeStackRef(value: LLVMValueRef, ptr: LLVMValueRef) = 
+    if (!RTGC) {
         updateRef(value, ptr, onStack = true)
+    } else if (context.memoryModel == MemoryModel.STRICT || !isObjectRef(value)) {
+        LLVMBuildStore(builder, value, ptr)
+    }
+    else {
+        call(context.llvm.updateStackRefFunction, listOf(ptr, value))
+        null;
+    }
+
+    fun rtgc_storeGlobalVar(value: LLVMValueRef, ptr: LLVMValueRef) = 
+    if (!isObjectRef(value)) {
+        LLVMBuildStore(builder, value, ptr)
+    }
+    else {
+        call(context.llvm.updateStackRefFunction, listOf(ptr, value))
+        null;
+    }
+
+    fun rtgc_storeMemberVar(value: LLVMValueRef, ptr: LLVMValueRef, owner: LLVMValueRef) = 
+    if (isObjectRef(value)) {
+        call(context.llvm.updateHeapRefFunction, listOf(ptr, value, owner))
+        null
+    } else {
+        LLVMBuildStore(builder, value, ptr)
     }
 
     fun storeAny(value: LLVMValueRef, ptr: LLVMValueRef, onStack: Boolean) = if (isObjectRef(value)) {
+        // obsolete in RTGC
+        assert(!RTGC);
             if (onStack) storeStackRef(value, ptr) else storeHeapRef(value, ptr)
             null
         } else {
+        // obsolete in RTGC
+        assert(!RTGC);
             LLVMBuildStore(builder, value, ptr)
         }
 
@@ -470,6 +523,8 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     }
 
     private fun updateRef(value: LLVMValueRef, address: LLVMValueRef, onStack: Boolean) {
+        // obsolete in rtgc
+        assert(!RTGC);
         if (onStack) {
             if (context.memoryModel == MemoryModel.STRICT)
                 store(value, address)
@@ -486,6 +541,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
              resultLifetime: Lifetime = Lifetime.IRRELEVANT,
              exceptionHandler: ExceptionHandler = ExceptionHandler.None,
              verbatim: Boolean = false): LLVMValueRef {
+        var rtgc_idxResVar: Int = -1;          
         val callArgs = if (verbatim || !isObjectReturn(llvmFunction.type)) {
             args
         } else {
@@ -506,13 +562,24 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
                 SlotType.RETURN -> returnSlot!!
 
-                SlotType.ANONYMOUS -> vars.createAnonymousSlot()
+                SlotType.ANONYMOUS -> if (RTGC && rtgc_anonymousRetValue >= 0) {
+                    rtgc_idxResVar = rtgc_anonymousRetValue
+                    rtgc_anonymousRetValue = -1;
+                    vars.addressOf(rtgc_idxResVar)
+                }
+                else {
+                    vars.createAnonymousSlot()
+                }
 
                 else -> throw Error("Incorrect slot type: ${resultLifetime.slotType}")
             }
             args + resultSlot
         }
-        return callRaw(llvmFunction, callArgs, exceptionHandler)
+        val res = callRaw(llvmFunction, callArgs, exceptionHandler)
+        if (rtgc_idxResVar >= 0) {
+            vars.rtgc_attachReturnValue(res, rtgc_idxResVar)
+        }
+        return res;
     }
 
     private fun callRaw(llvmFunction: LLVMValueRef, args: List<LLVMValueRef>,
@@ -572,7 +639,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             call(context.llvm.allocInstanceFunction, listOf(typeInfo), lifetime)
 
     fun allocInstance(irClass: IrClass, lifetime: Lifetime, stackLocalsManager: StackLocalsManager) =
-            if (lifetime == Lifetime.STACK)
+            if (RTGC_ENABLE_STACK_LOCAL && lifetime == Lifetime.STACK)
                 stackLocalsManager.alloc(irClass,
                         // In case the allocation is not from the root scope, fields must be cleaned up explicitly,
                         // as the object might be being reused.
@@ -587,7 +654,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         exceptionHandler: ExceptionHandler
     ): LLVMValueRef {
         val typeInfo = codegen.typeInfoValue(irClass)
-        return if (lifetime == Lifetime.STACK) {
+        return if (RTGC_ENABLE_STACK_LOCAL && lifetime == Lifetime.STACK) {
             stackLocalsManager.allocArray(irClass, count)
         } else {
             call(context.llvm.allocArrayFunction, listOf(typeInfo, count), lifetime, exceptionHandler)
@@ -1221,13 +1288,15 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             else
                 kNullObjHeaderPtrPtr
             if (needSlots) {
-                // Zero-init slots.
+                // Zero-init slots. ZZZZZ
                 val slotsMem = bitcast(kInt8Ptr, slots)
                 call(context.llvm.memsetFunction,
                         listOf(slotsMem, Int8(0).llvm,
                                 Int32(slotCount * codegen.runtime.pointerSize).llvm,
                                 Int1(0).llvm))
-                call(context.llvm.enterFrameFunction, listOf(slots, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm))
+                if (!RTGC) {                
+                    call(context.llvm.enterFrameFunction, listOf(slots, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm))
+                }
             }
             addPhiIncoming(slotsPhi!!, prologueBb to slots)
             memScoped {
@@ -1267,10 +1336,20 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
                 returns.isNotEmpty() -> {
                     val returnPhi = phi(returnType!!)
                     addPhiIncoming(returnPhi, *returns.toList().toTypedArray())
-                    if (returnSlot != null) {
-                        updateReturnRef(returnPhi, returnSlot!!)
+                    if (RTGC) {
+                        if (returnSlot != null) {
+                            rtgc_releaseVars2(returnPhi, returnSlot!!)
+                        }
+                        else {
+                            releaseVars()
+                        }
                     }
-                    releaseVars()
+                    else {
+                        if (returnSlot != null) {
+                            updateReturnRef(returnPhi, returnSlot!!)
+                        }
+                        releaseVars()
+                    }
                     if (context.memoryModel == MemoryModel.EXPERIMENTAL)
                         call(context.llvm.Kotlin_mm_safePointFunctionEpilogue, emptyList())
                     LLVMBuildRet(builder, returnPhi)
@@ -1448,8 +1527,25 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             call(context.llvm.leaveFrameFunction,
                     listOf(slotsPhi!!, Int32(vars.skipSlots).llvm, Int32(slotCount).llvm))
         }
+        if (RTGC_ENABLE_STACK_LOCAL) {
+            stackLocalsManager.clean(refsOnly = true) // Only bother about not leaving any dangling references.
+        }
+    }
+
+    private fun rtgc_releaseVars2(phi: LLVMValueRef, returnSlot: LLVMValueRef) {
+        if (RTGC_ENABLE_STACK_LOCAL) {
         stackLocalsManager.clean(refsOnly = true) // Only bother about not leaving any dangling references.
     }
+        if (needSlots) {
+            val param_count = (vars.skipSlots * 256 * 256) + slotCount;
+            callRaw(context.llvm.rtgc_leaveFrameAndReturnRefFunction,
+                listOf(slotsPhi!!, Int32(param_count).llvm, returnSlot, phi), ExceptionHandler.None)
+        }
+        else {
+            updateReturnRef(phi, returnSlot)
+        }
+    }
+
 }
 
 
