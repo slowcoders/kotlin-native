@@ -1,3 +1,4 @@
+#if 0
 #include <string.h>
 #include <stdio.h>
 
@@ -587,3 +588,4 @@ void CyclicNodeDetector::detectCyclicNodes(GCObject* tracingObj) {
         }
     }
 }
+#endif

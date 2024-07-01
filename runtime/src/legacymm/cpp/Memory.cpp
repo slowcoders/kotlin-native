@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#if 0
 #include <string.h>
 #include <stdio.h>
 
@@ -573,11 +573,11 @@ private:
         if (atomicGet(&aliveMemoryStatesCount) == 0)
           return;
 
-        memoryState = InitMemory(false); // Required by ReleaseHeapRef.
+        memoryState = InitMemory(false); // Required by RTGC_ReleaseRef/*ReleaseHeapRef*/.
       }
 
       processEnqueuedReleaseRefsWith([](ObjHeader* obj) {
-        ReleaseHeapRef(obj);
+        RTGC_ReleaseRef/*ReleaseHeapRef*/(obj);
       });
 
       if (hadNoStateInitialized) {
@@ -1754,7 +1754,7 @@ inline bool tryAddHeapRef(const ObjHeader* header) {
 
 template <bool Strict, bool CanCollect>
 inline void releaseHeapRef(ContainerHeader* container) {
-  MEMORY_LOG("ReleaseHeapRef %p: rc=%d\n", container, container->refCount())
+  MEMORY_LOG("RTGC_ReleaseRef/*ReleaseHeapRef*/ %p: rc=%d\n", container, container->refCount())
   UPDATE_RELEASEREF_STAT(memoryState, container, needAtomicAccess(container), canBeCyclic(container), 0)
   if (container->tag() != CONTAINER_TAG_STACK) {
     if (Strict)
@@ -2187,7 +2187,7 @@ void zeroHeapRef(ObjHeader** location) {
   if (reinterpret_cast<uintptr_t>(value) > 1) {
     UPDATE_REF_EVENT(memoryState, value, nullptr, location, 0);
     *location = nullptr;
-    ReleaseHeapRef(value);
+    RTGC_ReleaseRef/*ReleaseHeapRef*/(value);
   }
 }
 
@@ -2256,7 +2256,7 @@ void updateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) {
     auto old = __sync_val_compare_and_swap(location, nullptr, const_cast<ObjHeader*>(object));
     if (old != nullptr) {
       // Failed to store, was not null.
-     ReleaseHeapRef(const_cast<ObjHeader*>(object));
+     RTGC_ReleaseRef/*ReleaseHeapRef*/(const_cast<ObjHeader*>(object));
     }
 #endif
     UPDATE_REF_EVENT(memoryState, old, object, location, 0);
@@ -2470,7 +2470,7 @@ OBJ_GETTER(swapHeapRefLocked,
   unlock(spinlock);
 
   if (oldValue != nullptr && oldValue == expectedValue) {
-    ReleaseHeapRef(oldValue);
+    RTGC_ReleaseRef/*ReleaseHeapRef*/(oldValue);
   }
   return oldValue;
 }
@@ -2487,7 +2487,7 @@ void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlo
   *cookie = computeCookie();
   unlock(spinlock);
   if (oldValue != nullptr)
-    ReleaseHeapRef(oldValue);
+    RTGC_ReleaseRef/*ReleaseHeapRef*/(oldValue);
 }
 
 OBJ_GETTER(readHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* cookie) {
@@ -2657,7 +2657,7 @@ KNativePtr createStablePointer(KRef any) {
 void disposeStablePointer(KNativePtr pointer) {
   if (pointer == nullptr) return;
   KRef ref = reinterpret_cast<KRef>(pointer);
-  ReleaseHeapRef(ref);
+  RTGC_ReleaseRef/*ReleaseHeapRef*/(ref);
 }
 
 OBJ_GETTER(derefStablePointer, KNativePtr pointer) {
@@ -2989,7 +2989,7 @@ ScopedRefHolder::ScopedRefHolder(KRef obj): obj_(obj) {
 
 ScopedRefHolder::~ScopedRefHolder() {
   if (obj_) {
-    ReleaseHeapRef(obj_);
+    RTGC_ReleaseRef/*ReleaseHeapRef*/(obj_);
   }
 }
 
@@ -3419,15 +3419,15 @@ RUNTIME_NOTHROW void UpdateHeapRefIfNull(ObjHeader** location, const ObjHeader* 
 }
 
 OBJ_GETTER(SwapHeapRefLocked,
-    ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock, int32_t* cookie) {
+    ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner_rtgc, int32_t* cookie) {
   RETURN_RESULT_OF(swapHeapRefLocked, location, expectedValue, newValue, spinlock, cookie);
 }
 
-RUNTIME_NOTHROW void SetHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock, int32_t* cookie) {
+RUNTIME_NOTHROW void SetHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner_rtgc, int32_t* cookie) {
   setHeapRefLocked(location, newValue, spinlock, cookie);
 }
 
-OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* cookie) {
+OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock, ObjHeader* owner_rtgc, int32_t* cookie) {
   RETURN_RESULT_OF(readHeapRefLocked, location, spinlock, cookie);
 }
 
@@ -3697,3 +3697,4 @@ ALWAYS_INLINE RUNTIME_NOTHROW void Kotlin_mm_safePointExceptionUnwind() {
 }
 
 } // extern "C"
+#endif

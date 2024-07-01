@@ -32,7 +32,9 @@ void EnsureDeclarationsEmitted() {
     ensureUsed(UpdateStackRef);
     ensureUsed(UpdateReturnRef);
     ensureUsed(ZeroHeapRef);
-    ensureUsed(ZeroArrayRefs);
+    ensureUsed(RTGC_ReleaseRef);
+    ensureUsed(RTGC_ZeroStackLocalArrayRefs);
+    ensureUsed(RTGC_LeaveFrameAndReturnRef);
     ensureUsed(EnterFrame);
     ensureUsed(LeaveFrame);
     ensureUsed(AddTLSRecord);

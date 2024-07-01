@@ -44,8 +44,7 @@ class KonanConfig(val project: Project, val configuration: CompilerConfiguration
     val lightDebug: Boolean = configuration.get(KonanConfigKeys.LIGHT_DEBUG)
             ?: target.family.isAppleFamily // Default is true for Apple targets.
 
-    val memoryModel: MemoryModel get() = MemoryModel.RTGC
-    // configuration.get(KonanConfigKeys.MEMORY_MODEL)!!
+    val memoryModel: MemoryModel get() = /*false ? MemoryModel.RTGC :*/configuration.get(KonanConfigKeys.MEMORY_MODEL)!!
     
     val destroyRuntimeMode: DestroyRuntimeMode get() = configuration.get(KonanConfigKeys.DESTROY_RUNTIME_MODE)!!
 

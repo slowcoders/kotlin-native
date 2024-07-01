@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#if 0
 #include <string.h>
 #include <stdio.h>
 
@@ -4474,3 +4474,4 @@ void Kotlin_native_internal_GC_setCyclicCollector(KRef gc, KBoolean value) {
 }
 
 } // extern "C"
+#endif

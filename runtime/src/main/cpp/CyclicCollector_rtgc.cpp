@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#if 0
 #ifndef KONAN_NO_THREADS
 #define WITH_WORKERS 1
 #endif
@@ -526,3 +527,4 @@ void cyclicLocalGC() {
     local->localGC();
 #endif  // WITH_WORKERS
 }
+#endif

@@ -405,7 +405,7 @@ class CyclicCollector {
       }
 
       for (auto* it: heapRefsToRelease) {
-        ReleaseHeapRef(it);
+        RTGC_ReleaseRef/*ReleaseHeapRef*/(it);
       }
     }
   }

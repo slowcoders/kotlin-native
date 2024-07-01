@@ -318,8 +318,9 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
     override val context = codegen.context
     val RTGC:Boolean = context.memoryModel == MemoryModel.RTGC;
-    var RTGC_ENABLE_ALTER_ARGS:Boolean = true;
-    val RTGC_ENABLE_STACK_LOCAL:Boolean = true;
+    var RTGC_ENABLE_ALTER_ARGS:Boolean = RTGC;
+    val RTGC_ENABLE_STACK_LOCAL:Boolean = RTGC;
+    val RTGC_ENABLE_PERMANENT_REF:Boolean = RTGC;
     val rtgc_permanentRefs: HashMap<LLVMValueRef, LLVMValueRef> = hashMapOf();
     //val permanentAddrs: HashSet<LLVMValueRef> = hashSetOf();
 
@@ -497,11 +498,11 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     fun storeAny(value: LLVMValueRef, ptr: LLVMValueRef, onStack: Boolean) = if (isObjectRef(value)) {
         // obsolete in RTGC
         assert(!RTGC);
-            if (onStack) storeStackRef(value, ptr) else storeHeapRef(value, ptr)
+        if (onStack) storeStackRef(value, ptr) else storeHeapRef(value, ptr)
             null
         } else {
-        // obsolete in RTGC
-        assert(!RTGC);
+            // obsolete in RTGC
+            assert(!RTGC);
             LLVMBuildStore(builder, value, ptr)
         }
 
@@ -531,7 +532,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             else
                 call(context.llvm.updateStackRefFunction, listOf(address, value))
         } else {
-            call(context.llvm.updateHeapRefFunction, listOf(address, value))
+            call(context.llvm.updateStackRefFunction/*updateHeapRefFunction*/, listOf(address, value))
         }
     }
 

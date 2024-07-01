@@ -319,13 +319,15 @@ MODEL_VARIANTS(void, SetStackRef, ObjHeader** location, const ObjHeader* object)
 MODEL_VARIANTS(void, SetHeapRef, ObjHeader** location, const ObjHeader* object);
 MODEL_VARIANTS(void, ZeroStackRef, ObjHeader** location);
 MODEL_VARIANTS(void, UpdateStackRef, ObjHeader** location, const ObjHeader* object);
-MODEL_VARIANTS(void, UpdateHeapRef, ObjHeader** location, const ObjHeader* object);
+MODEL_VARIANTS(void, UpdateHeapRef, ObjHeader** location, const ObjHeader* object, const ObjHeader* owner_rtgc);
 MODEL_VARIANTS(void, UpdateHeapRefIfNull, ObjHeader** location, const ObjHeader* object);
 MODEL_VARIANTS(void, UpdateReturnRef, ObjHeader** returnSlot, const ObjHeader* object);
 MODEL_VARIANTS(void, EnterFrame, ObjHeader** start, int parameters, int count);
 MODEL_VARIANTS(void, LeaveFrame, ObjHeader** start, int parameters, int count);
+MODEL_VARIANTS(void, LeaveFrame, ObjHeader** start, int parameters, int count);
+MODEL_VARIANTS(const ObjHeader*, RTGC_LeaveFrameAndReturnRef, ObjHeader** start, int param_count, ObjHeader** resultSlot, const ObjHeader* returnRef);
 
-MODEL_VARIANTS(void, ReleaseHeapRef, const ObjHeader* object);
+MODEL_VARIANTS(void, RTGC_ReleaseRef, const ObjHeader* object);
 MODEL_VARIANTS(void, ReleaseHeapRefNoCollect, const ObjHeader* object);
 
 }  // extern "C"

@@ -45,7 +45,7 @@ RUNTIME_NOTHROW void UpdateStackRef(ObjHeader** location, const ObjHeader* objec
     TODO();
 }
 
-RUNTIME_NOTHROW void UpdateHeapRef(ObjHeader** location, const ObjHeader* object) {
+RUNTIME_NOTHROW void UpdateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner_rtgc) {
     TODO();
 }
 
@@ -58,15 +58,15 @@ RUNTIME_NOTHROW void UpdateReturnRef(ObjHeader** returnSlot, const ObjHeader* ob
 }
 
 RUNTIME_NOTHROW OBJ_GETTER(
-        SwapHeapRefLocked, ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock, int32_t* cookie) {
+        SwapHeapRefLocked, ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner_rtgc, int32_t* cookie) {
     TODO();
 }
 
-RUNTIME_NOTHROW void SetHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock, int32_t* cookie) {
+RUNTIME_NOTHROW void SetHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock, ObjHeader* owner_rtgc, int32_t* cookie) {
     TODO();
 }
 
-RUNTIME_NOTHROW OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* cookie) {
+RUNTIME_NOTHROW OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock, ObjHeader* owner_rtgc, int32_t* cookie) {
     TODO();
 }
 
@@ -90,7 +90,7 @@ bool TryAddHeapRef(const ObjHeader* object) {
     TODO();
 }
 
-RUNTIME_NOTHROW void ReleaseHeapRef(const ObjHeader* object) {
+RUNTIME_NOTHROW void RTGC_ReleaseRef/*ReleaseHeapRef*/(const ObjHeader* object) {
     TODO();
 }
 

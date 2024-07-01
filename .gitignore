@@ -82,3 +82,5 @@ tools/toolchain_builder/artifacts
 
 # ignore the project model created by CLion (for now).
 runtime/.idea
+temp_before_delete
+_local/kobjc

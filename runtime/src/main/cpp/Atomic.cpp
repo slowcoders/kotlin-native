@@ -181,11 +181,12 @@ void Kotlin_AtomicReference_checkIfFrozen(KRef value) {
     }
 }
 
+const bool RTGC_OPT_ATOMIC = false;
 OBJ_GETTER(Kotlin_AtomicReference_compareAndSwap, KRef thiz, KRef expectedValue, KRef newValue) {
     Kotlin_AtomicReference_checkIfFrozen(newValue);
     // See Kotlin_AtomicReference_get() for explanations, why locking is needed.
     AtomicReferenceLayout* ref = asAtomicReference(thiz);
-    if (RTGC && !ref->header.container()->shared()) {
+    if (RTGC_OPT_ATOMIC && !isShareable(&ref->header)) {
         ObjHeader* old = ref->value_;
         UpdateReturnRef(OBJ_RESULT, old);
         if (old == expectedValue) {
@@ -204,7 +205,7 @@ KBoolean Kotlin_AtomicReference_compareAndSet(KRef thiz, KRef expectedValue, KRe
     // See Kotlin_AtomicReference_get() for explanations, why locking is needed.
     AtomicReferenceLayout* ref = asAtomicReference(thiz);
         ObjHeader* old;
-    if (RTGC && !ref->header.container()->shared()) {
+    if (RTGC_OPT_ATOMIC && !isShareable(&ref->header)) {
         old = ref->value_;
         if (old == expectedValue) {
             UpdateHeapRef(&ref->value_, newValue, thiz);
@@ -221,7 +222,7 @@ KBoolean Kotlin_AtomicReference_compareAndSet(KRef thiz, KRef expectedValue, KRe
 void Kotlin_AtomicReference_set(KRef thiz, KRef newValue) {
     Kotlin_AtomicReference_checkIfFrozen(newValue);
     AtomicReferenceLayout* ref = asAtomicReference(thiz);
-    if (RTGC && !ref->header.container()->shared()) {
+    if (RTGC_OPT_ATOMIC && !isShareable(&ref->header)) {
         UpdateHeapRef(&ref->value_, newValue, thiz);
     }
     else {
@@ -235,7 +236,7 @@ OBJ_GETTER(Kotlin_AtomicReference_get, KRef thiz) {
     // rescheduled unluckily, between the moment value is read from the field and RC is incremented,
     // object may go away.
     AtomicReferenceLayout* ref = asAtomicReference(thiz);
-    if (RTGC && !ref->header.container()->shared()) {
+    if (RTGC_OPT_ATOMIC && !isShareable(&ref->header)) {
         ObjHeader* value = ref->value_;
         UpdateReturnRef(OBJ_RESULT, value);
         return value;

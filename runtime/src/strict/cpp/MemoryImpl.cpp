@@ -28,7 +28,7 @@ OBJ_GETTER(InitSingleton, ObjHeader** location, const TypeInfo* typeInfo, void (
 }
 
 RUNTIME_NOTHROW void RTGC_ReleaseRef/*ReleaseHeapRef*/(const ObjHeader* object) {
-  ReleaseHeapRefStrict(object);
+  RTGC_ReleaseRefStrict(object);
 }
 
 RUNTIME_NOTHROW void ReleaseHeapRefNoCollect(const ObjHeader* object) {
@@ -68,12 +68,8 @@ RUNTIME_NOTHROW void LeaveFrame(ObjHeader** start, int parameters, int count) {
   LeaveFrameStrict(start, parameters, count);
 }
 
-RUNTIME_NOTHROW void UpdateStackRef(ObjHeader** location, const ObjHeader* object) {
-    UpdateStackRefStrict(location, object);
-}
-
 const ObjHeader* RTGC_LeaveFrameAndReturnRef(ObjHeader** start, int param_count, ObjHeader** resultSlot, const ObjHeader* returnRef) {
-  return LeaveFrameAndReturnRefStrict(start, param_count, resultSlot, returnRef);
+  return RTGC_LeaveFrameAndReturnRefStrict(start, param_count, resultSlot, returnRef);
 }
 
 }  // extern "C"

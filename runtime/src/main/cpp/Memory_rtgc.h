@@ -23,6 +23,8 @@
 #include "TypeInfo.h"
 #include "Atomic.h"
 
+struct ArrayHeader;
+struct MetaObjHeader;
 
 typedef enum {
   CONTAINER_TAG_GC_BUFFERED = 0x01, // Reserved for TRACE_STATE
@@ -567,8 +569,6 @@ public:
   }
 };
 
-struct ArrayHeader;
-struct MetaObjHeader;
 
 template <typename T>
 ALWAYS_INLINE T* setPointerBits(T* ptr, unsigned bits) {

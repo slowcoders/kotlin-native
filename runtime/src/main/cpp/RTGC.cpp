@@ -1,3 +1,4 @@
+#if 0
 #include <string.h>
 #include <stdio.h>
 
@@ -445,3 +446,4 @@ void RTGC_dumpTypeInfo(const char* msg, const TypeInfo* typeInfo, GCObject* obj)
     if (classname[0] != '?') konan::free((void*)classname);
     rtgc_trap(NULL);
 }
+#endif

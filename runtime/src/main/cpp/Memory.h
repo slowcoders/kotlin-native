@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-#if 1
-#include "Memory_rtgc.h"
-#else
 #ifndef RUNTIME_MEMORY_H
 #define RUNTIME_MEMORY_H
 
@@ -25,6 +22,7 @@
 #include "TypeInfo.h"
 #include "Atomic.h"
 #include "PointerBits.h"
+#include "RTGC_def.h"
 
 typedef enum {
   // Must match to permTag() in Kotlin.
@@ -190,7 +188,8 @@ void InitAndRegisterGlobal(ObjHeader** location, const ObjHeader* initialValue) 
 enum class MemoryModel {
     kStrict = 0,
     kRelaxed = 1,
-    kExperimental = 2,
+    kRtgc = 2,
+    kExperimental = 3,
 };
 
 // Controls the current memory model, is compile-time constant.
@@ -203,13 +202,13 @@ void SetHeapRef(ObjHeader** location, const ObjHeader* object) RUNTIME_NOTHROW;
 // Zeroes heap location.
 void ZeroHeapRef(ObjHeader** location) RUNTIME_NOTHROW;
 // Zeroes an array.
-void ZeroArrayRefs(ArrayHeader* array) RUNTIME_NOTHROW;
+void RTGC_ZeroStackLocalArrayRefs/*ZeroArrayRefs*/(ArrayHeader* array) RUNTIME_NOTHROW;
 // Zeroes stack location.
 void ZeroStackRef(ObjHeader** location) RUNTIME_NOTHROW;
 // Updates stack location.
 void UpdateStackRef(ObjHeader** location, const ObjHeader* object) RUNTIME_NOTHROW;
 // Updates heap/static data location.
-void UpdateHeapRef(ObjHeader** location, const ObjHeader* object) RUNTIME_NOTHROW;
+void UpdateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner_rtgc) RUNTIME_NOTHROW;
 // Updates location if it is null, atomically.
 void UpdateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) RUNTIME_NOTHROW;
 // Updates reference in return slot.
@@ -217,16 +216,18 @@ void UpdateReturnRef(ObjHeader** returnSlot, const ObjHeader* object) RUNTIME_NO
 // Compares and swaps reference with taken lock.
 OBJ_GETTER(SwapHeapRefLocked,
     ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock,
-    int32_t* cookie) RUNTIME_NOTHROW;
+    ObjHeader* owner_rtgc, int32_t* cookie) RUNTIME_NOTHROW;
 // Sets reference with taken lock.
 void SetHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock,
-    int32_t* cookie) RUNTIME_NOTHROW;
+    ObjHeader* owner_rtgc, int32_t* cookie) RUNTIME_NOTHROW;
 // Reads reference with taken lock.
-OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* cookie) RUNTIME_NOTHROW;
+OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock, 
+    ObjHeader* owner_rtgc, int32_t* cookie) RUNTIME_NOTHROW;
 // Called on frame enter, if it has object slots.
 void EnterFrame(ObjHeader** start, int parameters, int count) RUNTIME_NOTHROW;
 // Called on frame leave, if it has object slots.
 void LeaveFrame(ObjHeader** start, int parameters, int count) RUNTIME_NOTHROW;
+const ObjHeader* RTGC_LeaveFrameAndReturnRef(ObjHeader** start, int param_count, ObjHeader** resultSlot, const ObjHeader* returnRef) RUNTIME_NOTHROW;
 // Clears object subgraph references from memory subsystem, and optionally
 // checks if subgraph referenced by given root is disjoint from the rest of
 // object graph, i.e. no external references exists.
@@ -265,7 +266,7 @@ void PerformFullGC(MemoryState* memory) RUNTIME_NOTHROW;
 
 bool TryAddHeapRef(const ObjHeader* object);
 
-void ReleaseHeapRef(const ObjHeader* object) RUNTIME_NOTHROW;
+void RTGC_ReleaseRef/*ReleaseHeapRef*/(const ObjHeader* object) RUNTIME_NOTHROW;
 void ReleaseHeapRefNoCollect(const ObjHeader* object) RUNTIME_NOTHROW;
 
 ForeignRefContext InitLocalForeignRef(ObjHeader* object);
@@ -356,4 +357,3 @@ class ExceptionObjHolder {
 };
 
 #endif // RUNTIME_MEMORY_H
-#endif

@@ -971,10 +971,10 @@ internal class CAdapterGenerator(val context: Context) : DeclarationDescriptorVi
         |class ExceptionObjHolder {
         | public:
         |  explicit ExceptionObjHolder(const KObjHeader* obj): obj_(nullptr) {
-        |    ::UpdateHeapRef(&obj_, obj);
+        |    ::UpdateStackRef(&obj_, obj);
         |  }
         |  ~ExceptionObjHolder() {
-        |    UpdateHeapRef(&obj_, nullptr);
+        |    UpdateStackRef(&obj_, nullptr);
         |  }
         |  KObjHeader* obj() { return obj_; }
         | private:
