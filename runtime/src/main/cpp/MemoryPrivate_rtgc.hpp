@@ -23,7 +23,7 @@ extern "C" {
 
 bool TryRetainRef(const ObjHeader* object);
 
-MODEL_VARIANTS(void, RTGC_ReleaseRef, const ObjHeader* object);
+MODEL_VARIANTS(void, ReleaseHeapRef, const ObjHeader* object);
 
 void Kotlin_ObjCExport_releaseAssociatedObject(void* associatedObject);
 

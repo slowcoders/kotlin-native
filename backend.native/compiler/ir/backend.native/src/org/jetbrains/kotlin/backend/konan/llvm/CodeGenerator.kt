@@ -263,7 +263,7 @@ internal class StackLocalsManagerImpl(
     private fun clean(stackLocal: StackLocal, refsOnly: Boolean) = with(functionGenerationContext) {
         if (stackLocal.isArray) {
             if (stackLocal.irClass.symbol == context.ir.symbols.array)
-                call(context.llvm.rtgc_ZeroStackLocalArrayRefsFunction/*zeroArrayRefsFunction*/, listOf(stackLocal.objHeaderPtr))
+                call(context.llvm.zeroArrayRefsFunction, listOf(stackLocal.objHeaderPtr))
         } else {
             val type = context.llvmDeclarations.forClass(stackLocal.irClass).bodyType
             for (field in context.getLayoutBuilder(stackLocal.irClass).fields) {
@@ -463,12 +463,12 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     }
 
     fun storeHeapRef(value: LLVMValueRef, ptr: LLVMValueRef) {
-        // obsolete in RTGC
+        // obsolete in RTGC ???
         updateRef(value, ptr, onStack = false)
     }
 
     fun storeStackRef(value: LLVMValueRef, ptr: LLVMValueRef) = 
-    if (!RTGC) {
+    if (!RTGC/*???*/) {
         updateRef(value, ptr, onStack = true)
     } else if (context.memoryModel == MemoryModel.STRICT || !isObjectRef(value)) {
         LLVMBuildStore(builder, value, ptr)
@@ -489,7 +489,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
     fun rtgc_storeMemberVar(value: LLVMValueRef, ptr: LLVMValueRef, owner: LLVMValueRef) = 
     if (isObjectRef(value)) {
-        call(context.llvm.updateHeapRefFunction, listOf(ptr, value, owner))
+        call(context.llvm.rtgcUpdateObjectRefFunction, listOf(ptr, value, owner))
         null
     } else {
         LLVMBuildStore(builder, value, ptr)
@@ -532,7 +532,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             else
                 call(context.llvm.updateStackRefFunction, listOf(address, value))
         } else {
-            call(context.llvm.updateStackRefFunction/*updateHeapRefFunction*/, listOf(address, value))
+            call(context.llvm.updateHeapRefFunction, listOf(address, value))
         }
     }
 

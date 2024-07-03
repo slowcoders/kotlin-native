@@ -45,7 +45,11 @@ RUNTIME_NOTHROW void UpdateStackRef(ObjHeader** location, const ObjHeader* objec
     TODO();
 }
 
-RUNTIME_NOTHROW void UpdateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner_rtgc) {
+RUNTIME_NOTHROW void UpdateHeapRef(ObjHeader** location, const ObjHeader* object) {
+    TODO();
+}
+
+RUNTIME_NOTHROW void rtgc_UpdateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner_rtgc) {
     TODO();
 }
 
@@ -90,7 +94,7 @@ bool TryAddHeapRef(const ObjHeader* object) {
     TODO();
 }
 
-RUNTIME_NOTHROW void RTGC_ReleaseRef/*ReleaseHeapRef*/(const ObjHeader* object) {
+RUNTIME_NOTHROW void ReleaseHeapRef(const ObjHeader* object) {
     TODO();
 }
 

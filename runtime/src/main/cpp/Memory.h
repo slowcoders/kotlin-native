@@ -188,8 +188,8 @@ void InitAndRegisterGlobal(ObjHeader** location, const ObjHeader* initialValue) 
 enum class MemoryModel {
     kStrict = 0,
     kRelaxed = 1,
-    kRtgc = 2,
-    kExperimental = 3,
+    kExperimental = 2,
+    kRtgc = 3,
 };
 
 // Controls the current memory model, is compile-time constant.
@@ -202,13 +202,15 @@ void SetHeapRef(ObjHeader** location, const ObjHeader* object) RUNTIME_NOTHROW;
 // Zeroes heap location.
 void ZeroHeapRef(ObjHeader** location) RUNTIME_NOTHROW;
 // Zeroes an array.
-void RTGC_ZeroStackLocalArrayRefs/*ZeroArrayRefs*/(ArrayHeader* array) RUNTIME_NOTHROW;
+void ZeroArrayRefs(ArrayHeader* array) RUNTIME_NOTHROW;
 // Zeroes stack location.
 void ZeroStackRef(ObjHeader** location) RUNTIME_NOTHROW;
 // Updates stack location.
 void UpdateStackRef(ObjHeader** location, const ObjHeader* object) RUNTIME_NOTHROW;
 // Updates heap/static data location.
-void UpdateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner_rtgc) RUNTIME_NOTHROW;
+void UpdateHeapRef(ObjHeader** location, const ObjHeader* object) RUNTIME_NOTHROW;
+// Updates object member variable
+void rtgc_UpdateObjectRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner_rtgc) RUNTIME_NOTHROW;
 // Updates location if it is null, atomically.
 void UpdateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) RUNTIME_NOTHROW;
 // Updates reference in return slot.
@@ -266,7 +268,7 @@ void PerformFullGC(MemoryState* memory) RUNTIME_NOTHROW;
 
 bool TryAddHeapRef(const ObjHeader* object);
 
-void RTGC_ReleaseRef/*ReleaseHeapRef*/(const ObjHeader* object) RUNTIME_NOTHROW;
+void ReleaseHeapRef(const ObjHeader* object) RUNTIME_NOTHROW;
 void ReleaseHeapRefNoCollect(const ObjHeader* object) RUNTIME_NOTHROW;
 
 ForeignRefContext InitLocalForeignRef(ObjHeader* object);

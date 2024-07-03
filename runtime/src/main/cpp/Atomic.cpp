@@ -190,7 +190,7 @@ OBJ_GETTER(Kotlin_AtomicReference_compareAndSwap, KRef thiz, KRef expectedValue,
         ObjHeader* old = ref->value_;
         UpdateReturnRef(OBJ_RESULT, old);
         if (old == expectedValue) {
-            UpdateHeapRef(&ref->value_, newValue, thiz);
+            rtgc_UpdateObjectRef(&ref->value_, newValue, thiz);
         }
         return old;
     }
@@ -208,7 +208,7 @@ KBoolean Kotlin_AtomicReference_compareAndSet(KRef thiz, KRef expectedValue, KRe
     if (RTGC_OPT_ATOMIC && !isShareable(&ref->header)) {
         old = ref->value_;
         if (old == expectedValue) {
-            UpdateHeapRef(&ref->value_, newValue, thiz);
+            rtgc_UpdateObjectRef(&ref->value_, newValue, thiz);
         }
     }
     else {
@@ -223,7 +223,7 @@ void Kotlin_AtomicReference_set(KRef thiz, KRef newValue) {
     Kotlin_AtomicReference_checkIfFrozen(newValue);
     AtomicReferenceLayout* ref = asAtomicReference(thiz);
     if (RTGC_OPT_ATOMIC && !isShareable(&ref->header)) {
-        UpdateHeapRef(&ref->value_, newValue, thiz);
+        rtgc_UpdateObjectRef(&ref->value_, newValue, thiz);
     }
     else {
         SetHeapRefLocked(&ref->value_, newValue, &ref->lock_, thiz, &ref->cookie_);

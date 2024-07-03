@@ -18,6 +18,8 @@
         "string_view": "cpp",
         "unordered_map": "cpp",
         "unordered_set": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "chrono": "cpp",
+        "variant": "cpp"
     }
 }

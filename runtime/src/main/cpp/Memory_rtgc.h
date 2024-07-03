@@ -791,13 +791,14 @@ MODEL_VARIANTS(void, SetHeapRef, ObjHeader** location, const ObjHeader* object);
 // Zeroes heap location.
 void ZeroHeapRef(ObjHeader** location) RUNTIME_NOTHROW;
 // Zeroes an array.
-void RTGC_ZeroStackLocalArrayRefs/*ZeroArrayRefs*/(ArrayHeader* array) RUNTIME_NOTHROW;
+void ZeroArrayRefs(ArrayHeader* array) RUNTIME_NOTHROW;
 // Zeroes stack location.
 MODEL_VARIANTS(void, ZeroStackRef, ObjHeader** location);
 // Updates stack location.
 MODEL_VARIANTS(void, UpdateStackRef, ObjHeader** location, const ObjHeader* object);
 // Updates heap/static data location.
-MODEL_VARIANTS(void, UpdateHeapRef, ObjHeader** location, const ObjHeader* object, const ObjHeader* owner);
+MODEL_VARIANTS(void, UpdateHeapRef, ObjHeader** location, const ObjHeader* object);
+MODEL_VARIANTS(void, rtgc_UpdateObjectRef, ObjHeader** location, const ObjHeader* object, const ObjHeader* owner);
 // Updates location if it is null, atomically.
 MODEL_VARIANTS(void, UpdateHeapRefIfNull, ObjHeader** location, const ObjHeader* object);
 // Updates reference in return slot.

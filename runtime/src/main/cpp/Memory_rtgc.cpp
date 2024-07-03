@@ -382,7 +382,7 @@ public:
     for (int i = 0; i < 6; i++) {
       for (int j = 0; j < 6; j++) {
         if (updateCounters[i][j] != 0)
-            konan::consolePrintf("UpdateHeapRef[%s -> %s]: %lld (%.2lf%% of all, %.2lf%% of heap)\n",
+            konan::consolePrintf("rtgc_UpdateObjectRef[%s -> %s]: %lld (%.2lf%% of all, %.2lf%% of heap)\n",
                              indexToName[i], indexToName[j], updateCounters[i][j],
                              percents(updateCounters[i][j], allUpdateRefs),
                              percents(updateCounters[i][j], heapUpdateRefs));
@@ -520,7 +520,7 @@ class ForeignRefManager {
 
     while (toProcess != nullptr) {
       if (RTGC) {
-        RTGC_ReleaseRef/*ReleaseHeapRef*/(toProcess->obj);
+        ReleaseHeapRef(toProcess->obj);
       }
       else {
         process(toProcess->obj);
@@ -550,11 +550,11 @@ private:
         if (atomicGet(&aliveMemoryStatesCount) == 0)
           return;
 
-        memoryState = InitMemory(); // Required by RTGC_ReleaseRef/*ReleaseHeapRef*/.
+        memoryState = InitMemory(); // Required by ReleaseHeapRef.
       }
 
       processEnqueuedReleaseRefsWith([](ObjHeader* obj) {
-        RTGC_ReleaseRef/*ReleaseHeapRef*/(obj);
+        ReleaseHeapRef(obj);
       });
 
       if (hadNoStateInitialized) {
@@ -2182,7 +2182,7 @@ inline void releaseRef(const ObjHeader* object) {
     return;
   }
 
-  MEMORY_LOG("RTGC_ReleaseRef/*ReleaseHeapRef*/ %p: rc=%d\n", container, container->refCount())
+  MEMORY_LOG("ReleaseHeapRef %p: rc=%d\n", container, container->refCount())
   UPDATE_RELEASEREF_STAT(memoryState, container, needAtomicAccess(container), canBeCyclic(container), 0)
   if (Strict) {
     enqueueDecrementRC</* CanCollect = */ true>(container);
@@ -2310,7 +2310,7 @@ void garbageCollect(MemoryState* state, bool force) {
   if (RTGC || !IsStrictMemoryModel) {
     RTGC_LOG("garbageCollect %p::%p\n", state, memoryState);
     state->foreignRefManager->processEnqueuedReleaseRefsWith([](ObjHeader* obj) {
-        RTGC_ReleaseRef/*ReleaseHeapRef*/(obj);
+        ReleaseHeapRef(obj);
       });
     CyclicNode::garbageCollectCycles(nullptr);
     // GCNode::dumpGCLog();    
@@ -2648,7 +2648,7 @@ void zeroHeapRef(ObjHeader** location) {
   if (reinterpret_cast<uintptr_t>(value) > 1) {
     UPDATE_REF_EVENT(memoryState, value, nullptr, location, 0);
     *location = nullptr;
-    RTGC_ReleaseRef/*ReleaseHeapRef*/(value);
+    ReleaseHeapRef(value);
   }
 }
 
@@ -2736,11 +2736,11 @@ void updateHeapRef_internal(const ObjHeader* object, const ObjHeader* old, const
 namespace {
 
 template <bool Strict>
-void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
+void updateObjectRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
   UPDATE_REF_EVENT(memoryState, *location, object, location, owner);
 
   if (owner->local()) {
-    // konan::consolePrintf("updateHeapRef on stackLocal Owner");
+    // konan::consolePrintf("updateObjectRef on stackLocal Owner");
     UpdateStackRef(location, object);
     return;
   }
@@ -2760,7 +2760,7 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeade
 
 #else 
 template <bool Strict>
-void updateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
+void updateObjectRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
   UPDATE_REF_EVENT(memoryState, *location, object, location, 0);
   ObjHeader* old = *location;
   if (old != object) {
@@ -2813,7 +2813,7 @@ void updateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) {
     auto old = __sync_val_compare_and_swap(location, nullptr, const_cast<ObjHeader*>(object));
     if (old != nullptr) {
       // Failed to store, was not null.
-     RTGC_ReleaseRef/*ReleaseHeapRef*/(const_cast<ObjHeader*>(object));
+     ReleaseHeapRef(const_cast<ObjHeader*>(object));
     }
 #endif
     UPDATE_REF_EVENT(memoryState, old, object, location, 0);
@@ -3044,7 +3044,7 @@ OBJ_GETTER(swapHeapRefLocked,
       ObjHeader* old = *location;
       UpdateReturnRef(OBJ_RESULT, old);
       if (old == expectedValue) {
-          UpdateHeapRef(location, newValue, owner);
+          rtgc_UpdateObjectRef(location, newValue, owner);
       }
       return old;
   }
@@ -3070,7 +3070,7 @@ OBJ_GETTER(swapHeapRefLocked,
     else {
       // @zee protect deleting oldValue;
       UpdateReturnRef(OBJ_RESULT, oldValue);
-      UpdateHeapRef(location, newValue, owner);
+      rtgc_UpdateObjectRef(location, newValue, owner);
     }
   }
   else {
@@ -3092,7 +3092,7 @@ void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlo
   MEMORY_LOG("setHeapRefLocked: %p, v=%p, o=%p\n", location, newValue, owner);
   bool isLocal = owner != nullptr && !owner->container()->shared();
   if (isLocal) {
-      UpdateHeapRef(location, newValue, owner);
+      rtgc_UpdateObjectRef(location, newValue, owner);
       return;
   }
   GCNode::rtgcLock(_SetHeapRefLocked);
@@ -3100,15 +3100,15 @@ void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlo
   if (g_hasCyclicCollector)
     cyclicMutateAtomicRoot(newValue);
 #endif  // USE_CYCLIC_GC
-  // We do not use UpdateRef() here to avoid having RTGC_ReleaseRef/*ReleaseHeapRef*/() on old value under the lock.
+  // We do not use UpdateRef() here to avoid having ReleaseHeapRef() on old value under the lock.
   if (owner == NULL) {
     ObjHeader* oldValue = *location;
     SetHeapRef(location, newValue);
     if (oldValue != nullptr)
-      RTGC_ReleaseRef/*ReleaseHeapRef*/(oldValue);
+      ReleaseHeapRef(oldValue);
   }
   else {
-    UpdateHeapRef(location, newValue, owner);
+    rtgc_UpdateObjectRef(location, newValue, owner);
   }
   *cookie = computeCookie();
   GCNode::rtgcUnlock();
@@ -3336,7 +3336,7 @@ void disposeStablePointer(KNativePtr pointer) {
   if (pointer == nullptr) return;
   KRef any = reinterpret_cast<KRef>(pointer);
   MEMORY_LOG("disposeStablePointer for %p rc=%d\n", any, any->container() ? any->container()->refCount() : 0)
-  RTGC_ReleaseRef/*ReleaseHeapRef*/(any);
+  ReleaseHeapRef(any);
 }
 
 OBJ_GETTER(derefStablePointer, KNativePtr pointer) {
@@ -3745,7 +3745,7 @@ ScopedRefHolder::ScopedRefHolder(KRef obj): obj_(obj) {
 
 ScopedRefHolder::~ScopedRefHolder() {
   if (obj_) {
-    RTGC_ReleaseRef/*ReleaseHeapRef*/(obj_);
+    ReleaseHeapRef(obj_);
   }
 }
 
@@ -3831,7 +3831,7 @@ OBJ_GETTER(createAndFillArray, const C& container) {
   RTGC_LOG("createAndFillArray: %p\n", result);
 
   for (KRef it: container) {
-    UpdateHeapRef(place++, it, result->obj());
+    rtgc_UpdateObjectRef(place++, it, result->obj());
   }
   RETURN_OBJ(result->obj());
 }
@@ -4161,10 +4161,10 @@ void UpdateStackRefRelaxed(ObjHeader** location, const ObjHeader* object) {
 }
 
 void UpdateHeapRefStrict(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
-  updateHeapRef<true>(location, object, owner);
+  updateObjectRef<true>(location, object, owner);
 }
 void UpdateHeapRefRelaxed(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner) {
-  updateHeapRef<false>(location, object, owner);
+  updateObjectRef<false>(location, object, owner);
 }
 
 void UpdateReturnRefStrict(ObjHeader** returnSlot, const ObjHeader* value) {
@@ -4174,8 +4174,8 @@ void UpdateReturnRefRelaxed(ObjHeader** returnSlot, const ObjHeader* value) {
   updateReturnRef<false>(returnSlot, value);
 }
 
-void RTGC_ZeroStackLocalArrayRefs/*ZeroArrayRefs*/(ArrayHeader* array) {
-  RTGC_LOG("RTGC_ZeroStackLocalArrayRefs/*ZeroArrayRefs*/ (all refs should be in stack): %p\n", array);
+void ZeroArrayRefs(ArrayHeader* array) {
+  RTGC_LOG("ZeroArrayRefs (all refs should be in stack): %p\n", array);
 
   for (uint32_t index = 0; index < array->count_; ++index) {
     ObjHeader** location = ArrayAddressOfElementAt(array, index);

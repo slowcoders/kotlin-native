@@ -27,9 +27,9 @@ OBJ_GETTER(InitSingleton, ObjHeader** location, const TypeInfo* typeInfo, void (
     RETURN_RESULT_OF(InitSingletonRelaxed, location, typeInfo, ctor);
 }
 
-RUNTIME_NOTHROW void RTGC_ReleaseRef/*ReleaseHeapRef*/(const ObjHeader* object) {
+RUNTIME_NOTHROW void ReleaseHeapRef(const ObjHeader* object) {
   // throw "Not implemented";
-  RTGC_ReleaseRefRelaxed(object);
+  ReleaseHeapRefRelaxed(object);
 }
 
 RUNTIME_NOTHROW void ReleaseHeapRefNoCollect(const ObjHeader* object) {
@@ -52,8 +52,12 @@ RUNTIME_NOTHROW void UpdateStackRef(ObjHeader** location, const ObjHeader* objec
   UpdateStackRefRelaxed(location, object);
 }
 
-RUNTIME_NOTHROW void UpdateHeapRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner_rtgc) {
-  UpdateHeapRefRelaxed(location, object, owner_rtgc);
+RUNTIME_NOTHROW void UpdateHeapRef(ObjHeader** location, const ObjHeader* object) {
+  UpdateHeapRefRelaxed(location, object);
+}
+
+RUNTIME_NOTHROW void rtgc_UpdateObjectRef(ObjHeader** location, const ObjHeader* object, const ObjHeader* owner_rtgc) {
+  rtgc_UpdateObjectRefRelaxed(location, object, owner_rtgc);
 }
 
 RUNTIME_NOTHROW void UpdateReturnRef(ObjHeader** returnSlot, const ObjHeader* object) {

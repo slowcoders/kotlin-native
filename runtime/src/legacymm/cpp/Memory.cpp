@@ -573,11 +573,11 @@ private:
         if (atomicGet(&aliveMemoryStatesCount) == 0)
           return;
 
-        memoryState = InitMemory(false); // Required by RTGC_ReleaseRef/*ReleaseHeapRef*/.
+        memoryState = InitMemory(false); // Required by ReleaseHeapRef.
       }
 
       processEnqueuedReleaseRefsWith([](ObjHeader* obj) {
-        RTGC_ReleaseRef/*ReleaseHeapRef*/(obj);
+        ReleaseHeapRef(obj);
       });
 
       if (hadNoStateInitialized) {
@@ -1754,7 +1754,7 @@ inline bool tryAddHeapRef(const ObjHeader* header) {
 
 template <bool Strict, bool CanCollect>
 inline void releaseHeapRef(ContainerHeader* container) {
-  MEMORY_LOG("RTGC_ReleaseRef/*ReleaseHeapRef*/ %p: rc=%d\n", container, container->refCount())
+  MEMORY_LOG("ReleaseHeapRef %p: rc=%d\n", container, container->refCount())
   UPDATE_RELEASEREF_STAT(memoryState, container, needAtomicAccess(container), canBeCyclic(container), 0)
   if (container->tag() != CONTAINER_TAG_STACK) {
     if (Strict)
@@ -2187,7 +2187,7 @@ void zeroHeapRef(ObjHeader** location) {
   if (reinterpret_cast<uintptr_t>(value) > 1) {
     UPDATE_REF_EVENT(memoryState, value, nullptr, location, 0);
     *location = nullptr;
-    RTGC_ReleaseRef/*ReleaseHeapRef*/(value);
+    ReleaseHeapRef(value);
   }
 }
 
@@ -2256,7 +2256,7 @@ void updateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) {
     auto old = __sync_val_compare_and_swap(location, nullptr, const_cast<ObjHeader*>(object));
     if (old != nullptr) {
       // Failed to store, was not null.
-     RTGC_ReleaseRef/*ReleaseHeapRef*/(const_cast<ObjHeader*>(object));
+     ReleaseHeapRef(const_cast<ObjHeader*>(object));
     }
 #endif
     UPDATE_REF_EVENT(memoryState, old, object, location, 0);
@@ -2470,7 +2470,7 @@ OBJ_GETTER(swapHeapRefLocked,
   unlock(spinlock);
 
   if (oldValue != nullptr && oldValue == expectedValue) {
-    RTGC_ReleaseRef/*ReleaseHeapRef*/(oldValue);
+    ReleaseHeapRef(oldValue);
   }
   return oldValue;
 }
@@ -2487,7 +2487,7 @@ void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlo
   *cookie = computeCookie();
   unlock(spinlock);
   if (oldValue != nullptr)
-    RTGC_ReleaseRef/*ReleaseHeapRef*/(oldValue);
+    ReleaseHeapRef(oldValue);
 }
 
 OBJ_GETTER(readHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* cookie) {
@@ -2657,7 +2657,7 @@ KNativePtr createStablePointer(KRef any) {
 void disposeStablePointer(KNativePtr pointer) {
   if (pointer == nullptr) return;
   KRef ref = reinterpret_cast<KRef>(pointer);
-  RTGC_ReleaseRef/*ReleaseHeapRef*/(ref);
+  ReleaseHeapRef(ref);
 }
 
 OBJ_GETTER(derefStablePointer, KNativePtr pointer) {
@@ -2989,7 +2989,7 @@ ScopedRefHolder::ScopedRefHolder(KRef obj): obj_(obj) {
 
 ScopedRefHolder::~ScopedRefHolder() {
   if (obj_) {
-    RTGC_ReleaseRef/*ReleaseHeapRef*/(obj_);
+    ReleaseHeapRef(obj_);
   }
 }
 

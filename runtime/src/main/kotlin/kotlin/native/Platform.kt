@@ -40,8 +40,8 @@ public enum class CpuArchitecture(val bitness: Int) {
 public enum class MemoryModel {
     STRICT,
     RELAXED,
-    RTGC,
     EXPERIMENTAL,
+    RTGC,
 }
 
 /**

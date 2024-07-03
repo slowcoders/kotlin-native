@@ -29,11 +29,12 @@ void EnsureDeclarationsEmitted() {
     ensureUsed(InitSingleton);
     ensureUsed(InitAndRegisterGlobal);
     ensureUsed(UpdateHeapRef);
+    ensureUsed(rtgc_UpdateObjectRef);
     ensureUsed(UpdateStackRef);
     ensureUsed(UpdateReturnRef);
     ensureUsed(ZeroHeapRef);
-    ensureUsed(RTGC_ReleaseRef);
-    ensureUsed(RTGC_ZeroStackLocalArrayRefs);
+    ensureUsed(ReleaseHeapRef);
+    ensureUsed(ZeroArrayRefs);
     ensureUsed(RTGC_LeaveFrameAndReturnRef);
     ensureUsed(EnterFrame);
     ensureUsed(LeaveFrame);
